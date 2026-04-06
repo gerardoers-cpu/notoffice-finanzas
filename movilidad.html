@@ -187,9 +187,7 @@ function MainApp({user,onLogout,userRole}){
       hora:new Date().toTimeString().slice(0,5),
       locacion,tarifa:parseFloat(tarifa),marca,
       nota:nota||null,
-      estado:"aprobado",
-      aprobado_por:userEmail,
-      aprobado_at:new Date().toISOString(),
+      estado:"pendiente",
       origen:"manual",
       registrado_por:userEmail,
       mes:fecha.slice(0,7)
@@ -205,7 +203,7 @@ function MainApp({user,onLogout,userRole}){
     loadData();
   };
 
-  /* ── Approval actions ── */
+  /* ── Approval actions (individual trips, no email) ── */
   const updateEstado=async(ids,estado)=>{
     const sb=getSB();if(!sb)return;
     const now=new Date().toISOString();
@@ -213,6 +211,57 @@ function MainApp({user,onLogout,userRole}){
       await sb.from("movilidad").update({estado,aprobado_por:estado==="aprobado"?userEmail:null,aprobado_at:estado==="aprobado"?now:null}).eq("id",id);
     }
     setSelected(new Set());loadData();
+  };
+
+  /* ── Monthly closure: send summary email to Ynes & Gerardo ── */
+  const[sendingCierre,setSendingCierre]=useState(false);
+  const[cierreMsg,setCierreMsg]=useState("");
+  const cerrarMes=async()=>{
+    const aprobados=monthViajes.filter(v=>v.estado==="aprobado");
+    const pendientesCount=monthViajes.filter(v=>(v.estado||"pendiente")==="pendiente").length;
+    if(pendientesCount>0){alert("Aún hay "+pendientesCount+" viajes pendientes de aprobar. Apruébalos o recházalos antes de cerrar el mes.");return;}
+    if(aprobados.length===0){alert("No hay viajes aprobados este mes.");return;}
+    if(!confirm("¿Cerrar movilidad de "+monthLabel+"? Se enviará el resumen a Ynes y Gerardo para programar los reembolsos."))return;
+
+    setSendingCierre(true);
+    /* Build summary by filmmaker */
+    const byFM={};
+    aprobados.forEach(v=>{
+      if(!byFM[v.user_name])byFM[v.user_name]={name:v.user_name,viajes:[],total:0};
+      byFM[v.user_name].viajes.push({fecha:v.fecha,destino:v.locacion,marca:v.marca,monto:parseFloat(v.tarifa||0)});
+      byFM[v.user_name].total+=parseFloat(v.tarifa||0);
+    });
+    const byMarca={};
+    aprobados.forEach(v=>{
+      if(!byMarca[v.marca])byMarca[v.marca]=0;
+      byMarca[v.marca]+=parseFloat(v.tarifa||0);
+    });
+    const totalMes=aprobados.reduce((s,v)=>s+parseFloat(v.tarifa||0),0);
+
+    const sb=getSB();
+    if(sb){
+      try{
+        await sb.functions.invoke("notify-movilidad",{body:{
+          type:"cierre_mensual",
+          to:["ynes@notoffice.pe","gerardo@notoffice.pe"],
+          mes:viewMonth,
+          mesLabel:monthLabel,
+          totalViajes:aprobados.length,
+          totalMonto:totalMes,
+          porFilmmaker:Object.values(byFM),
+          porMarca:byMarca,
+          aprobado_por:userEmail
+        }});
+        setCierreMsg("Resumen enviado a Ynes y Gerardo");
+      }catch(e){
+        console.warn("Email error:",e);
+        setCierreMsg("Viajes cerrados (email no enviado — configura la Edge Function)");
+      }
+    }else{
+      setCierreMsg("Mes cerrado (sin conexión para enviar email)");
+    }
+    setSendingCierre(false);
+    setTimeout(()=>setCierreMsg(""),5000);
   };
 
   /* ── Filmmaker management ── */
@@ -257,6 +306,29 @@ function MainApp({user,onLogout,userRole}){
         <div className="kpi"><div className="val">{filmmakers.length}</div><div className="lbl">Filmmakers</div></div>
       </div>
 
+      {/* Cierre mensual */}
+      {monthViajes.length>0&&pendientes.length===0&&(
+        <div style={{background:"#f0fdf4",border:"1px solid #bbf7d0",borderRadius:12,padding:"14px 18px",marginBottom:16,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+          <div>
+            <div style={{fontWeight:700,fontSize:14,color:"#166534"}}>Todos los viajes de {monthLabel} están aprobados</div>
+            <div style={{fontSize:12,color:"#15803d"}}>Envía el resumen a Ynes y Gerardo para programar los reembolsos</div>
+          </div>
+          <button className="btn" style={{background:"#059669",color:"#fff",padding:"10px 20px",fontSize:13}} onClick={cerrarMes} disabled={sendingCierre}>
+            {sendingCierre?"Enviando...":"Cerrar mes y notificar"}
+          </button>
+        </div>
+      )}
+      {pendientes.length>0&&(
+        <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:12,padding:"12px 18px",marginBottom:16,fontSize:12,color:"#92400e"}}>
+          Hay <strong>{pendientes.length}</strong> viajes pendientes de aprobación — {fmt(totalPend)}. Apruébalos o recházalos para poder cerrar el mes.
+        </div>
+      )}
+      {cierreMsg&&(
+        <div style={{background:"#d1fae5",border:"1px solid #6ee7b7",borderRadius:12,padding:"12px 18px",marginBottom:16,fontSize:13,color:"#065f46",fontWeight:600}}>
+          {cierreMsg}
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="tabs">
         <button className={`tab ${tab==="registro"?"active":""}`} onClick={()=>setTab("registro")}>Registro Manual</button>
@@ -297,7 +369,7 @@ function MainApp({user,onLogout,userRole}){
 
               {/* Existing entries */}
               <table className="entry-table">
-                <thead><tr><th style={{width:120}}>Fecha</th><th>Ubicación</th><th>Marca</th><th style={{width:100}} className="text-right">Tarifa</th><th style={{width:50}}></th></tr></thead>
+                <thead><tr><th style={{width:110}}>Fecha</th><th>Destino</th><th>Marca</th><th style={{width:90}} className="text-right">Monto</th><th style={{width:90}}>Estado</th><th style={{width:100}}></th></tr></thead>
                 <tbody>
                   {fmViajes.map(v=>(
                     <tr key={v.id} className={v.marca==="Agencia"?"agencia-row":""}>
@@ -305,16 +377,24 @@ function MainApp({user,onLogout,userRole}){
                       <td>{v.locacion}</td>
                       <td>{v.marca==="Agencia"?<span className="badge b-agencia">Agencia (OH)</span>:<span className="badge" style={{background:"#f4f4f5",color:"#52525b"}}>{v.marca}</span>}</td>
                       <td className="text-right" style={{fontWeight:700}}>{fmt(v.tarifa)}</td>
-                      <td><button className="del-btn" onClick={()=>deleteEntry(v.id)}>✕</button></td>
+                      <td><span className={`badge ${v.estado==="aprobado"?"b-ok":v.estado==="rechazado"?"b-rej":"b-pend"}`}>{v.estado||"pendiente"}</span></td>
+                      <td style={{display:"flex",gap:4,alignItems:"center"}}>
+                        {(v.estado||"pendiente")==="pendiente"&&<>
+                          <button className="btn btn-approve btn-sm" onClick={()=>updateEstado([v.id],"aprobado")} title="Aprobar">✓</button>
+                          <button className="btn btn-reject btn-sm" onClick={()=>updateEstado([v.id],"rechazado")} title="Rechazar">✕</button>
+                        </>}
+                        {v.estado==="aprobado"&&<button className="btn btn-gray btn-sm" onClick={()=>updateEstado([v.id],"pendiente")}>Revertir</button>}
+                        {(v.estado||"pendiente")==="pendiente"&&<button className="del-btn" onClick={()=>deleteEntry(v.id)}>🗑</button>}
+                      </td>
                     </tr>
                   ))}
                   {/* New entry row */}
                   <NewEntryRow onAdd={addEntry}/>
                 </tbody>
                 {fmViajes.length>0&&<tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e4e4e7"}}>
-                  <td colSpan={3}>Total</td>
-                  <td className="text-right">{fmt(fmViajes.reduce((s,v)=>s+parseFloat(v.tarifa||0),0))}</td>
-                  <td></td>
+                  <td colSpan={3}>Total aprobado</td>
+                  <td className="text-right">{fmt(fmViajes.filter(v=>v.estado==="aprobado").reduce((s,v)=>s+parseFloat(v.tarifa||0),0))}</td>
+                  <td colSpan={2}></td>
                 </tr></tfoot>}
               </table>
             </div>
