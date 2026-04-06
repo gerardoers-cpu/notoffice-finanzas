@@ -198,6 +198,28 @@ const INIT_TEAM=[
   mkP(19,"Ynes Martínez",1800,[{id:1022,clientId:null,role:"Administración y Pagos",amount:2007}]),
 ];
 
+const INIT_STAFF=[
+  {id:1,name:"Carlos Mendoza",regimen:"planilla",bruto:1561,role:"Community Manager"},
+  {id:2,name:"Ana López",regimen:"planilla",bruto:2007,role:"Diseñadora"},
+  {id:3,name:"Juan Pérez",regimen:"planilla",bruto:2565,role:"Account Manager"},
+  {id:4,name:"María García",regimen:"planilla",bruto:1561,role:"Community Manager"},
+  {id:5,name:"Luis Torres",regimen:"planilla",bruto:2342,role:"Diseñador"},
+  {id:6,name:"Diego Ramírez",regimen:"planilla",bruto:1561,role:"Community Manager"},
+  {id:7,name:"Sofía Hernández",regimen:"planilla",bruto:2565,role:"Account Manager"},
+  {id:8,name:"Roberto Díaz",regimen:"planilla",bruto:1561,role:"Community Manager"},
+  {id:9,name:"Fernanda Ruiz",regimen:"planilla",bruto:2241,role:"Diseñadora"},
+  {id:10,name:"Andrea Vega",regimen:"rh",bruto:1600,role:"Pauta Digital"},
+  {id:11,name:"Pablo Morales",regimen:"planilla",bruto:1561,role:"Community Manager"},
+  {id:12,name:"Laura Sánchez",regimen:"planilla",bruto:2565,role:"Account Manager"},
+  {id:13,name:"Daniela Flores",regimen:"rh",bruto:1400,role:"Community Manager"},
+  {id:14,name:"Ricardo Ortiz",regimen:"planilla",bruto:4683,role:"Director Creativo"},
+  {id:15,name:"Gabriela Mora",regimen:"planilla",bruto:4726,role:"Directora de Cuentas"},
+  {id:16,name:"Alejandro Cruz",regimen:"planilla",bruto:3731,role:"Estratega Digital"},
+  {id:17,name:"Valeria Reyes",regimen:"rh",bruto:2500,role:"Diseñadora UI/UX"},
+  {id:18,name:"Miguel Ángel",regimen:"planilla",bruto:3483,role:"Desarrollo Web"},
+  {id:19,name:"Ynes Martínez",regimen:"planilla",bruto:2241,role:"Administración y Pagos"},
+];
+
 const genInvoices=()=>{
   const inv=[];let id=1;
   /* Recurrentes (fees mensuales) */
@@ -330,6 +352,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[variableExp,setVariableExp]=useState(saved?.variableExp||INIT_VAR);
   const[officeExp,setOfficeExp]=useState(saved?.officeExp||INIT_OFFICE);
   const[investExp,setInvestExp]=useState(saved?.investExp||INIT_INV);
+  const[staff,setStaff]=useState(saved?.staff||INIT_STAFF);
+  const[editStaffId,setEditStaffId]=useState(null);
 
   /* Per-month fees: { month: { clientId: { base:number, services:[{id,name,amount}] } } } */
   const[clientFees,setClientFees]=useState(saved?.clientFees||initFees);
@@ -428,6 +452,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
         setProjects(cloudData.projects||[]);setFixedExp(cloudData.fixedExp||[]);setDigitalExp(cloudData.digitalExp||[]);
         setVariableExp(cloudData.variableExp||[]);setOfficeExp(cloudData.officeExp||[]);setInvestExp(cloudData.investExp||[]);
         setClientFees(cloudData.clientFees||initFees());setMonthSnapshots(cloudData.monthSnapshots||{});
+        if(cloudData.staff)setStaff(cloudData.staff);
         setSaveMsg("Datos cargados de la nube");setTimeout(()=>setSaveMsg(""),3000);
       }
       setInitialLoaded(true);
@@ -437,7 +462,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   /* ── Auto-save on data change ── */
   useEffect(()=>{
     if(!initialLoaded)return; /* don't save until cloud data is loaded */
-    const state={clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots};
+    const state={clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff};
     const timer=setTimeout(()=>{
       saveStateLocal(state); /* always save locally as backup */
       if(cloudMode){
@@ -450,7 +475,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
       }
     },1500);
     return()=>clearTimeout(timer);
-  },[clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,initialLoaded]);
+  },[clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,initialLoaded]);
 
   const NAV=[
     {section:"Ingresos"},
@@ -805,7 +830,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           <div style={{textAlign:"right",marginBottom:12}}>
             <button className="btn btn-blue" onClick={()=>setShowForm("team")}><Ic d={ic.plus} size={14} color="#fff"/> Agregar Persona</button>
           </div>
-          {showForm==="team"&&<TeamForm clients={clients} preClient={preClient} onAdd={t=>{setTeam(prev=>[...prev,{...t,id:Date.now()}]);setShowForm(null);setPreClient(null);}} onClose={()=>{setShowForm(null);setPreClient(null);}}/>}}
+          {showForm==="team"&&<TeamForm clients={clients} staff={staff} preClient={preClient} onAdd={t=>{setTeam(prev=>[...prev,{...t,id:Date.now()}]);setShowForm(null);setPreClient(null);}} onClose={()=>{setShowForm(null);setPreClient(null);}}/>}}
 
           {/* ── Equipos por marca ── */}
           <div className="sl">Equipos por Marca</div>
@@ -1766,6 +1791,55 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             </table>
           </div>
 
+          <div className="sl" style={{marginTop:24}}>Base de Datos — Personal</div>
+          <div style={{textAlign:"right",marginBottom:12}}>
+            <button className="btn btn-green" onClick={()=>setShowForm("staff")}><Ic d={ic.plus} size={14} color="#fff"/> Nueva Persona</button>
+          </div>
+          {showForm==="staff"&&(
+            <div className="form-card"><h4 style={{color:"#18181b"}}>Nueva Persona en Base de Datos</h4>
+              <form onSubmit={e=>{e.preventDefault();const f=new FormData(e.target);const nm=f.get("n");const reg=f.get("r");const br=parseInt(f.get("b"));const role=f.get("role");
+                if(nm&&reg&&br&&role){const nid=Date.now();setStaff(p=>[...p,{id:nid,name:nm,regimen:reg,bruto:br,role}]);
+                  setShowForm(null);}
+              }}>
+                <div className="form-row">
+                  <input name="n" placeholder="Nombre completo" required/>
+                  <select name="r" required><option value="">Régimen</option><option value="planilla">Planilla</option><option value="rh">RH</option></select>
+                </div>
+                <div className="form-row">
+                  <input name="b" type="number" placeholder="Sueldo Bruto (S/)" required/>
+                  <input name="role" placeholder="Rol/Puesto" required/>
+                </div>
+                <div style={{display:"flex",gap:6}}><button type="submit" className="btn btn-green">Guardar</button><button type="button" className="btn btn-gray" onClick={()=>setShowForm(null)}>Cancelar</button></div>
+              </form>
+            </div>
+          )}
+          <div className="card" style={{padding:0,overflow:"hidden"}}>
+            <table>
+              <thead><tr><th>Nombre</th><th className="text-center">Régimen</th><th className="text-right">Sueldo Bruto</th><th className="text-right">Neto</th><th className="text-right">Inversión</th><th>Rol</th><th></th><th></th></tr></thead>
+              <tbody>{staff.map(s=>{
+                const isEdit=editStaffId===s.id;
+                const isPlanilla=s.regimen==="planilla";
+                const brutoVal=isEdit?parseInt(document.querySelector(`input[data-staff-bruto-${s.id}]`)?.value||s.bruto):s.bruto;
+                const neto=isPlanilla?Math.round(brutoVal/1.115):brutoVal;
+                const afp=isPlanilla?Math.round(neto*0.115):0;
+                const essalud=isPlanilla?Math.round(neto*0.09):0;
+                const inversion=isPlanilla?brutoVal+essalud:brutoVal;
+                return(<tr key={s.id}>
+                  <td style={{fontWeight:600}}>{isEdit?<input type="text" defaultValue={s.name} data-staff-name={s.id} style={{fontSize:12,padding:"4px 6px",width:"100%"}}/>:s.name}</td>
+                  <td className="text-center"><span className={`badge ${isPlanilla?"bb":"bpp"}`}>{isPlanilla?"Planilla":"RH"}</span></td>
+                  <td className="text-right">{isEdit?<input type="number" defaultValue={s.bruto} data-staff-bruto={s.id} style={{fontSize:12,padding:"4px 6px",width:80,textAlign:"right"}}/>:fmt(s.bruto)}</td>
+                  <td className="text-right" style={{color:"#71717a"}}>{fmt(neto)}</td>
+                  <td className="text-right tr font-bold">{fmt(inversion)}</td>
+                  <td style={{fontSize:12,color:"#71717a"}}>{isEdit?<input type="text" defaultValue={s.role} data-staff-role={s.id} style={{fontSize:12,padding:"4px 6px",width:"100%"}}/>:s.role}</td>
+                  <td><button className="btn btn-sm btn-gray" onClick={()=>{if(isEdit){const nm=document.querySelector(`input[data-staff-name="${s.id}"]`)?.value;const br=parseInt(document.querySelector(`input[data-staff-bruto="${s.id}"]`)?.value);const role=document.querySelector(`input[data-staff-role="${s.id}"]`)?.value;setStaff(staff.map(st=>st.id===s.id?{...st,name:nm,bruto:br,role}:st));setEditStaffId(null);}else setEditStaffId(s.id);}}>
+                    {isEdit?"✓":"Editar"}
+                  </button></td>
+                  <td><button className="del-btn" onClick={()=>{if(confirm("¿Eliminar a "+s.name+" de la base de datos?")){setStaff(staff.filter(x=>x.id!==s.id));setEditStaffId(null);}}}> ✕</button></td>
+                </tr>);
+              })}</tbody>
+            </table>
+          </div>
+
           <div className="sl" style={{marginTop:24}}>Información</div>
           <div className="card">
             <div style={{fontWeight:600,marginBottom:12}}>Cómo se calcula la rentabilidad</div>
@@ -1783,7 +1857,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             <div style={{fontSize:12,color:"#71717a",marginBottom:12}}>Los datos se guardan automáticamente en tu navegador (localStorage). Si cambias de navegador o borras datos, se perderán.</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button className="btn btn-gray" onClick={()=>{
-                const data={clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots};
+                const data={clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff};
                 const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
                 const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="finanzas_backup_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(url);
               }}>Exportar Backup (JSON)</button>
@@ -1794,6 +1868,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                     if(d.clients&&d.team){setClients(d.clients);setTeam(d.team);setInvoices(d.invoices||[]);setProjects(d.projects||[]);
                       setFixedExp(d.fixedExp||[]);setDigitalExp(d.digitalExp||[]);setVariableExp(d.variableExp||[]);setOfficeExp(d.officeExp||[]);setInvestExp(d.investExp||[]);
                       setClientFees(d.clientFees||initFees());setMonthSnapshots(d.monthSnapshots||{});
+                      if(d.staff)setStaff(d.staff);
                       setSaveMsg("Backup restaurado");setTimeout(()=>setSaveMsg(""),3000);
                     }else alert("Archivo inválido");}catch(err){alert("Error al leer: "+err.message);}};r.readAsText(f);};inp.click();
               }}>Importar Backup</button>
@@ -1940,9 +2015,11 @@ function AssignRow({a,clients,onChange,onDel,canDel}){
   </div>);
 }
 
-function TeamForm({clients,onAdd,onClose,preClient}){
+function TeamForm({clients,staff,onAdd,onClose,preClient}){
   const[fd,setFd]=useState({name:"",regimen:"planilla",bruto:""});
   const[assigns,setAssigns]=useState([{id:Date.now(),clientId:preClient||null,role:"",amount:0}]);
+  const[suggestions,setSuggestions]=useState([]);
+  const[showSug,setShowSug]=useState(false);
   const isRH=fd.regimen==="rh";
   const bruto=parseInt(fd.bruto)||0;
   const neto=isRH?bruto:Math.round(bruto/1.115);
@@ -1958,11 +2035,25 @@ function TeamForm({clients,onAdd,onClose,preClient}){
     if(valid.length===0){alert("Agrega al menos una asignación con rol y monto.");return;}
     onAdd({name:fd.name,regimen:fd.regimen,neto,essalud,afp,bruto,inversion,
       assignments:valid.map(a=>({...a,id:Date.now()+Math.random()}))});};
+  const handleNameChange=e=>{
+    const val=e.target.value;setFd({...fd,name:val});setShowSug(true);
+    if(val.trim().length<2){setSuggestions([]);setShowSug(false);return;}
+    const lower=val.toLowerCase();
+    const filtered=(staff||[]).filter(s=>s.name.toLowerCase().includes(lower)).slice(0,5);
+    setSuggestions(filtered);};
+  const selectSuggestion=s=>{setFd({...fd,name:s.name,regimen:s.regimen,bruto:String(s.bruto)});setSuggestions([]);setShowSug(false);};
   return(<div className="form-card" style={{background:"#f4f4f5",borderColor:"#f0f0f0"}}>
     <h4 style={{color:"#18181b"}}>Nueva Persona</h4>
     <form onSubmit={submit}>
       <div className="form-row">
-        <input value={fd.name} onChange={e=>setFd({...fd,name:e.target.value})} placeholder="Nombre completo" required/>
+        <div style={{position:"relative",flex:1}}>
+          <input value={fd.name} onChange={handleNameChange} onBlur={()=>setTimeout(()=>setShowSug(false),200)} placeholder="Nombre completo" required/>
+          {showSug&&suggestions.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e4e4e7",borderRadius:8,marginTop:4,maxHeight:200,overflowY:"auto",zIndex:50,boxShadow:"0 4px 6px rgba(0,0,0,0.1)"}}>
+            {suggestions.map(s=><div key={s.id} onClick={()=>selectSuggestion(s)} style={{padding:"10px 14px",cursor:"pointer",borderBottom:"1px solid #f4f4f5",fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.target.parentElement.style.background="#f4f4f5"} onMouseLeave={e=>e.target.parentElement.style.background="#fff"}>
+              <span>{s.name}</span><span style={{fontSize:10,color:"#a1a1aa"}}>{s.regimen==="planilla"?"Planilla":"RH"}</span>
+            </div>)}
+          </div>}
+        </div>
         <select value={fd.regimen} onChange={e=>setFd({...fd,regimen:e.target.value})}>
           <option value="planilla">Planilla (con EsSalud/AFP)</option><option value="rh">RH - Recibo por Honorarios</option>
         </select>
