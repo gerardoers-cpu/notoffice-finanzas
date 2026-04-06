@@ -667,7 +667,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               <span style={{width:7,height:7,borderRadius:"50%",background:cloudMode?"#dc2626":"#d4d4d8",marginRight:2}} title={cloudMode?"Conectado a la nube":"Modo local"}/>
               <span style={{width:30,height:30,borderRadius:"50%",background:"#18181b",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,letterSpacing:".5px"}}>{(userEmail||"YM").slice(0,2).toUpperCase()}</span>
               <strong style={{maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{userEmail==="local"?"Ynes Martínez":userEmail}</strong>
-              {cloudMode&&<button onClick={onLogout} style={{background:"none",border:"none",cursor:"pointer",color:"#a1a1aa",fontSize:11,fontFamily:"inherit"}}>Salir</button>}
+              {cloudMode&&<button onClick={onLogout} style={{background:"#18181b",border:"none",cursor:"pointer",color:"#fff",fontSize:11,fontFamily:"inherit",padding:"6px 14px",borderRadius:20,fontWeight:600}}>Cerrar sesión</button>}
             </div>
           </div>
         </div>
@@ -2139,80 +2139,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               <strong>coordinador</strong> → Movilidad completa (registro, validación, tarifario, equipo) &nbsp;|&nbsp;
               <strong>filmmaker</strong> → Movilidad limitada (registra sus viajes, ve su historial)
             </div>
-            {(()=>{
-              const[newRoleEmail,setNewRoleEmail]=React.useState("");
-              const[newRoleName,setNewRoleName]=React.useState("");
-              const[newRoleRol,setNewRoleRol]=React.useState("filmmaker");
-              const[editingRole,setEditingRole]=React.useState(null);
-              const[savingRole,setSavingRole]=React.useState(false);
-
-              const addRole=async()=>{
-                if(!newRoleEmail.trim()||!newRoleName.trim())return;
-                const sb=getSB();if(!sb)return;
-                setSavingRole(true);
-                const{error}=await sb.from("user_roles").upsert({email:newRoleEmail.trim().toLowerCase(),nombre:newRoleName.trim(),rol:newRoleRol,activo:true},{onConflict:"email"});
-                if(!error){setNewRoleEmail("");setNewRoleName("");setNewRoleRol("filmmaker");loadRoles();}
-                else alert("Error: "+error.message);
-                setSavingRole(false);
-              };
-
-              const updateRole=async(id,newRol)=>{
-                const sb=getSB();if(!sb)return;
-                await sb.from("user_roles").update({rol:newRol}).eq("id",id);
-                loadRoles();setEditingRole(null);
-              };
-
-              const toggleActive=async(id,current)=>{
-                const sb=getSB();if(!sb)return;
-                await sb.from("user_roles").update({activo:!current}).eq("id",id);
-                loadRoles();
-              };
-
-              const deleteRole=async(id,nombre)=>{
-                if(!confirm("¿Eliminar a "+nombre+" del sistema de roles?"))return;
-                const sb=getSB();if(!sb)return;
-                await sb.from("user_roles").delete().eq("id",id);
-                loadRoles();
-              };
-
-              return(<>
-                <table className="data-table" style={{marginBottom:16}}>
-                  <thead><tr><th>Email</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
-                  <tbody>
-                    {userRoles.length===0&&<tr><td colSpan={5} style={{textAlign:"center",color:"#a1a1aa",padding:20}}>No hay usuarios registrados</td></tr>}
-                    {userRoles.map(u=>(
-                      <tr key={u.id} style={{opacity:u.activo?1:.5}}>
-                        <td style={{fontSize:12}}>{u.email}</td>
-                        <td style={{fontWeight:600}}>{u.nombre}</td>
-                        <td>{editingRole===u.id?(
-                          <select defaultValue={u.rol} style={{fontSize:12,padding:"4px 6px"}} onChange={e=>updateRole(u.id,e.target.value)}>
-                            <option value="admin">admin</option>
-                            <option value="coordinador">coordinador</option>
-                            <option value="filmmaker">filmmaker</option>
-                          </select>
-                        ):<span className={`badge ${u.rol==="admin"?"bb":u.rol==="coordinador"?"bpp":"bg"}`}>{u.rol}</span>}</td>
-                        <td><span style={{color:u.activo?"#16a34a":"#dc2626",fontSize:12}}>{u.activo?"Activo":"Inactivo"}</span></td>
-                        <td style={{display:"flex",gap:4}}>
-                          <button className="btn btn-sm btn-gray" onClick={()=>setEditingRole(editingRole===u.id?null:u.id)}>{editingRole===u.id?"✓":"Rol"}</button>
-                          <button className="btn btn-sm btn-gray" onClick={()=>toggleActive(u.id,u.activo)}>{u.activo?"Desact.":"Activar"}</button>
-                          <button className="del-btn" onClick={()=>deleteRole(u.id,u.nombre)}>✕</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                  <input placeholder="Email" value={newRoleEmail} onChange={e=>setNewRoleEmail(e.target.value)} style={{fontSize:12,padding:"6px 10px",border:"1px solid #e4e4e7",borderRadius:8,width:200}}/>
-                  <input placeholder="Nombre" value={newRoleName} onChange={e=>setNewRoleName(e.target.value)} style={{fontSize:12,padding:"6px 10px",border:"1px solid #e4e4e7",borderRadius:8,width:140}}/>
-                  <select value={newRoleRol} onChange={e=>setNewRoleRol(e.target.value)} style={{fontSize:12,padding:"6px 10px",border:"1px solid #e4e4e7",borderRadius:8}}>
-                    <option value="filmmaker">filmmaker</option>
-                    <option value="coordinador">coordinador</option>
-                    <option value="admin">admin</option>
-                  </select>
-                  <button className="btn btn-primary" onClick={addRole} disabled={savingRole||!newRoleEmail.trim()||!newRoleName.trim()}>{savingRole?"Guardando...":"+ Agregar Usuario"}</button>
-                </div>
-              </>);
-            })()}
+            <RolesManager userRoles={userRoles} loadRoles={loadRoles} getSB={getSB}/>
           </div>
           </>)}
 
@@ -2250,6 +2177,82 @@ function App({userEmail="local",onLogout,cloudMode=false}){
       </div>
     </div>
   );
+}
+
+/* ═══ ROLES MANAGER COMPONENT ═══ */
+function RolesManager({userRoles,loadRoles,getSB}){
+  const[newRoleEmail,setNewRoleEmail]=useState("");
+  const[newRoleName,setNewRoleName]=useState("");
+  const[newRoleRol,setNewRoleRol]=useState("filmmaker");
+  const[editingRole,setEditingRole]=useState(null);
+  const[savingRole,setSavingRole]=useState(false);
+
+  const addRole=async()=>{
+    if(!newRoleEmail.trim()||!newRoleName.trim())return;
+    const sb=getSB();if(!sb)return;
+    setSavingRole(true);
+    const{error}=await sb.from("user_roles").upsert({email:newRoleEmail.trim().toLowerCase(),nombre:newRoleName.trim(),rol:newRoleRol,activo:true},{onConflict:"email"});
+    if(!error){setNewRoleEmail("");setNewRoleName("");setNewRoleRol("filmmaker");loadRoles();}
+    else alert("Error: "+error.message);
+    setSavingRole(false);
+  };
+
+  const updateRole=async(id,newRol)=>{
+    const sb=getSB();if(!sb)return;
+    await sb.from("user_roles").update({rol:newRol}).eq("id",id);
+    loadRoles();setEditingRole(null);
+  };
+
+  const toggleActive=async(id,current)=>{
+    const sb=getSB();if(!sb)return;
+    await sb.from("user_roles").update({activo:!current}).eq("id",id);
+    loadRoles();
+  };
+
+  const deleteRole=async(id,nombre)=>{
+    if(!confirm("¿Eliminar a "+nombre+" del sistema de roles?"))return;
+    const sb=getSB();if(!sb)return;
+    await sb.from("user_roles").delete().eq("id",id);
+    loadRoles();
+  };
+
+  return(<>
+    <table className="data-table" style={{marginBottom:16}}>
+      <thead><tr><th>Email</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody>
+        {userRoles.length===0&&<tr><td colSpan={5} style={{textAlign:"center",color:"#a1a1aa",padding:20}}>No hay usuarios registrados</td></tr>}
+        {userRoles.map(u=>(
+          <tr key={u.id} style={{opacity:u.activo?1:.5}}>
+            <td style={{fontSize:12}}>{u.email}</td>
+            <td style={{fontWeight:600}}>{u.nombre}</td>
+            <td>{editingRole===u.id?(
+              <select defaultValue={u.rol} style={{fontSize:12,padding:"4px 6px"}} onChange={e=>updateRole(u.id,e.target.value)}>
+                <option value="admin">admin</option>
+                <option value="coordinador">coordinador</option>
+                <option value="filmmaker">filmmaker</option>
+              </select>
+            ):<span className={`badge ${u.rol==="admin"?"bb":u.rol==="coordinador"?"bpp":"bg"}`}>{u.rol}</span>}</td>
+            <td><span style={{color:u.activo?"#16a34a":"#dc2626",fontSize:12}}>{u.activo?"Activo":"Inactivo"}</span></td>
+            <td style={{display:"flex",gap:4}}>
+              <button className="btn btn-sm btn-gray" onClick={()=>setEditingRole(editingRole===u.id?null:u.id)}>{editingRole===u.id?"✓":"Rol"}</button>
+              <button className="btn btn-sm btn-gray" onClick={()=>toggleActive(u.id,u.activo)}>{u.activo?"Desact.":"Activar"}</button>
+              <button className="del-btn" onClick={()=>deleteRole(u.id,u.nombre)}>✕</button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+    <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+      <input placeholder="Email" value={newRoleEmail} onChange={e=>setNewRoleEmail(e.target.value)} style={{fontSize:12,padding:"6px 10px",border:"1px solid #e4e4e7",borderRadius:8,width:200}}/>
+      <input placeholder="Nombre" value={newRoleName} onChange={e=>setNewRoleName(e.target.value)} style={{fontSize:12,padding:"6px 10px",border:"1px solid #e4e4e7",borderRadius:8,width:140}}/>
+      <select value={newRoleRol} onChange={e=>setNewRoleRol(e.target.value)} style={{fontSize:12,padding:"6px 10px",border:"1px solid #e4e4e7",borderRadius:8}}>
+        <option value="filmmaker">filmmaker</option>
+        <option value="coordinador">coordinador</option>
+        <option value="admin">admin</option>
+      </select>
+      <button className="btn btn-primary" onClick={addRole} disabled={savingRole||!newRoleEmail.trim()||!newRoleName.trim()}>{savingRole?"Guardando...":"+ Agregar Usuario"}</button>
+    </div>
+  </>);
 }
 
 /* ═══ SUB-COMPONENTS ═══ */
