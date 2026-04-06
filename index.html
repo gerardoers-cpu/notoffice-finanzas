@@ -251,6 +251,10 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[asigPersona,setAsigPersona]=useState("");
   const[asigMonto,setAsigMonto]=useState("");
   const[asigNota,setAsigNota]=useState("");
+  const[expandedCajaPersona,setExpandedCajaPersona]=useState(null);
+  const[editingAsigId,setEditingAsigId]=useState(null);
+  const[editAsigMonto,setEditAsigMonto]=useState("");
+  const[editAsigNota,setEditAsigNota]=useState("");
   const handleAsignarCaja=async()=>{
     if(!asigPersona||!asigMonto||parseFloat(asigMonto)<=0){alert("Selecciona persona y monto");return;}
     const sb=getSB();if(!sb){alert("Sin conexión a Supabase");return;}
@@ -951,15 +955,57 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                   </div>
                 </div>
               )}
-              <div className="grid g3" style={{marginBottom:12}}>
+              <div style={{marginBottom:12}}>
                 {CAJA_PERSONAS_EMAILS.map(p=>{const b=cajaBalances[p]||{asignado:0,gastado:0,saldo:0};const color=b.saldo<=0?"#e11d48":b.saldo<100?"#71717a":"#2563eb";
                   const persona=cajaPersonas.find(cp=>cp.email===p);
-                  return(<div key={p} className="card" style={{borderLeft:`4px solid ${color}`,position:"relative"}}>
+                  const pAsig=cajaAsignaciones.filter(a=>a.persona_email===p);
+                  const isExpanded=expandedCajaPersona===p;
+                  return(<div key={p} className="card" style={{borderLeft:`4px solid ${color}`,position:"relative",marginBottom:8}}>
                     <button onClick={()=>handleRemovePersona(persona?.id,p)} title="Eliminar persona" style={{position:"absolute",top:8,right:8,background:"none",border:"none",color:"#d4d4d8",cursor:"pointer",fontSize:14,padding:2}}>✕</button>
-                    <div style={{fontSize:12,fontWeight:600}}>{persona?.nombre||nameFromEmail(p)}</div>
-                    <div style={{fontSize:10,color:"#a1a1aa",marginBottom:2}}>{p}</div>
-                    <div style={{fontSize:20,fontWeight:700,color,margin:"4px 0"}}>{fmt(b.saldo)}</div>
-                    <div style={{fontSize:10,color:"#a1a1aa"}}>Asignado: {fmt(b.asignado)} · Gastado: {fmt(b.gastado)}</div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setExpandedCajaPersona(isExpanded?null:p)}>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:600}}>{persona?.nombre||nameFromEmail(p)}</div>
+                        <div style={{fontSize:10,color:"#a1a1aa"}}>{p}</div>
+                      </div>
+                      <div style={{textAlign:"right"}}>
+                        <div style={{fontSize:20,fontWeight:700,color}}>{fmt(b.saldo)}</div>
+                        <div style={{fontSize:10,color:"#a1a1aa"}}>Asignado: {fmt(b.asignado)} · Gastado: {fmt(b.gastado)}</div>
+                      </div>
+                    </div>
+                    {isExpanded&&(
+                      <div style={{marginTop:12,borderTop:"1px solid #f0f0f0",paddingTop:10}}>
+                        <div style={{fontSize:11,fontWeight:700,color:"#a1a1aa",marginBottom:6,textTransform:"uppercase",letterSpacing:"1px"}}>Historial de asignaciones</div>
+                        {pAsig.length===0?<div style={{fontSize:12,color:"#a1a1aa",padding:"8px 0"}}>Sin asignaciones</div>:(
+                          <table style={{width:"100%",fontSize:12}}><thead><tr style={{background:"#f9fafb"}}><th style={{padding:"6px 8px",textAlign:"left"}}>Fecha</th><th style={{padding:"6px 8px",textAlign:"left"}}>Nota</th><th style={{padding:"6px 8px",textAlign:"right"}}>Monto</th><th style={{padding:"6px 8px",textAlign:"left"}}>Por</th><th style={{padding:"6px 8px",width:80}}>Acciones</th></tr></thead>
+                          <tbody>{pAsig.map(a=>(
+                            <tr key={a.id} style={{borderBottom:"1px solid #f4f4f5"}}>
+                              <td style={{padding:"6px 8px"}}>{new Date(a.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short",year:"numeric"})}</td>
+                              {editingAsigId===a.id?(
+                                <>
+                                  <td style={{padding:"4px 6px"}}><input value={editAsigNota} onChange={e=>setEditAsigNota(e.target.value)} style={{width:"100%",padding:"4px 6px",fontSize:11,border:"1px solid #d4d4d8",borderRadius:6}}/></td>
+                                  <td style={{padding:"4px 6px"}}><input type="number" value={editAsigMonto} onChange={e=>setEditAsigMonto(e.target.value)} style={{width:80,padding:"4px 6px",fontSize:11,border:"1px solid #d4d4d8",borderRadius:6,textAlign:"right"}}/></td>
+                                  <td style={{padding:"6px 8px",fontSize:11,color:"#a1a1aa"}}>{nameFromEmail(a.asignado_por)}</td>
+                                  <td style={{padding:"4px 6px"}}>
+                                    <button onClick={async()=>{const sb=getSB();if(!sb)return;await sb.from("caja_chica_asignaciones").update({monto:parseFloat(editAsigMonto),nota:editAsigNota}).eq("id",a.id);setEditingAsigId(null);loadCajaChica(vm);}} style={{background:"#059669",color:"#fff",border:"none",borderRadius:6,padding:"3px 8px",fontSize:10,cursor:"pointer",marginRight:4}}>✓</button>
+                                    <button onClick={()=>setEditingAsigId(null)} style={{background:"#d4d4d8",color:"#18181b",border:"none",borderRadius:6,padding:"3px 8px",fontSize:10,cursor:"pointer"}}>✕</button>
+                                  </td>
+                                </>
+                              ):(
+                                <>
+                                  <td style={{padding:"6px 8px"}}>{a.nota||"—"}</td>
+                                  <td style={{padding:"6px 8px",textAlign:"right",fontWeight:700,color:"#059669"}}>+{fmt(a.monto)}</td>
+                                  <td style={{padding:"6px 8px",fontSize:11,color:"#a1a1aa"}}>{nameFromEmail(a.asignado_por)}</td>
+                                  <td style={{padding:"4px 6px"}}>
+                                    <button onClick={()=>{setEditingAsigId(a.id);setEditAsigMonto(String(a.monto));setEditAsigNota(a.nota||"");}} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,padding:2,marginRight:4}} title="Editar">✏️</button>
+                                    <button onClick={async()=>{if(!confirm("¿Eliminar esta asignación?"))return;const sb=getSB();if(!sb)return;await sb.from("caja_chica_asignaciones").delete().eq("id",a.id);loadCajaChica(vm);}} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,padding:2}} title="Eliminar">🗑</button>
+                                  </td>
+                                </>
+                              )}
+                            </tr>
+                          ))}</tbody></table>
+                        )}
+                      </div>
+                    )}
                   </div>);
                 })}
               </div>
