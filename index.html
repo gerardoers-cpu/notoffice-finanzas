@@ -164,11 +164,11 @@ const INIT_CLIENTS=[
   {id:4,name:"Marca Delta",fee:15000},{id:5,name:"Marca Épsilon",fee:9500},{id:6,name:"Marca Zeta",fee:11000},
 ];
 
-/* regimen: "planilla" → neto input, EsSalud=9%, AFP=11.5% auto
+/* regimen: "planilla" → neto input, EsSalud=9%, AFP=11.37% auto
    Sueldo Bruto = neto + AFP | Inversión Total = neto + AFP + EsSalud
    "rh" → recibo por honorarios, bruto=monto, no cargas
    assignments: [{id,clientId(null=transversal),role,amount}] — how inversión is distributed */
-const mkP=(id,nm,neto,assigns)=>{const es=Math.round(neto*0.09);const afp=Math.round(neto*0.115);
+const mkP=(id,nm,neto,assigns)=>{const es=Math.round(neto*0.09);const afp=Math.round(neto*0.1137);
   return{id,name:nm,regimen:"planilla",neto,essalud:es,afp,bruto:neto+afp,inversion:neto+afp+es,assignments:assigns};};
 const mkR=(id,nm,neto,assigns)=>({id,name:nm,regimen:"rh",neto,essalud:0,afp:0,bruto:neto,inversion:neto,assignments:assigns});
 /* helpers: cost a person allocates to a specific client, or to transversal */
@@ -912,7 +912,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                       <span style={{fontSize:12,fontWeight:600,minWidth:50}}>Bruto</span>
                       <input type="number" value={m.bruto} onChange={e=>{
                         const newBruto=parseInt(e.target.value)||0;
-                        if(m.regimen==="planilla"){const newNeto=Math.round(newBruto/1.115);const afp=Math.round(newNeto*0.115);const es=Math.round(newNeto*0.09);
+                        if(m.regimen==="planilla"){const newNeto=Math.round(newBruto/1.1137);const afp=Math.round(newNeto*0.115);const es=Math.round(newNeto*0.09);
                           setTeam(prev=>prev.map(t=>t.id===m.id?{...t,bruto:newBruto,neto:newNeto,essalud:es,afp,inversion:newBruto+es}:t));
                         }else{setTeam(prev=>prev.map(t=>t.id===m.id?{...t,bruto:newBruto,neto:newBruto,inversion:newBruto}:t));}
                       }} style={{width:120,textAlign:"right",fontWeight:600,fontSize:13,padding:"4px 8px"}}/>
@@ -2099,8 +2099,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                 const isEdit=editStaffId===s.id;
                 const isPlanilla=s.regimen==="planilla";
                 const brutoVal=isEdit?parseInt(document.querySelector(`input[data-staff-bruto-${s.id}]`)?.value||s.bruto):s.bruto;
-                const neto=isPlanilla?Math.round(brutoVal/1.115):brutoVal;
-                const afp=isPlanilla?Math.round(neto*0.115):0;
+                const neto=isPlanilla?Math.round(brutoVal/1.1137):brutoVal;
+                const afp=isPlanilla?Math.round(neto*0.1137):0;
                 const essalud=isPlanilla?Math.round(neto*0.09):0;
                 const inversion=isPlanilla?brutoVal+essalud:brutoVal;
                 return(<tr key={s.id}>
@@ -2433,9 +2433,9 @@ function TeamForm({clients,staff,roles,onAdd,onClose,preClient}){
   const[showSug,setShowSug]=useState(false);
   const isRH=fd.regimen==="rh";
   const bruto=parseInt(fd.bruto)||0;
-  const neto=isRH?bruto:Math.round(bruto/1.115);
+  const neto=isRH?bruto:Math.round(bruto/1.1137);
   const essalud=isRH?0:Math.round(neto*0.09);
-  const afp=isRH?0:Math.round(neto*0.115);
+  const afp=isRH?0:Math.round(neto*0.1137);
   const inversion=isRH?bruto:bruto+essalud;
 
   /* Auto-adjust primary assignment when bonos change — distribute BRUTO */
