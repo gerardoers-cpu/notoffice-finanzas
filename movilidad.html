@@ -177,7 +177,7 @@ function MainApp({user,onLogout,userRole}){
   },[filmmakers,monthViajes]);
 
   /* ── Add entry ── */
-  const addEntry=async(fecha,locacion,marca,tarifa,nota)=>{
+  const addEntry=async(fecha,orig,dest,ret,marca,tarifa)=>{
     if(!selFMData)return;
     const sb=getSB();if(!sb)return;
     const{error}=await sb.from("movilidad").insert({
@@ -185,8 +185,8 @@ function MainApp({user,onLogout,userRole}){
       user_name:selFMData.nombre,
       fecha,
       hora:new Date().toTimeString().slice(0,5),
-      locacion,tarifa:parseFloat(tarifa),marca,
-      nota:nota||null,
+      salida:orig,destino:dest,retorno:ret,
+      tarifa:parseFloat(tarifa),marca,
       estado:"pendiente",
       origen:"manual",
       registrado_por:userEmail,
@@ -369,12 +369,14 @@ function MainApp({user,onLogout,userRole}){
 
               {/* Existing entries */}
               <table className="entry-table">
-                <thead><tr><th style={{width:110}}>Fecha</th><th>Destino</th><th>Marca</th><th style={{width:90}} className="text-right">Monto</th><th style={{width:90}}>Estado</th><th style={{width:100}}></th></tr></thead>
+                <thead><tr><th style={{width:100}}>Fecha</th><th>Salida</th><th>Grabación</th><th>Retorno</th><th>Marca</th><th style={{width:80}} className="text-right">Monto</th><th style={{width:80}}>Estado</th><th style={{width:100}}></th></tr></thead>
                 <tbody>
                   {fmViajes.map(v=>(
                     <tr key={v.id} className={v.marca==="Agencia"?"agencia-row":""}>
                       <td style={{fontSize:12}}>{v.fecha}</td>
-                      <td>{v.locacion}</td>
+                      <td style={{fontSize:12}}>{v.salida||"—"}</td>
+                      <td style={{fontSize:12,fontWeight:600}}>{v.destino||v.locacion||"—"}</td>
+                      <td style={{fontSize:12}}>{v.retorno||"—"}</td>
                       <td>{v.marca==="Agencia"?<span className="badge b-agencia">Agencia (OH)</span>:<span className="badge" style={{background:"#f4f4f5",color:"#52525b"}}>{v.marca}</span>}</td>
                       <td className="text-right" style={{fontWeight:700}}>{fmt(v.tarifa)}</td>
                       <td><span className={`badge ${v.estado==="aprobado"?"b-ok":v.estado==="rechazado"?"b-rej":"b-pend"}`}>{v.estado||"pendiente"}</span></td>
@@ -392,7 +394,7 @@ function MainApp({user,onLogout,userRole}){
                   <NewEntryRow onAdd={addEntry}/>
                 </tbody>
                 {fmViajes.length>0&&<tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e4e4e7"}}>
-                  <td colSpan={3}>Total aprobado</td>
+                  <td colSpan={5}>Total aprobado</td>
                   <td className="text-right">{fmt(fmViajes.filter(v=>v.estado==="aprobado").reduce((s,v)=>s+parseFloat(v.tarifa||0),0))}</td>
                   <td colSpan={2}></td>
                 </tr></tfoot>}
@@ -513,8 +515,8 @@ function MainApp({user,onLogout,userRole}){
         })()}
         {/* Export */}
         <button className="btn btn-gray" style={{marginTop:8}} onClick={()=>{
-          const rows=monthViajes.filter(v=>v.estado==="aprobado").map(v=>[v.fecha,v.hora,v.user_name,v.locacion,v.marca,v.tarifa,v.origen||"manual",v.nota||""]);
-          const csv=[["Fecha","Hora","Filmmaker","Ubicación","Marca","Tarifa","Origen","Nota"],...rows].map(r=>r.join(",")).join("\n");
+          const rows=monthViajes.filter(v=>v.estado==="aprobado").map(v=>[v.fecha,v.hora,v.user_name,v.salida||"",v.destino||v.locacion||"",v.retorno||"",v.marca,v.tarifa]);
+          const csv=[["Fecha","Hora","Filmmaker","Salida","Destino (grabación)","Retorno","Marca","Monto"],...rows].map(r=>r.join(",")).join("\n");
           const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent(csv);a.download="movilidad_"+viewMonth+".csv";a.click();
         }}>Exportar CSV</button>
       </>)}
@@ -579,31 +581,35 @@ function MainApp({user,onLogout,userRole}){
 /* ── Inline new entry row component ── */
 function NewEntryRow({onAdd}){
   const[fecha,setFecha]=useState(new Date().toISOString().slice(0,10));
-  const[loc,setLoc]=useState("");
+  const[orig,setOrig]=useState("");
+  const[dest,setDest]=useState("");
+  const[ret,setRet]=useState("");
   const[marca,setMarca]=useState("");
   const[tarifa,setTarifa]=useState("");
 
   const handleSubmit=()=>{
-    if(!fecha||!loc||!marca||!tarifa){alert("Completa fecha, destino, marca y monto");return;}
-    onAdd(fecha,loc,marca,parseFloat(tarifa),"");
-    setLoc("");setMarca("");setTarifa("");
+    if(!fecha||!dest||!marca||!tarifa){alert("Completa fecha, destino, marca y monto");return;}
+    onAdd(fecha,orig||"Oficina",dest,ret||orig||"Oficina",marca,parseFloat(tarifa));
+    setOrig("");setDest("");setRet("");setMarca("");setTarifa("");
     setFecha(new Date().toISOString().slice(0,10));
   };
 
-  return(
+  return(<>
     <tr className="new-row">
       <td><input type="date" value={fecha} onChange={e=>setFecha(e.target.value)}/></td>
-      <td><input type="text" value={loc} onChange={e=>setLoc(e.target.value)} placeholder="Destino..."/></td>
+      <td><input type="text" value={orig} onChange={e=>setOrig(e.target.value)} placeholder="Punto de salida"/></td>
+      <td><input type="text" value={dest} onChange={e=>setDest(e.target.value)} placeholder="Punto de grabación"/></td>
+      <td><input type="text" value={ret} onChange={e=>setRet(e.target.value)} placeholder="Punto de retorno"/></td>
       <td>
         <select value={marca} onChange={e=>setMarca(e.target.value)}>
           <option value="">Marca...</option>
           {MARCAS.map(m=><option key={m} value={m}>{m}{m==="Agencia"?" (→ OH)":""}</option>)}
         </select>
       </td>
-      <td><input type="number" value={tarifa} onChange={e=>setTarifa(e.target.value)} placeholder="S/" min="1" style={{textAlign:"right"}}/></td>
+      <td><input type="number" value={tarifa} onChange={e=>setTarifa(e.target.value)} placeholder="S/" min="1" style={{textAlign:"right",width:80}}/></td>
       <td><button className="btn btn-dark btn-sm" onClick={handleSubmit} style={{padding:"6px 10px"}}>+</button></td>
     </tr>
-  );
+  </>);
 }
 
 /* ═══ FILMMAKER VIEW (limited) ═══ */
@@ -640,13 +646,15 @@ function FilmmakerView({user,onLogout}){
   const pendientes=monthViajes.filter(v=>(v.estado||"pendiente")==="pendiente");
   const totalAprobado=aprobados.reduce((s,v)=>s+parseFloat(v.tarifa||0),0);
 
-  const addEntry=async(fecha,locacion,marca,tarifa,nota)=>{
+  const addEntry=async(fecha,orig,dest,ret,marca,tarifa)=>{
     const sb=getSB();if(!sb)return;
     const{error}=await sb.from("movilidad").insert({
       user_email:userEmail,user_name:userName,fecha,
       hora:new Date().toTimeString().slice(0,5),
-      locacion,tarifa:parseFloat(tarifa),marca,
-      nota:nota||null,estado:"pendiente",origen:"manual",
+      salida:orig,destino:dest,retorno:ret,
+      tarifa:parseFloat(tarifa),marca,
+      estado:"pendiente",
+      origen:"manual",
       registrado_por:userEmail,mes:fecha.slice(0,7)
     });
     if(error)alert("Error: "+error.message);
@@ -688,28 +696,28 @@ function FilmmakerView({user,onLogout}){
         <div style={{fontWeight:800,fontSize:18,marginBottom:4}}>Registrar viaje</div>
         <div style={{fontSize:12,color:"#a1a1aa",marginBottom:14}}>Tus registros manuales quedan como pendientes hasta que el coordinador los apruebe.</div>
         <table className="entry-table">
-          <thead><tr><th style={{width:120}}>Fecha</th><th>Ubicación</th><th>Marca</th><th style={{width:100}} className="text-right">Tarifa</th><th style={{width:50}}></th></tr></thead>
+          <thead><tr><th style={{width:100}}>Fecha</th><th>Salida</th><th>Grabación</th><th>Retorno</th><th>Marca</th><th style={{width:80}} className="text-right">Monto</th><th style={{width:80}}>Estado</th><th style={{width:40}}></th></tr></thead>
           <tbody>
             {monthViajes.map(v=>(
               <tr key={v.id} className={v.marca==="Agencia"?"agencia-row":""}>
                 <td style={{fontSize:12}}>{v.fecha}</td>
-                <td>{v.locacion}</td>
+                <td style={{fontSize:12}}>{v.salida||"—"}</td>
+                <td style={{fontSize:12,fontWeight:600}}>{v.destino||v.locacion||"—"}</td>
+                <td style={{fontSize:12}}>{v.retorno||"—"}</td>
                 <td>
                   {v.marca==="Agencia"?<span className="badge b-agencia">Agencia</span>:<span className="badge" style={{background:"#f4f4f5",color:"#52525b"}}>{v.marca}</span>}
                 </td>
                 <td className="text-right" style={{fontWeight:700}}>{fmt(v.tarifa)}</td>
-                <td style={{display:"flex",gap:4,alignItems:"center"}}>
-                  <span className={`badge ${v.estado==="aprobado"?"b-ok":v.estado==="rechazado"?"b-rej":"b-pend"}`} style={{fontSize:9}}>{v.estado||"pendiente"}</span>
-                  {(v.estado||"pendiente")==="pendiente"&&<button className="del-btn" onClick={()=>deleteEntry(v.id)}>✕</button>}
-                </td>
+                <td><span className={`badge ${v.estado==="aprobado"?"b-ok":v.estado==="rechazado"?"b-rej":"b-pend"}`} style={{fontSize:9}}>{v.estado||"pendiente"}</span></td>
+                <td>{(v.estado||"pendiente")==="pendiente"&&<button className="del-btn" onClick={()=>deleteEntry(v.id)}>✕</button>}</td>
               </tr>
             ))}
             <NewEntryRow onAdd={addEntry}/>
           </tbody>
           {monthViajes.length>0&&<tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e4e4e7"}}>
-            <td colSpan={3}>Total</td>
+            <td colSpan={5}>Total</td>
             <td className="text-right">{fmt(monthViajes.reduce((s,v)=>s+parseFloat(v.tarifa||0),0))}</td>
-            <td></td>
+            <td colSpan={2}></td>
           </tr></tfoot>}
         </table>
       </div>
