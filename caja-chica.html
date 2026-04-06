@@ -11,61 +11,61 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#059669">
+<meta name="theme-color" content="#dc2626">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',system-ui,sans-serif;background:#f8fafc;color:#1e293b;-webkit-text-size-adjust:100%}
+body{font-family:'Inter',system-ui,sans-serif;background:#fafafa;color:#18181b;-webkit-text-size-adjust:100%}
 .screen{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
-.top-bar{background:#059669;color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.top-bar{background:#dc2626;color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
 .top-bar h1{font-size:17px;font-weight:700}
 .top-bar .user-info{font-size:11px;opacity:.85}
 .top-bar button{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit}
 .content{flex:1;padding:16px;max-width:480px;margin:0 auto;width:100%}
-.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid #e2e8f0}
-.card h3{font-size:15px;font-weight:700;margin-bottom:12px;color:#059669}
-label{display:block;font-size:12px;font-weight:500;color:#64748b;margin-bottom:4px}
-input,select,textarea{width:100%;padding:12px 14px;border:1px solid #e2e8f0;border-radius:10px;font-size:16px;font-family:inherit;color:#1e293b;background:#fff;-webkit-appearance:none;appearance:none}
-input:focus,select:focus,textarea:focus{outline:none;border-color:#059669;box-shadow:0 0 0 3px rgba(5,150,105,.12)}
+.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid #e4e4e7}
+.card h3{font-size:15px;font-weight:700;margin-bottom:12px;color:#dc2626}
+label{display:block;font-size:12px;font-weight:500;color:#71717a;margin-bottom:4px}
+input,select,textarea{width:100%;padding:12px 14px;border:1px solid #e4e4e7;border-radius:10px;font-size:16px;font-family:inherit;color:#18181b;background:#fff;-webkit-appearance:none;appearance:none}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.08)}
 textarea{resize:vertical;min-height:60px}
 .field{margin-bottom:14px}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .btn{width:100%;padding:14px;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
-.btn-primary{background:#059669;color:#fff}.btn-primary:hover{background:#047857}.btn-primary:disabled{opacity:.5}
-.btn-secondary{background:#f1f5f9;color:#475569}.btn-secondary:hover{background:#e2e8f0}
-.btn-google{background:#fff;color:#1e293b;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-primary{background:#dc2626;color:#fff}.btn-primary:hover{background:#b91c1c}.btn-primary:disabled{opacity:.5}
+.btn-secondary{background:#f4f4f5;color:#52525b}.btn-secondary:hover{background:#e4e4e7}
+.btn-google{background:#fff;color:#18181b;border:1px solid #e4e4e7;display:flex;align-items:center;justify-content:center;gap:10px}
 .btn-sm{padding:10px 14px;font-size:13px;width:auto;display:inline-block}
-.photo-zone{border:2px dashed #d1d5db;border-radius:12px;padding:20px;text-align:center;cursor:pointer;color:#94a3b8;font-size:13px;transition:all .15s;position:relative;overflow:hidden}
-.photo-zone:hover,.photo-zone.drag{border-color:#059669;background:#f0fdf4;color:#059669}
+.photo-zone{border:2px dashed #d4d4d8;border-radius:12px;padding:20px;text-align:center;cursor:pointer;color:#a1a1aa;font-size:13px;transition:all .15s;position:relative;overflow:hidden}
+.photo-zone:hover,.photo-zone.drag{border-color:#dc2626;background:#f4f4f5;color:#dc2626}
 .photo-zone img{max-width:100%;max-height:200px;border-radius:8px;object-fit:contain}
 .photo-zone input{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer}
-.expense-item{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px solid #f1f5f9}
+.expense-item{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px solid #f4f4f5}
 .expense-item:last-child{border-bottom:none}
 .expense-left{flex:1;min-width:0}
 .expense-name{font-weight:600;font-size:14px}
-.expense-meta{font-size:12px;color:#94a3b8;margin-top:2px}
+.expense-meta{font-size:12px;color:#a1a1aa;margin-top:2px}
 .expense-amount{font-weight:700;font-size:15px;white-space:nowrap;margin-left:12px}
 .expense-thumb{width:40px;height:40px;border-radius:6px;object-fit:cover;margin-left:8px;cursor:pointer}
-.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;background:#f1f5f9;color:#64748b}
-.tabs{display:flex;background:#f1f5f9;border-radius:10px;padding:3px;margin-bottom:16px}
-.tab{flex:1;padding:10px;border:none;border-radius:8px;background:transparent;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;color:#64748b;text-align:center}
-.tab.active{background:#fff;color:#1e293b;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;background:#f4f4f5;color:#71717a}
+.tabs{display:flex;background:#f4f4f5;border-radius:10px;padding:3px;margin-bottom:16px}
+.tab{flex:1;padding:10px;border:none;border-radius:8px;background:transparent;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;color:#71717a;text-align:center}
+.tab.active{background:#fff;color:#18181b;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .msg{padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px;text-align:center}
-.msg-ok{background:#ecfdf5;color:#059669}.msg-err{background:#fff1f2;color:#e11d48}
+.msg-ok{background:#fafafa;color:#dc2626}.msg-err{background:#fff1f2;color:#e11d48}
 .balance-card{border-radius:14px;padding:20px;margin-bottom:14px;text-align:center}
-.balance-ok{background:linear-gradient(135deg,#ecfdf5,#f0fdf4);border:2px solid #a7f3d0}
-.balance-low{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid #fde68a}
+.balance-ok{background:linear-gradient(135deg,#fafafa,#f4f4f5);border:2px solid #e4e4e7}
+.balance-low{background:linear-gradient(135deg,#fafafa,#f4f4f5);border:2px solid #d4d4d8}
 .balance-zero{background:linear-gradient(135deg,#fff1f2,#ffe4e6);border:2px solid #fecdd3}
-.balance-label{font-size:12px;color:#64748b;margin-bottom:4px}
+.balance-label{font-size:12px;color:#71717a;margin-bottom:4px}
 .balance-value{font-size:28px;font-weight:700}
-.balance-sub{font-size:12px;color:#94a3b8;margin-top:6px}
+.balance-sub{font-size:12px;color:#a1a1aa;margin-top:6px}
 .summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:13px}
-.del-btn{background:none;border:none;color:#cbd5e1;font-size:16px;cursor:pointer;padding:4px}.del-btn:hover{color:#e11d48}
+.del-btn{background:none;border:none;color:#d4d4d8;font-size:16px;cursor:pointer;padding:4px}.del-btn:hover{color:#e11d48}
 .lightbox{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
 .lightbox img{max-width:100%;max-height:90vh;border-radius:8px;object-fit:contain}
 .lightbox button{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:24px;width:40px;height:40px;border-radius:50%;cursor:pointer}
-.login-screen{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:#f8fafc;padding:20px}
+.login-screen{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:#fafafa;padding:20px}
 .login-box{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
-.asig-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px}
+.asig-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f4f4f5;font-size:13px}
 .asig-item:last-child{border-bottom:none}
 </style>
 </head>
@@ -224,7 +224,7 @@ function CajaChicaApp({user,onLogout}){
   };
 
   const balanceClass=myBalance.saldo<=0?"balance-zero":myBalance.saldo<100?"balance-low":"balance-ok";
-  const balanceColor=myBalance.saldo<=0?"#e11d48":myBalance.saldo<100?"#d97706":"#059669";
+  const balanceColor=myBalance.saldo<=0?"#e11d48":myBalance.saldo<100?"#71717a":"#dc2626";
 
   return(
     <div className="screen">
@@ -258,7 +258,7 @@ function CajaChicaApp({user,onLogout}){
         {/* TAB: Nuevo Gasto */}
         {tab==="mi_saldo"&&(
           myBalance.saldo<=0?(
-            <div className="card" style={{textAlign:"center",color:"#94a3b8"}}>
+            <div className="card" style={{textAlign:"center",color:"#a1a1aa"}}>
               <div style={{fontSize:28,marginBottom:8}}>💰</div>
               <div style={{fontWeight:600,color:"#e11d48",marginBottom:4}}>Sin saldo</div>
               <div style={{fontSize:13}}>Pide que te asignen caja chica para poder registrar gastos.</div>
@@ -309,8 +309,8 @@ function CajaChicaApp({user,onLogout}){
         {/* TAB: Mis Gastos */}
         {tab==="historial"&&(
           <div>
-            {loading?<div style={{textAlign:"center",padding:20,color:"#94a3b8"}}>Cargando...</div>:
-            myGastos.length===0?<div className="card" style={{textAlign:"center",color:"#94a3b8"}}><div style={{fontSize:28,marginBottom:8}}>📋</div><p>No tienes gastos registrados</p></div>:(
+            {loading?<div style={{textAlign:"center",padding:20,color:"#a1a1aa"}}>Cargando...</div>:
+            myGastos.length===0?<div className="card" style={{textAlign:"center",color:"#a1a1aa"}}><div style={{fontSize:28,marginBottom:8}}>📋</div><p>No tienes gastos registrados</p></div>:(
               <div className="card" style={{padding:8}}>
                 {myGastos.map(g=>(
                   <div className="expense-item" key={g.id}>
@@ -331,14 +331,14 @@ function CajaChicaApp({user,onLogout}){
             {/* My assignments */}
             {asignaciones.filter(a=>a.persona_email===user.email).length>0&&(
               <div className="card" style={{marginTop:8}}>
-                <h3 style={{fontSize:13,color:"#64748b"}}>Mis asignaciones recibidas</h3>
+                <h3 style={{fontSize:13,color:"#71717a"}}>Mis asignaciones recibidas</h3>
                 {asignaciones.filter(a=>a.persona_email===user.email).map(a=>(
                   <div className="asig-item" key={a.id}>
                     <div>
-                      <div style={{fontWeight:600,color:"#059669"}}>+{fmt(a.monto)}</div>
-                      <div style={{fontSize:11,color:"#94a3b8"}}>{a.nota} · por {nameFromEmail(a.asignado_por)}</div>
+                      <div style={{fontWeight:600,color:"#dc2626"}}>+{fmt(a.monto)}</div>
+                      <div style={{fontSize:11,color:"#a1a1aa"}}>{a.nota} · por {nameFromEmail(a.asignado_por)}</div>
                     </div>
-                    <div style={{fontSize:11,color:"#94a3b8"}}>{new Date(a.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}</div>
+                    <div style={{fontSize:11,color:"#a1a1aa"}}>{new Date(a.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}</div>
                   </div>
                 ))}
               </div>
@@ -351,7 +351,7 @@ function CajaChicaApp({user,onLogout}){
           <form onSubmit={handleAsignar}>
             <div className="card">
               <h3>Asignar Caja Chica</h3>
-              <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>Dale fondos a alguien del equipo para sus gastos.</div>
+              <div style={{fontSize:12,color:"#71717a",marginBottom:12}}>Dale fondos a alguien del equipo para sus gastos.</div>
               <div className="field">
                 <label>Persona</label>
                 <select value={asigPersona} onChange={e=>setAsigPersona(e.target.value)} required>
@@ -382,34 +382,34 @@ function CajaChicaApp({user,onLogout}){
             {PERSONAS.map(p=>{
               const b=balances[p]||{asignado:0,gastado:0,saldo:0};
               const bc=b.saldo<=0?"balance-zero":b.saldo<100?"balance-low":"balance-ok";
-              const color=b.saldo<=0?"#e11d48":b.saldo<100?"#d97706":"#059669";
+              const color=b.saldo<=0?"#e11d48":b.saldo<100?"#71717a":"#dc2626";
               const pGastos=gastos.filter(g=>g.user_email===p).slice(0,5);
               return(
                 <div key={p} className="card">
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                     <div>
                       <div style={{fontWeight:700,fontSize:15}}>{nameFromEmail(p)}</div>
-                      <div style={{fontSize:11,color:"#94a3b8"}}>{p}</div>
+                      <div style={{fontSize:11,color:"#a1a1aa"}}>{p}</div>
                     </div>
                     <div style={{textAlign:"right"}}>
                       <div style={{fontSize:20,fontWeight:700,color}}>{fmt(b.saldo)}</div>
-                      <div style={{fontSize:10,color:"#94a3b8"}}>de {fmt(b.asignado)}</div>
+                      <div style={{fontSize:10,color:"#a1a1aa"}}>de {fmt(b.asignado)}</div>
                     </div>
                   </div>
                   {/* Progress bar */}
-                  <div style={{background:"#f1f5f9",borderRadius:6,height:6,marginBottom:8,overflow:"hidden"}}>
+                  <div style={{background:"#f4f4f5",borderRadius:6,height:6,marginBottom:8,overflow:"hidden"}}>
                     <div style={{background:color,height:"100%",width:`${b.asignado>0?Math.min((b.gastado/b.asignado)*100,100):0}%`,borderRadius:6,transition:"width .3s"}}/>
                   </div>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#94a3b8"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#a1a1aa"}}>
                     <span>Gastado: {fmt(b.gastado)}</span>
                     <span>Disponible: {fmt(b.saldo)}</span>
                   </div>
                   {pGastos.length>0&&(
-                    <div style={{marginTop:8,borderTop:"1px solid #f1f5f9",paddingTop:8}}>
-                      <div style={{fontSize:11,fontWeight:600,color:"#94a3b8",marginBottom:4}}>Últimos gastos</div>
+                    <div style={{marginTop:8,borderTop:"1px solid #f4f4f5",paddingTop:8}}>
+                      <div style={{fontSize:11,fontWeight:600,color:"#a1a1aa",marginBottom:4}}>Últimos gastos</div>
                       {pGastos.map(g=>(
                         <div key={g.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}>
-                          <span style={{color:"#64748b"}}>{g.concepto}</span>
+                          <span style={{color:"#71717a"}}>{g.concepto}</span>
                           <span style={{fontWeight:600,color:"#e11d48"}}>{fmt(g.monto)}</span>
                         </div>
                       ))}
@@ -469,14 +469,14 @@ function AuthWrapper(){
   const handleLogout=async()=>{const sb=getSB();if(sb)await sb.auth.signOut();setUser(null);};
 
   if(loading)return(<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",fontFamily:"Inter,sans-serif"}}>
-    <div style={{textAlign:"center"}}><div style={{fontSize:24,fontWeight:700,color:"#059669"}}>Caja Chica</div><div style={{color:"#94a3b8"}}>Cargando...</div></div>
+    <div style={{textAlign:"center"}}><div style={{fontSize:24,fontWeight:700,color:"#dc2626"}}>Caja Chica</div><div style={{color:"#a1a1aa"}}>Cargando...</div></div>
   </div>);
 
   if(!hasConfig||showSetup)return(
     <div className="login-screen"><div className="login-box">
       <div style={{textAlign:"center",marginBottom:20}}>
-        <div style={{fontSize:24,fontWeight:700,color:"#059669",marginBottom:4}}>NotOffice Caja Chica</div>
-        <div style={{fontSize:13,color:"#94a3b8"}}>Configurar conexión</div>
+        <div style={{fontSize:24,fontWeight:700,color:"#dc2626",marginBottom:4}}>NotOffice Caja Chica</div>
+        <div style={{fontSize:13,color:"#a1a1aa"}}>Configurar conexión</div>
       </div>
       <SupabaseSetupMini onDone={()=>location.reload()}/>
     </div></div>
@@ -485,22 +485,22 @@ function AuthWrapper(){
   if(!user)return(
     <div className="login-screen"><div className="login-box">
       <div style={{textAlign:"center",marginBottom:20}}>
-        <div style={{fontSize:24,fontWeight:700,color:"#059669",marginBottom:4}}>NotOffice Caja Chica</div>
-        <div style={{fontSize:13,color:"#94a3b8"}}>Registra tus gastos desde el celular</div>
+        <div style={{fontSize:24,fontWeight:700,color:"#dc2626",marginBottom:4}}>NotOffice Caja Chica</div>
+        <div style={{fontSize:13,color:"#a1a1aa"}}>Registra tus gastos desde el celular</div>
       </div>
       {error&&<div className="msg msg-err">{error}</div>}
       <button onClick={handleGoogleLogin} className="btn btn-google" style={{marginBottom:12}}>
         <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
         Ingresar con Google
       </button>
-      <div style={{display:"flex",alignItems:"center",gap:12,margin:"8px 0"}}><div style={{flex:1,height:1,background:"#e2e8f0"}}/><span style={{fontSize:12,color:"#94a3b8"}}>o</span><div style={{flex:1,height:1,background:"#e2e8f0"}}/></div>
+      <div style={{display:"flex",alignItems:"center",gap:12,margin:"8px 0"}}><div style={{flex:1,height:1,background:"#e4e4e7"}}/><span style={{fontSize:12,color:"#a1a1aa"}}>o</span><div style={{flex:1,height:1,background:"#e4e4e7"}}/></div>
       <form onSubmit={handleLogin}>
         <div className="field"><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" required/></div>
         <div className="field"><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Contraseña" required minLength={6}/></div>
         <button type="submit" className="btn btn-primary">Ingresar</button>
       </form>
       <div style={{textAlign:"center",marginTop:8}}>
-        <button onClick={()=>setShowSetup(true)} style={{background:"none",border:"none",color:"#94a3b8",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Cambiar configuración</button>
+        <button onClick={()=>setShowSetup(true)} style={{background:"none",border:"none",color:"#a1a1aa",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Cambiar configuración</button>
       </div>
     </div></div>
   );
