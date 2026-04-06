@@ -102,7 +102,16 @@ const{useState,useMemo,useEffect,useRef}=React;
 const fmt=n=>"S/ "+Math.round(n).toLocaleString("es-PE");
 const pct=(a,b)=>b>0?((a/b)*100).toFixed(1):"0.0";
 const ML=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-const MONTHS=ML.map((_,i)=>{const m=String(i+1).padStart(2,"0");return{value:`2026-${m}`,label:`${ML[i]} 2026`}});
+const START_YEAR=2026;
+const NOW=new Date();const CUR_YEAR=NOW.getFullYear();const CUR_MONTH=NOW.getMonth()+1;
+/* Generate months from Jan 2026 to Dec of current year (or 2026 if before 2026) */
+const END_YEAR=Math.max(CUR_YEAR,START_YEAR);
+const ALL_MONTHS=(()=>{const arr=[];for(let y=START_YEAR;y<=END_YEAR;y++){for(let m=1;m<=12;m++){const ms=String(m).padStart(2,"0");arr.push({value:`${y}-${ms}`,label:`${ML[m-1]} ${y}`,year:y});}}return arr;})();
+const YEARS=(()=>{const ys=[];for(let y=START_YEAR;y<=END_YEAR;y++)ys.push(y);return ys;})();
+/* MONTHS = filtered by selected year (set dynamically in App) — fallback to all for init */
+let MONTHS=ALL_MONTHS;
+const getYearMonths=(y)=>ALL_MONTHS.filter(m=>m.year===y);
+const DEFAULT_VM=`${Math.max(CUR_YEAR,START_YEAR)}-${String(Math.min(Math.max(CUR_YEAR>=START_YEAR?CUR_MONTH:1,1),12)).padStart(2,"0")}`;
 
 /* ── CSS bar chart ── */
 function SimpleBar({data,keys,colors}){
@@ -266,8 +275,10 @@ const initFees=()=>{
     4:[{id:4,name:"Pauta Digital",amount:5000},{id:5,name:"Producción Video",amount:3000}],
     5:[{id:6,name:"SEO mensual",amount:1500}],
   };
-  MONTHS.forEach(({value:m})=>{f[m]={};INIT_CLIENTS.forEach(c=>{
-    f[m][c.id]={base:c.fee,services:(demoSvc[c.id]||[]).map(s=>({...s}))};
+  ALL_MONTHS.forEach(({value:m})=>{f[m]={};INIT_CLIENTS.forEach(c=>{
+    /* Demo services only for first year */
+    const isFirstYear=m.startsWith(String(START_YEAR));
+    f[m][c.id]={base:c.fee,services:isFirstYear?(demoSvc[c.id]||[]).map(s=>({...s,id:s.id+Math.random()})):[]};
   });});return f;
 };
 
@@ -284,7 +295,11 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[initialLoaded,setInitialLoaded]=useState(false);
   const saved=useRef(loadStateLocal()).current;
   const[page,setPage]=useState("recurrentes");
-  const[vm,setVm]=useState("2026-04");
+  const[vm,setVm]=useState(DEFAULT_VM);
+  const selYear=parseInt(vm.split("-")[0]);
+  const yearMonths=getYearMonths(selYear);
+  /* Override global MONTHS for calculations in this render */
+  MONTHS=yearMonths;
   const[selClient,setSelClient]=useState(null);
   const[showForm,setShowForm]=useState(null);
   const[statusFilter,setStatusFilter]=useState("");
@@ -509,7 +524,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
       const hasData=invoices.some(i=>i.month===m)||projects.some(p=>p.month===m)||vr>0||iv>0||fees>0;
       return{month:label.split(" ")[0],m:m,fees,sExp,sProfit:fees-sExp,pProfit:pR-pC,total:(fees-sExp)+(pR-pC),income:fees+pR,pCost:pC,hasData,snapped:!!snap};
     });
-  },[clients,team,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,invoices,clientFees,monthSnapshots]);
+  },[clients,team,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,invoices,clientFees,monthSnapshots,vm]);
 
   const filtInv=useMemo(()=>{
     let list=invoices.filter(i=>i.month===vm&&i.type===facturaTab);
@@ -539,8 +554,11 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           <div style={{display:"flex",alignItems:"center",gap:16}}>
             {saveMsg&&<span style={{fontSize:11,color:"#fff",fontWeight:600,background:"#18181b",padding:"5px 14px",borderRadius:20}}>{saveMsg}</span>}
             <button className="btn btn-sm btn-gray" title="Cerrar mes: guarda snapshot de planilla y gastos actuales para este mes" onClick={()=>{takeSnapshot();setSaveMsg("Mes cerrado ✓");setTimeout(()=>setSaveMsg(""),3000);}}>Cerrar {ML[parseInt(vm.split("-")[1])-1]}</button>
+            {YEARS.length>1&&<select className="msel" value={selYear} onChange={e=>{const y=parseInt(e.target.value);setVm(`${y}-${vm.split("-")[1]}`);}}>
+              {YEARS.map(y=><option key={y} value={y}>{y}</option>)}
+            </select>}
             <select className="msel" value={vm} onChange={e=>setVm(e.target.value)}>
-              {MONTHS.map(m=><option key={m.value} value={m.value}>{m.label}</option>)}
+              {yearMonths.map(m=><option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
             <div className="user-bar">
               <span style={{width:7,height:7,borderRadius:"50%",background:cloudMode?"#dc2626":"#d4d4d8",marginRight:2}} title={cloudMode?"Conectado a la nube":"Modo local"}/>
@@ -597,8 +615,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               if(!fee||fee<=0){alert("El fee debe ser mayor a S/ 0.");return;}
               if(clients.some(c=>c.name.toLowerCase()===nm.toLowerCase())){alert("Ya existe un cliente con ese nombre.");return;}
               const nid=Date.now();setClients(p=>[...p,{id:nid,name:nm,fee}]);
-                setClientFees(prev=>{const nf={...prev};MONTHS.forEach(({value:m})=>{
-                  const mIdx=MONTHS.findIndex(x=>x.value===m);const vmIdx=MONTHS.findIndex(x=>x.value===vm);
+                setClientFees(prev=>{const nf={...prev};ALL_MONTHS.forEach(({value:m})=>{
+                  const mIdx=ALL_MONTHS.findIndex(x=>x.value===m);const vmIdx=ALL_MONTHS.findIndex(x=>x.value===vm);
                   nf[m]={...nf[m],[nid]:{base:mIdx>=vmIdx?fee:0,services:[]}};
                 });return nf;});
                 setShowForm(null);
@@ -1102,7 +1120,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           <div className="card" style={{marginBottom:16,display:"flex",alignItems:"center",gap:12}}>
             <label style={{fontSize:12,fontWeight:600,color:"#52525b",whiteSpace:"nowrap"}}>Mes base de simulación</label>
             <select value={simMonth} onChange={e=>setSimMonth(e.target.value)} style={{flex:1,maxWidth:200}}>
-              {MONTHS.map(m=><option key={m.value} value={m.value}>{m.label}</option>)}
+              {ALL_MONTHS.map(m=><option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
             <span style={{fontSize:11,color:"#a1a1aa"}}>Fees y gastos se toman de este mes</span>
           </div>
@@ -1643,7 +1661,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             <div className="form-card"><h4 style={{color:"#18181b"}}>Nuevo Cliente</h4>
               <form onSubmit={e=>{e.preventDefault();const f=new FormData(e.target);const nm=f.get("n");const fee=parseInt(f.get("f"));
                 if(nm&&fee){const nid=Date.now();setClients(p=>[...p,{id:nid,name:nm,fee}]);
-                  setClientFees(prev=>{const nf={...prev};MONTHS.forEach(({value:m})=>{nf[m]={...nf[m],[nid]:{base:fee,services:[]}};});return nf;});
+                  setClientFees(prev=>{const nf={...prev};ALL_MONTHS.forEach(({value:m})=>{nf[m]={...nf[m],[nid]:{base:fee,services:[]}};});return nf;});
                   setShowForm(null);}
               }}>
                 <div className="form-row">
@@ -1667,7 +1685,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                   <td className="text-right tr">{fmt(cTeamCost)}</td>
                   <td className="text-center">{nAssigns}</td>
                   <td><button className="del-btn" onClick={()=>{if(confirm("¿Eliminar "+c.name+"?")){setClients(clients.filter(x=>x.id!==c.id));
-                    setClientFees(prev=>{const nf={...prev};MONTHS.forEach(({value:m})=>{nf[m]={...nf[m]};delete nf[m][c.id];});return nf;});}}}>✕</button></td>
+                    setClientFees(prev=>{const nf={...prev};ALL_MONTHS.forEach(({value:m})=>{nf[m]={...nf[m]};delete nf[m][c.id];});return nf;});}}}>✕</button></td>
                 </tr>);
               })}</tbody>
               <tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e4e4e7"}}>
