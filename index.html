@@ -288,7 +288,8 @@ const loadStateCloud=async()=>{
 const saveStateCloud=async(state,email)=>{
   const sb=getSB();if(!sb)return false;
   try{const{error}=await sb.from("app_state").upsert({id:"main",data:state,updated_at:new Date().toISOString(),updated_by:email||"unknown"});
-    return!error;}catch(e){console.warn("Cloud save failed:",e);return false;}
+    if(error)console.error("Cloud save error:",error.message,error.details,error.hint);
+    return!error;}catch(e){console.error("Cloud save exception:",e);return false;}
 };
 
 const initFees=()=>{
