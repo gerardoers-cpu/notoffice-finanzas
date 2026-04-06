@@ -350,8 +350,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     if(!newPersonaEmail.trim()){alert("Ingresa un email");return;}
     const sb=getSB();if(!sb)return;
     const nombre=newPersonaNombre.trim()||nameFromEmail(newPersonaEmail.trim());
-    const{error}=await sb.from("caja_chica_personas").insert({email:newPersonaEmail.trim().toLowerCase(),nombre,created_by:userEmail});
-    if(error){if(error.code==="23505")alert("Esta persona ya existe");else alert("Error: "+error.message);return;}
+    const{error}=await sb.from("caja_chica_personas").upsert({email:newPersonaEmail.trim().toLowerCase(),nombre,activo:true,created_by:userEmail},{onConflict:"email"});
+    if(error){alert("Error: "+error.message);return;}
     setNewPersonaEmail("");setNewPersonaNombre("");setShowAddPersona(false);loadCajaChica(vm);setSaveMsg("Persona agregada");setTimeout(()=>setSaveMsg(""),3000);
   };
   const handleRemovePersona=async(id,email)=>{
