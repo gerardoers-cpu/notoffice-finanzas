@@ -261,6 +261,20 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[statusFilter,setStatusFilter]=useState("");
   const[facturaTab,setFacturaTab]=useState("recurrente");
   const[gastoTab,setGastoTab]=useState("fijos");
+  const[showAsignarCaja,setShowAsignarCaja]=useState(false);
+  const[asigPersona,setAsigPersona]=useState("");
+  const[asigMonto,setAsigMonto]=useState("");
+  const[asigNota,setAsigNota]=useState("");
+  const handleAsignarCaja=async()=>{
+    if(!asigPersona||!asigMonto||parseFloat(asigMonto)<=0){alert("Selecciona persona y monto");return;}
+    const sb=getSB();if(!sb){alert("Sin conexión a Supabase");return;}
+    const{error}=await sb.from("caja_chica_asignaciones").insert({
+      persona_email:asigPersona,persona_name:asigPersona.split("@")[0].replace(/\./g," ").replace(/\b\w/g,c=>c.toUpperCase()),
+      monto:parseFloat(asigMonto),nota:asigNota.trim()||"Asignación de caja chica",asignado_por:userEmail
+    });
+    if(error)alert("Error: "+error.message);
+    else{setAsigMonto("");setAsigNota("");setAsigPersona("");setShowAsignarCaja(false);loadCajaChica(vm);setSaveMsg("Caja chica asignada");setTimeout(()=>setSaveMsg(""),3000);}
+  };
   const[saveMsg,setSaveMsg]=useState("");
 
   const[clients,setClients]=useState(saved?.clients||INIT_CLIENTS);
@@ -828,6 +842,24 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                   </div>);
                 })}
               </div>
+              {/* Asignar caja chica */}
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                <button className="btn btn-sm btn-green" onClick={()=>setShowAsignarCaja(!showAsignarCaja)}>{showAsignarCaja?"Cancelar":"+ Asignar Caja Chica"}</button>
+              </div>
+              {showAsignarCaja&&(
+                <div className="form-card" style={{marginBottom:12}}>
+                  <h4>Asignar fondos de caja chica</h4>
+                  <div className="form-row">
+                    <select value={asigPersona} onChange={e=>setAsigPersona(e.target.value)} style={{minWidth:160}}>
+                      <option value="">Seleccionar persona...</option>
+                      {CAJA_PERSONAS.map(p=><option key={p} value={p}>{nameFromEmail(p)} — Saldo: {fmt((cajaBalances[p]||{}).saldo||0)}</option>)}
+                    </select>
+                    <input type="number" value={asigMonto} onChange={e=>setAsigMonto(e.target.value)} placeholder="Monto S/" min="1" step="0.01"/>
+                    <input value={asigNota} onChange={e=>setAsigNota(e.target.value)} placeholder="Nota (opcional)"/>
+                    <button className="btn btn-sm btn-green" onClick={handleAsignarCaja}>Asignar</button>
+                  </div>
+                </div>
+              )}
               <div className="sl">GASTOS REGISTRADOS DESDE APP MÓVIL — {vm}</div>
               {loadingCaja?<div style={{textAlign:"center",padding:12,color:"#94a3b8"}}>Cargando...</div>:
               cajaChica.length===0?<div style={{textAlign:"center",padding:12,color:"#94a3b8",fontSize:12}}>Sin gastos de app móvil este mes</div>:(
@@ -1990,6 +2022,9 @@ function SupabaseSetup({onDone}){
 }
 
 ReactDOM.render(<AuthWrapper/>,document.getElementById("root"));
+</script>
+</body>
+</html>
 </script>
 </body>
 </html>
