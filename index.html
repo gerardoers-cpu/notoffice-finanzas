@@ -512,7 +512,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
       if(cloudMode){
         saveStateCloud(state,userEmail).then(ok=>{
           setSaveMsg(ok?"Guardado en la nube":"Guardado local (nube falló)");
-          setTimeout(()=>setSaveMsg(""),2500);
+          setTimeout(()=>setSaveMsg(""),4000);
         });
       }else{
         setSaveMsg("Guardado");setTimeout(()=>setSaveMsg(""),2000);
@@ -653,7 +653,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
         <div className="header">
           <h1>{pageLabel}</h1>
           <div style={{display:"flex",alignItems:"center",gap:16}}>
-            {saveMsg&&<span style={{fontSize:11,color:"#fff",fontWeight:600,background:"#18181b",padding:"5px 14px",borderRadius:20}}>{saveMsg}</span>}
+            {saveMsg&&<span style={{fontSize:11,color:"#fff",fontWeight:600,background:saveMsg.includes("nube")?"#059669":"#18181b",padding:"6px 16px",borderRadius:20,animation:"fadeIn .2s",whiteSpace:"nowrap"}}>{saveMsg.includes("nube")?"☁️ ":""}{saveMsg}</span>}
             <button className="btn btn-sm btn-gray" title="Cerrar mes: guarda snapshot de planilla y gastos actuales para este mes" onClick={()=>{takeSnapshot();setSaveMsg("Mes cerrado ✓");setTimeout(()=>setSaveMsg(""),3000);}}>Cerrar {ML[parseInt(vm.split("-")[1])-1]}</button>
             <div style={{display:"flex",alignItems:"center",gap:4,background:"#f4f4f5",borderRadius:10,padding:3}}>
               {YEARS.map(y=>(
