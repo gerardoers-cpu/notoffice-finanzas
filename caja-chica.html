@@ -8,65 +8,123 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#dc2626">
+<meta name="theme-color" content="#fafafa">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Inter',system-ui,sans-serif;background:#fafafa;color:#18181b;-webkit-text-size-adjust:100%}
-.screen{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
-.top-bar{background:#dc2626;color:#fff;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
-.top-bar h1{font-size:17px;font-weight:700}
-.top-bar .user-info{font-size:11px;opacity:.85}
-.top-bar button{background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit}
-.content{flex:1;padding:16px;max-width:480px;margin:0 auto;width:100%}
-.card{background:#fff;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid #e4e4e7}
-.card h3{font-size:15px;font-weight:700;margin-bottom:12px;color:#dc2626}
-label{display:block;font-size:12px;font-weight:500;color:#71717a;margin-bottom:4px}
-input,select,textarea{width:100%;padding:12px 14px;border:1px solid #e4e4e7;border-radius:10px;font-size:16px;font-family:inherit;color:#18181b;background:#fff;-webkit-appearance:none;appearance:none}
-input:focus,select:focus,textarea:focus{outline:none;border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.08)}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#fafafa;color:#18181b;-webkit-text-size-adjust:100%;overflow-x:hidden}
+.screen{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;padding-bottom:80px}
+
+/* ── Top Bar: clean, no color ── */
+.top-bar{padding:20px 24px 16px;display:flex;align-items:flex-start;justify-content:space-between;background:#fafafa;position:sticky;top:0;z-index:10}
+.top-bar h1{font-size:28px;font-weight:800;color:#18181b;letter-spacing:-.5px;line-height:1.1}
+.top-bar .user-info{font-size:11px;color:#a1a1aa;margin-top:4px;font-weight:400}
+.top-bar .logout-btn{background:#18181b;border:none;color:#fff;padding:8px 16px;border-radius:20px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;letter-spacing:.3px}
+
+/* ── Content area ── */
+.content{flex:1;padding:0 20px 20px;max-width:480px;margin:0 auto;width:100%}
+
+/* ── Balance Hero Card ── */
+.balance-hero{background:#18181b;border-radius:24px;padding:32px 28px;margin-bottom:24px;text-align:center;position:relative;overflow:hidden}
+.balance-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.03)}
+.balance-hero::after{content:'';position:absolute;bottom:-20px;left:-20px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.02)}
+.balance-hero .label{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:rgba(255,255,255,.45);font-weight:600;margin-bottom:12px}
+.balance-hero .value{font-size:42px;font-weight:800;color:#fff;letter-spacing:-1.5px;line-height:1}
+.balance-hero .value.zero{color:#dc2626}
+.balance-hero .sub{display:flex;justify-content:center;gap:24px;margin-top:16px;font-size:12px;color:rgba(255,255,255,.5)}
+.balance-hero .sub span{display:flex;flex-direction:column;gap:2px}
+.balance-hero .sub .num{color:rgba(255,255,255,.8);font-weight:600}
+
+/* ── Bottom Pill Nav ── */
+.pill-nav{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#18181b;border-radius:50px;padding:5px;display:flex;gap:3px;z-index:20;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.pill-nav button{padding:11px 18px;border:none;border-radius:50px;background:transparent;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;color:rgba(255,255,255,.45);transition:all .2s;white-space:nowrap}
+.pill-nav button.active{background:#fff;color:#18181b}
+
+/* ── Cards ── */
+.card{background:#fff;border-radius:20px;padding:24px;margin-bottom:16px;border:1px solid #f0f0f0}
+.card h3{font-size:18px;font-weight:700;margin-bottom:16px;color:#18181b;letter-spacing:-.3px}
+
+/* ── Form Elements ── */
+label{display:block;font-size:11px;font-weight:600;color:#a1a1aa;margin-bottom:6px;text-transform:uppercase;letter-spacing:.8px}
+input,select,textarea{width:100%;padding:14px 16px;border:1.5px solid #e4e4e7;border-radius:14px;font-size:16px;font-family:inherit;color:#18181b;background:#fff;-webkit-appearance:none;appearance:none;transition:all .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#18181b;box-shadow:none}
 textarea{resize:vertical;min-height:60px}
-.field{margin-bottom:14px}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.btn{width:100%;padding:14px;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
-.btn-primary{background:#dc2626;color:#fff}.btn-primary:hover{background:#b91c1c}.btn-primary:disabled{opacity:.5}
+.field{margin-bottom:16px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── Buttons ── */
+.btn{width:100%;padding:16px;border:none;border-radius:16px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:-.2px}
+.btn-primary{background:#18181b;color:#fff}.btn-primary:hover{background:#27272a}.btn-primary:disabled{opacity:.35}
 .btn-secondary{background:#f4f4f5;color:#52525b}.btn-secondary:hover{background:#e4e4e7}
-.btn-google{background:#fff;color:#18181b;border:1px solid #e4e4e7;display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-google{background:#fff;color:#18181b;border:1.5px solid #e4e4e7;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600}
 .btn-sm{padding:10px 14px;font-size:13px;width:auto;display:inline-block}
-.photo-zone{border:2px dashed #d4d4d8;border-radius:12px;padding:20px;text-align:center;cursor:pointer;color:#a1a1aa;font-size:13px;transition:all .15s;position:relative;overflow:hidden}
-.photo-zone:hover,.photo-zone.drag{border-color:#dc2626;background:#f4f4f5;color:#dc2626}
-.photo-zone img{max-width:100%;max-height:200px;border-radius:8px;object-fit:contain}
+
+/* ── Photo Upload ── */
+.photo-zone{border:2px dashed #e4e4e7;border-radius:16px;padding:28px;text-align:center;cursor:pointer;color:#a1a1aa;font-size:13px;transition:all .15s;position:relative;overflow:hidden}
+.photo-zone:hover,.photo-zone.drag{border-color:#18181b;color:#18181b}
+.photo-zone img{max-width:100%;max-height:200px;border-radius:12px;object-fit:contain}
 .photo-zone input{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer}
-.expense-item{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px solid #f4f4f5}
+
+/* ── Expense List ── */
+.expense-item{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid #f4f4f5}
 .expense-item:last-child{border-bottom:none}
 .expense-left{flex:1;min-width:0}
-.expense-name{font-weight:600;font-size:14px}
-.expense-meta{font-size:12px;color:#a1a1aa;margin-top:2px}
-.expense-amount{font-weight:700;font-size:15px;white-space:nowrap;margin-left:12px}
-.expense-thumb{width:40px;height:40px;border-radius:6px;object-fit:cover;margin-left:8px;cursor:pointer}
-.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;background:#f4f4f5;color:#71717a}
-.tabs{display:flex;background:#f4f4f5;border-radius:10px;padding:3px;margin-bottom:16px}
-.tab{flex:1;padding:10px;border:none;border-radius:8px;background:transparent;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;color:#71717a;text-align:center}
-.tab.active{background:#fff;color:#18181b;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.msg{padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px;text-align:center}
-.msg-ok{background:#fafafa;color:#dc2626}.msg-err{background:#fff1f2;color:#e11d48}
-.balance-card{border-radius:14px;padding:20px;margin-bottom:14px;text-align:center}
-.balance-ok{background:linear-gradient(135deg,#fafafa,#f4f4f5);border:2px solid #e4e4e7}
-.balance-low{background:linear-gradient(135deg,#fafafa,#f4f4f5);border:2px solid #d4d4d8}
-.balance-zero{background:linear-gradient(135deg,#fff1f2,#ffe4e6);border:2px solid #fecdd3}
-.balance-label{font-size:12px;color:#71717a;margin-bottom:4px}
-.balance-value{font-size:28px;font-weight:700}
-.balance-sub{font-size:12px;color:#a1a1aa;margin-top:6px}
-.summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:13px}
-.del-btn{background:none;border:none;color:#d4d4d8;font-size:16px;cursor:pointer;padding:4px}.del-btn:hover{color:#e11d48}
-.lightbox{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
-.lightbox img{max-width:100%;max-height:90vh;border-radius:8px;object-fit:contain}
-.lightbox button{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:24px;width:40px;height:40px;border-radius:50%;cursor:pointer}
-.login-screen{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:#fafafa;padding:20px}
-.login-box{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
-.asig-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f4f4f5;font-size:13px}
+.expense-name{font-weight:600;font-size:15px;letter-spacing:-.2px}
+.expense-meta{font-size:11px;color:#a1a1aa;margin-top:3px}
+.expense-amount{font-weight:800;font-size:16px;white-space:nowrap;margin-left:12px;color:#dc2626}
+.expense-thumb{width:44px;height:44px;border-radius:10px;object-fit:cover;margin-left:10px;cursor:pointer}
+
+/* ── Badges ── */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;background:#f4f4f5;color:#71717a}
+
+/* ── Messages ── */
+.msg{padding:14px 18px;border-radius:14px;font-size:13px;margin-bottom:16px;text-align:center;font-weight:600}
+.msg-ok{background:#18181b;color:#fff}
+.msg-err{background:#dc2626;color:#fff}
+
+/* ── Team Person Card ── */
+.person-card{background:#fff;border-radius:20px;padding:24px;margin-bottom:12px;border:1px solid #f0f0f0}
+.person-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.person-name{font-weight:700;font-size:17px;letter-spacing:-.3px}
+.person-email{font-size:11px;color:#a1a1aa}
+.person-balance{text-align:right}
+.person-balance .amount{font-size:24px;font-weight:800;letter-spacing:-.5px}
+.person-balance .of{font-size:11px;color:#a1a1aa}
+
+/* ── Progress Bar ── */
+.progress-bar{background:#f4f4f5;border-radius:8px;height:4px;margin:12px 0 8px;overflow:hidden}
+.progress-fill{height:100%;border-radius:8px;transition:width .3s}
+
+/* ── Assignment Item ── */
+.asig-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f4f4f5;font-size:13px}
 .asig-item:last-child{border-bottom:none}
+
+/* ── Lightbox ── */
+.lightbox{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.lightbox img{max-width:100%;max-height:90vh;border-radius:12px;object-fit:contain}
+.lightbox button{position:absolute;top:20px;right:20px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:20px;width:44px;height:44px;border-radius:50%;cursor:pointer;backdrop-filter:blur(8px)}
+
+/* ── Login ── */
+.login-screen{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:#fafafa;padding:20px}
+.login-box{background:#fff;border-radius:24px;padding:36px 28px;width:100%;max-width:380px;border:1px solid #f0f0f0}
+.login-title{font-size:32px;font-weight:800;letter-spacing:-.8px;text-align:center;margin-bottom:4px}
+.login-sub{font-size:13px;color:#a1a1aa;text-align:center;margin-bottom:28px}
+
+/* ── Delete Button ── */
+.del-btn{background:none;border:none;color:#d4d4d8;font-size:16px;cursor:pointer;padding:4px;margin-left:8px}.del-btn:hover{color:#dc2626}
+
+/* ── Utility ── */
+.divider{display:flex;align-items:center;gap:12px;margin:12px 0}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:#e4e4e7}
+.divider span{font-size:11px;color:#a1a1aa;font-weight:500}
+
+/* ── Empty State ── */
+.empty{text-align:center;padding:40px 20px}
+.empty-icon{font-size:36px;margin-bottom:12px;opacity:.3}
+.empty-title{font-weight:700;font-size:16px;margin-bottom:4px}
+.empty-text{font-size:13px;color:#a1a1aa}
 </style>
 </head>
 <body>
@@ -93,7 +151,7 @@ const getSB=()=>{
 
 /* ═══ MAIN APP ═══ */
 function CajaChicaApp({user,onLogout}){
-  const[tab,setTab]=useState("mi_saldo");
+  const[tab,setTab]=useState("gasto");
   const[fecha,setFecha]=useState(new Date().toISOString().slice(0,10));
   const[monto,setMonto]=useState("");
   const[concepto,setConcepto]=useState("");
@@ -108,12 +166,10 @@ function CajaChicaApp({user,onLogout}){
   const[lightboxUrl,setLightboxUrl]=useState(null);
   const fileRef=useRef(null);
 
-  /* Asignar caja chica form */
   const[asigPersona,setAsigPersona]=useState("");
   const[asigMonto,setAsigMonto]=useState("");
   const[asigNota,setAsigNota]=useState("");
 
-  // Load ALL data (no month filter - continuous balance)
   const loadData=async()=>{
     const sb=getSB();if(!sb)return;
     setLoading(true);
@@ -130,7 +186,6 @@ function CajaChicaApp({user,onLogout}){
 
   useEffect(()=>{loadData();},[]);
 
-  // Calculate balances per person
   const balances=useMemo(()=>{
     const b={};
     PERSONAS.forEach(p=>{
@@ -144,7 +199,6 @@ function CajaChicaApp({user,onLogout}){
   const myBalance=balances[user.email]||{asignado:0,gastado:0,saldo:0};
   const myGastos=gastos.filter(g=>g.user_email===user.email);
 
-  // Upload photo
   const uploadFoto=async()=>{
     if(!foto)return null;
     const sb=getSB();if(!sb)return null;
@@ -166,20 +220,19 @@ function CajaChicaApp({user,onLogout}){
     reader.readAsDataURL(file);
   };
 
-  // Save expense
   const handleSave=async(e)=>{
     e.preventDefault();
     const montoNum=parseFloat(monto);
-    if(!montoNum||montoNum<=0){setMsg({type:"err",text:"Ingresa un monto válido"});return;}
+    if(!montoNum||montoNum<=0){setMsg({type:"err",text:"Ingresa un monto valido"});return;}
     if(!concepto.trim()){setMsg({type:"err",text:"Describe el gasto"});return;}
-    if(montoNum>myBalance.saldo){setMsg({type:"err",text:`Tu saldo es ${fmt(myBalance.saldo)}. No puedes gastar ${fmt(montoNum)}`});return;}
+    if(montoNum>myBalance.saldo){setMsg({type:"err",text:`Tu saldo es ${fmt(myBalance.saldo)}`});return;}
     setSaving(true);setMsg(null);
     try{
-      const sb=getSB();if(!sb){setMsg({type:"err",text:"Sin conexión"});setSaving(false);return;}
+      const sb=getSB();if(!sb){setMsg({type:"err",text:"Sin conexion"});setSaving(false);return;}
       const fotoUrl=await uploadFoto();
       const{error}=await sb.from("caja_chica").insert({
         user_email:user.email,user_name:nameFromEmail(user.email),fecha,
-        monto:montoNum,concepto:concepto.trim(),categoria:categoria.trim()||"Sin categoría",foto_url:fotoUrl
+        monto:montoNum,concepto:concepto.trim(),categoria:categoria.trim()||"Sin categoria",foto_url:fotoUrl
       });
       if(error)setMsg({type:"err",text:"Error: "+error.message});
       else{
@@ -192,18 +245,17 @@ function CajaChicaApp({user,onLogout}){
     setSaving(false);
   };
 
-  // Save assignment
   const handleAsignar=async(e)=>{
     e.preventDefault();
     if(!asigPersona){setMsg({type:"err",text:"Selecciona una persona"});return;}
     const m=parseFloat(asigMonto);
-    if(!m||m<=0){setMsg({type:"err",text:"Ingresa un monto válido"});return;}
+    if(!m||m<=0){setMsg({type:"err",text:"Ingresa un monto valido"});return;}
     setSaving(true);setMsg(null);
     try{
       const sb=getSB();if(!sb){setSaving(false);return;}
       const{error}=await sb.from("caja_chica_asignaciones").insert({
         persona_email:asigPersona,persona_name:nameFromEmail(asigPersona),
-        monto:m,nota:asigNota.trim()||"Asignación de caja chica",
+        monto:m,nota:asigNota.trim()||"Asignacion de caja chica",
         asignado_por:user.email
       });
       if(error)setMsg({type:"err",text:"Error: "+error.message});
@@ -217,56 +269,50 @@ function CajaChicaApp({user,onLogout}){
   };
 
   const handleDelete=async(id)=>{
-    if(!confirm("¿Eliminar este gasto?"))return;
+    if(!confirm("Eliminar este gasto?"))return;
     const sb=getSB();if(!sb)return;
     await sb.from("caja_chica").delete().eq("id",id);
     loadData();
   };
 
-  const balanceClass=myBalance.saldo<=0?"balance-zero":myBalance.saldo<100?"balance-low":"balance-ok";
-  const balanceColor=myBalance.saldo<=0?"#e11d48":myBalance.saldo<100?"#71717a":"#dc2626";
+  const pctUsed=myBalance.asignado>0?Math.min((myBalance.gastado/myBalance.asignado)*100,100):0;
 
   return(
     <div className="screen">
+      {/* ── Top Bar ── */}
       <div className="top-bar">
         <div>
           <h1>Caja Chica</h1>
-          <div className="user-info">{nameFromEmail(user.email)} · {user.email}</div>
+          <div className="user-info">{nameFromEmail(user.email)}</div>
         </div>
-        <button onClick={onLogout}>Salir</button>
+        <button className="logout-btn" onClick={onLogout}>Salir</button>
       </div>
 
       <div className="content">
-        {/* Balance card always visible */}
-        <div className={`balance-card ${balanceClass}`}>
-          <div className="balance-label">Mi saldo disponible</div>
-          <div className="balance-value" style={{color:balanceColor}}>{fmt(myBalance.saldo)}</div>
-          <div className="balance-sub">
-            Asignado: {fmt(myBalance.asignado)} · Gastado: {fmt(myBalance.gastado)}
+        {/* ── Balance Hero ── */}
+        <div className="balance-hero">
+          <div className="label">Saldo disponible</div>
+          <div className={`value${myBalance.saldo<=0?" zero":""}`}>{fmt(myBalance.saldo)}</div>
+          <div className="sub">
+            <span><span className="num">{fmt(myBalance.asignado)}</span>asignado</span>
+            <span><span className="num">{fmt(myBalance.gastado)}</span>gastado</span>
           </div>
-        </div>
-
-        <div className="tabs">
-          <button className={`tab${tab==="mi_saldo"?" active":""}`} onClick={()=>setTab("mi_saldo")}>Nuevo Gasto</button>
-          <button className={`tab${tab==="historial"?" active":""}`} onClick={()=>setTab("historial")}>Mis Gastos</button>
-          <button className={`tab${tab==="asignar"?" active":""}`} onClick={()=>setTab("asignar")}>Asignar</button>
-          <button className={`tab${tab==="equipo"?" active":""}`} onClick={()=>setTab("equipo")}>Equipo</button>
         </div>
 
         {msg&&<div className={`msg msg-${msg.type}`}>{msg.text}</div>}
 
-        {/* TAB: Nuevo Gasto */}
-        {tab==="mi_saldo"&&(
+        {/* ═══ TAB: Nuevo Gasto ═══ */}
+        {tab==="gasto"&&(
           myBalance.saldo<=0?(
-            <div className="card" style={{textAlign:"center",color:"#a1a1aa"}}>
-              <div style={{fontSize:28,marginBottom:8}}>💰</div>
-              <div style={{fontWeight:600,color:"#e11d48",marginBottom:4}}>Sin saldo</div>
-              <div style={{fontSize:13}}>Pide que te asignen caja chica para poder registrar gastos.</div>
+            <div className="empty">
+              <div className="empty-icon">$</div>
+              <div className="empty-title" style={{color:"#dc2626"}}>Sin saldo</div>
+              <div className="empty-text">Pide que te asignen caja chica para registrar gastos.</div>
             </div>
           ):(
             <form onSubmit={handleSave}>
               <div className="card">
-                <h3>Registrar Gasto</h3>
+                <h3>Nuevo gasto</h3>
                 <div className="row">
                   <div className="field">
                     <label>Fecha</label>
@@ -279,64 +325,70 @@ function CajaChicaApp({user,onLogout}){
                 </div>
                 <div className="field">
                   <label>Concepto</label>
-                  <input type="text" value={concepto} onChange={e=>setConcepto(e.target.value)} placeholder="Ej: Taxi a reunión con cliente" required/>
+                  <input type="text" value={concepto} onChange={e=>setConcepto(e.target.value)} placeholder="Ej: Taxi a reunion con cliente" required/>
                 </div>
                 <div className="field">
-                  <label>Categoría</label>
-                  <input type="text" value={categoria} onChange={e=>setCategoria(e.target.value)} placeholder="Ej: Transporte, Alimentación..." list="cats"/>
+                  <label>Categoria</label>
+                  <input type="text" value={categoria} onChange={e=>setCategoria(e.target.value)} placeholder="Transporte, Alimentacion..." list="cats"/>
                   <datalist id="cats">
-                    <option value="Transporte"/><option value="Alimentación"/><option value="Materiales"/>
-                    <option value="Servicios"/><option value="Representación"/><option value="Oficina"/><option value="Otros"/>
+                    <option value="Transporte"/><option value="Alimentacion"/><option value="Materiales"/>
+                    <option value="Servicios"/><option value="Representacion"/><option value="Oficina"/><option value="Otros"/>
                   </datalist>
                 </div>
                 <div className="field">
-                  <label>Foto del comprobante (opcional, máx 1 MB)</label>
+                  <label>Comprobante</label>
                   <div className="photo-zone">
-                    {fotoPreview?(<div><img src={fotoPreview} alt="preview"/><div style={{marginTop:8,fontSize:12}}>Toca para cambiar</div></div>):(
-                      <div><div style={{fontSize:28,marginBottom:4}}>📷</div><div>Toca para tomar foto o seleccionar</div></div>
+                    {fotoPreview?(<div><img src={fotoPreview} alt="preview"/><div style={{marginTop:8,fontSize:11,color:"#a1a1aa"}}>Toca para cambiar</div></div>):(
+                      <div><div style={{fontSize:24,marginBottom:8,opacity:.3}}>&#9679;</div><div>Toca para tomar foto</div></div>
                     )}
                     <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto}/>
                   </div>
                 </div>
               </div>
               <button type="submit" className="btn btn-primary" disabled={saving}>
-                {saving?"Guardando...":"Registrar Gasto"}
+                {saving?"Guardando...":"Registrar gasto"}
               </button>
             </form>
           )
         )}
 
-        {/* TAB: Mis Gastos */}
+        {/* ═══ TAB: Historial ═══ */}
         {tab==="historial"&&(
           <div>
-            {loading?<div style={{textAlign:"center",padding:20,color:"#a1a1aa"}}>Cargando...</div>:
-            myGastos.length===0?<div className="card" style={{textAlign:"center",color:"#a1a1aa"}}><div style={{fontSize:28,marginBottom:8}}>📋</div><p>No tienes gastos registrados</p></div>:(
-              <div className="card" style={{padding:8}}>
+            {loading?<div style={{textAlign:"center",padding:40,color:"#a1a1aa"}}>Cargando...</div>:
+            myGastos.length===0?(
+              <div className="empty">
+                <div className="empty-icon">&#8212;</div>
+                <div className="empty-title">Sin gastos</div>
+                <div className="empty-text">Tus gastos registrados apareceran aqui.</div>
+              </div>
+            ):(
+              <div className="card" style={{padding:16}}>
                 {myGastos.map(g=>(
                   <div className="expense-item" key={g.id}>
                     <div className="expense-left">
                       <div className="expense-name">{g.concepto}</div>
                       <div className="expense-meta">
                         {new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short",year:"numeric"})}
-                        {g.categoria&&<> · <span className="badge">{g.categoria}</span></>}
+                        {g.categoria&&<> &middot; <span className="badge">{g.categoria}</span></>}
                       </div>
                     </div>
-                    <div className="expense-amount" style={{color:"#e11d48"}}>{fmt(g.monto)}</div>
+                    <div className="expense-amount">{fmt(g.monto)}</div>
                     {g.foto_url&&<img className="expense-thumb" src={g.foto_url} alt="" onClick={()=>setLightboxUrl(g.foto_url)}/>}
-                    <button className="del-btn" title="Eliminar" onClick={()=>handleDelete(g.id)}>✕</button>
+                    <button className="del-btn" title="Eliminar" onClick={()=>handleDelete(g.id)}>&#10005;</button>
                   </div>
                 ))}
               </div>
             )}
-            {/* My assignments */}
+            {/* My assignments received */}
             {asignaciones.filter(a=>a.persona_email===user.email).length>0&&(
-              <div className="card" style={{marginTop:8}}>
-                <h3 style={{fontSize:13,color:"#71717a"}}>Mis asignaciones recibidas</h3>
+              <div className="card" style={{marginTop:4}}>
+                <h3 style={{fontSize:14,color:"#a1a1aa",fontWeight:600}}>Asignaciones recibidas</h3>
                 {asignaciones.filter(a=>a.persona_email===user.email).map(a=>(
                   <div className="asig-item" key={a.id}>
                     <div>
-                      <div style={{fontWeight:600,color:"#dc2626"}}>+{fmt(a.monto)}</div>
-                      <div style={{fontSize:11,color:"#a1a1aa"}}>{a.nota} · por {nameFromEmail(a.asignado_por)}</div>
+                      <div style={{fontWeight:700,color:"#18181b"}}>+{fmt(a.monto)}</div>
+                      <div style={{fontSize:11,color:"#a1a1aa"}}>{a.nota} &middot; {nameFromEmail(a.asignado_por)}</div>
                     </div>
                     <div style={{fontSize:11,color:"#a1a1aa"}}>{new Date(a.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}</div>
                   </div>
@@ -346,12 +398,12 @@ function CajaChicaApp({user,onLogout}){
           </div>
         )}
 
-        {/* TAB: Asignar caja chica */}
+        {/* ═══ TAB: Asignar ═══ */}
         {tab==="asignar"&&(
           <form onSubmit={handleAsignar}>
             <div className="card">
-              <h3>Asignar Caja Chica</h3>
-              <div style={{fontSize:12,color:"#71717a",marginBottom:12}}>Dale fondos a alguien del equipo para sus gastos.</div>
+              <h3>Asignar fondos</h3>
+              <div style={{fontSize:13,color:"#a1a1aa",marginBottom:16,lineHeight:1.5}}>Dale fondos a alguien del equipo.</div>
               <div className="field">
                 <label>Persona</label>
                 <select value={asigPersona} onChange={e=>setAsigPersona(e.target.value)} required>
@@ -366,51 +418,50 @@ function CajaChicaApp({user,onLogout}){
                 <input type="number" step="0.01" min="0.01" value={asigMonto} onChange={e=>setAsigMonto(e.target.value)} placeholder="500.00" required inputMode="decimal"/>
               </div>
               <div className="field">
-                <label>Nota (opcional)</label>
+                <label>Nota</label>
                 <input type="text" value={asigNota} onChange={e=>setAsigNota(e.target.value)} placeholder="Ej: Caja chica abril"/>
               </div>
             </div>
             <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving?"Asignando...":"Asignar Fondos"}
+              {saving?"Asignando...":"Asignar fondos"}
             </button>
           </form>
         )}
 
-        {/* TAB: Equipo (ver todos) */}
+        {/* ═══ TAB: Equipo ═══ */}
         {tab==="equipo"&&(
           <div>
             {PERSONAS.map(p=>{
               const b=balances[p]||{asignado:0,gastado:0,saldo:0};
-              const bc=b.saldo<=0?"balance-zero":b.saldo<100?"balance-low":"balance-ok";
-              const color=b.saldo<=0?"#e11d48":b.saldo<100?"#71717a":"#dc2626";
+              const pct=b.asignado>0?Math.min((b.gastado/b.asignado)*100,100):0;
+              const barColor=b.saldo<=0?"#dc2626":b.saldo<100?"#a1a1aa":"#18181b";
               const pGastos=gastos.filter(g=>g.user_email===p).slice(0,5);
               return(
-                <div key={p} className="card">
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <div key={p} className="person-card">
+                  <div className="person-header">
                     <div>
-                      <div style={{fontWeight:700,fontSize:15}}>{nameFromEmail(p)}</div>
-                      <div style={{fontSize:11,color:"#a1a1aa"}}>{p}</div>
+                      <div className="person-name">{nameFromEmail(p)}</div>
+                      <div className="person-email">{p}</div>
                     </div>
-                    <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:20,fontWeight:700,color}}>{fmt(b.saldo)}</div>
-                      <div style={{fontSize:10,color:"#a1a1aa"}}>de {fmt(b.asignado)}</div>
+                    <div className="person-balance">
+                      <div className="amount" style={{color:b.saldo<=0?"#dc2626":"#18181b"}}>{fmt(b.saldo)}</div>
+                      <div className="of">de {fmt(b.asignado)}</div>
                     </div>
                   </div>
-                  {/* Progress bar */}
-                  <div style={{background:"#f4f4f5",borderRadius:6,height:6,marginBottom:8,overflow:"hidden"}}>
-                    <div style={{background:color,height:"100%",width:`${b.asignado>0?Math.min((b.gastado/b.asignado)*100,100):0}%`,borderRadius:6,transition:"width .3s"}}/>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{background:barColor,width:`${pct}%`}}/>
                   </div>
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#a1a1aa"}}>
                     <span>Gastado: {fmt(b.gastado)}</span>
                     <span>Disponible: {fmt(b.saldo)}</span>
                   </div>
                   {pGastos.length>0&&(
-                    <div style={{marginTop:8,borderTop:"1px solid #f4f4f5",paddingTop:8}}>
-                      <div style={{fontSize:11,fontWeight:600,color:"#a1a1aa",marginBottom:4}}>Últimos gastos</div>
+                    <div style={{marginTop:14,borderTop:"1px solid #f4f4f5",paddingTop:12}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"#a1a1aa",marginBottom:6,textTransform:"uppercase",letterSpacing:"1px"}}>Recientes</div>
                       {pGastos.map(g=>(
-                        <div key={g.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}>
-                          <span style={{color:"#71717a"}}>{g.concepto}</span>
-                          <span style={{fontWeight:600,color:"#e11d48"}}>{fmt(g.monto)}</span>
+                        <div key={g.id} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"4px 0"}}>
+                          <span style={{color:"#52525b"}}>{g.concepto}</span>
+                          <span style={{fontWeight:700,color:"#dc2626"}}>{fmt(g.monto)}</span>
                         </div>
                       ))}
                     </div>
@@ -422,10 +473,18 @@ function CajaChicaApp({user,onLogout}){
         )}
       </div>
 
+      {/* ── Bottom Pill Nav ── */}
+      <div className="pill-nav">
+        <button className={tab==="gasto"?"active":""} onClick={()=>setTab("gasto")}>Gasto</button>
+        <button className={tab==="historial"?"active":""} onClick={()=>setTab("historial")}>Historial</button>
+        <button className={tab==="asignar"?"active":""} onClick={()=>setTab("asignar")}>Asignar</button>
+        <button className={tab==="equipo"?"active":""} onClick={()=>setTab("equipo")}>Equipo</button>
+      </div>
+
       {lightboxUrl&&(
         <div className="lightbox" onClick={()=>setLightboxUrl(null)}>
           <img src={lightboxUrl} alt="Comprobante"/>
-          <button onClick={()=>setLightboxUrl(null)}>✕</button>
+          <button onClick={()=>setLightboxUrl(null)}>&#10005;</button>
         </div>
       )}
     </div>
@@ -459,7 +518,7 @@ function AuthWrapper(){
     e.preventDefault();setError("");
     const sb=getSB();if(!sb){setError("Configura Supabase primero");return;}
     const{error:err}=await sb.auth.signInWithPassword({email,password});
-    if(err)setError(err.message==="Invalid login credentials"?"Email o contraseña incorrectos":err.message);
+    if(err)setError(err.message==="Invalid login credentials"?"Email o contrasena incorrectos":err.message);
   };
   const handleGoogleLogin=async()=>{
     setError("");const sb=getSB();if(!sb)return;
@@ -469,14 +528,14 @@ function AuthWrapper(){
   const handleLogout=async()=>{const sb=getSB();if(sb)await sb.auth.signOut();setUser(null);};
 
   if(loading)return(<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",fontFamily:"Inter,sans-serif"}}>
-    <div style={{textAlign:"center"}}><div style={{fontSize:24,fontWeight:700,color:"#dc2626"}}>Caja Chica</div><div style={{color:"#a1a1aa"}}>Cargando...</div></div>
+    <div style={{textAlign:"center"}}><div style={{fontSize:32,fontWeight:800,color:"#18181b",letterSpacing:"-1px"}}>Caja Chica</div><div style={{color:"#a1a1aa",marginTop:8,fontSize:13}}>Cargando...</div></div>
   </div>);
 
   if(!hasConfig||showSetup)return(
     <div className="login-screen"><div className="login-box">
-      <div style={{textAlign:"center",marginBottom:20}}>
-        <div style={{fontSize:24,fontWeight:700,color:"#dc2626",marginBottom:4}}>NotOffice Caja Chica</div>
-        <div style={{fontSize:13,color:"#a1a1aa"}}>Configurar conexión</div>
+      <div style={{marginBottom:28}}>
+        <div className="login-title">NotOffice</div>
+        <div className="login-sub">Configurar conexion</div>
       </div>
       <SupabaseSetupMini onDone={()=>location.reload()}/>
     </div></div>
@@ -484,23 +543,23 @@ function AuthWrapper(){
 
   if(!user)return(
     <div className="login-screen"><div className="login-box">
-      <div style={{textAlign:"center",marginBottom:20}}>
-        <div style={{fontSize:24,fontWeight:700,color:"#dc2626",marginBottom:4}}>NotOffice Caja Chica</div>
-        <div style={{fontSize:13,color:"#a1a1aa"}}>Registra tus gastos desde el celular</div>
+      <div style={{marginBottom:28}}>
+        <div className="login-title">NotOffice</div>
+        <div className="login-sub">Caja Chica</div>
       </div>
       {error&&<div className="msg msg-err">{error}</div>}
-      <button onClick={handleGoogleLogin} className="btn btn-google" style={{marginBottom:12}}>
+      <button onClick={handleGoogleLogin} className="btn btn-google" style={{marginBottom:16}}>
         <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
         Ingresar con Google
       </button>
-      <div style={{display:"flex",alignItems:"center",gap:12,margin:"8px 0"}}><div style={{flex:1,height:1,background:"#e4e4e7"}}/><span style={{fontSize:12,color:"#a1a1aa"}}>o</span><div style={{flex:1,height:1,background:"#e4e4e7"}}/></div>
-      <form onSubmit={handleLogin}>
+      <div className="divider"><span>o</span></div>
+      <form onSubmit={handleLogin} style={{marginTop:12}}>
         <div className="field"><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" required/></div>
-        <div className="field"><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Contraseña" required minLength={6}/></div>
+        <div className="field"><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Contrasena" required minLength={6}/></div>
         <button type="submit" className="btn btn-primary">Ingresar</button>
       </form>
-      <div style={{textAlign:"center",marginTop:8}}>
-        <button onClick={()=>setShowSetup(true)} style={{background:"none",border:"none",color:"#a1a1aa",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Cambiar configuración</button>
+      <div style={{textAlign:"center",marginTop:12}}>
+        <button onClick={()=>setShowSetup(true)} style={{background:"none",border:"none",color:"#a1a1aa",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Configuracion</button>
       </div>
     </div></div>
   );
@@ -520,13 +579,13 @@ function SupabaseSetupMini({onDone}){
     try{const sb=supabase.createClient(url,key);
       const{data,error}=await sb.from("caja_chica").select("id").limit(1);
       if(error)setResult("Error: "+error.message);
-      else{setResult("Conexión exitosa!");setSBConfig({url,key});_sb=null;setTimeout(()=>onDone(),1500);}
+      else{setResult("Conexion exitosa!");setSBConfig({url,key});_sb=null;setTimeout(()=>onDone(),1500);}
     }catch(e){setResult("Error: "+e.message);}
     setTesting(false);
   };
   return(<div>
     <div className="field"><label>Supabase URL</label><input value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://xxx.supabase.co"/></div>
-    <div className="field"><label>Supabase Anon Key</label><input value={key} onChange={e=>setKey(e.target.value)} placeholder="eyJhbGci..."/></div>
+    <div className="field"><label>Anon Key</label><input value={key} onChange={e=>setKey(e.target.value)} placeholder="eyJhbGci..."/></div>
     <button className="btn btn-primary" onClick={test} disabled={testing}>{testing?"Probando...":"Conectar"}</button>
     {result&&<div className={`msg ${result.includes("exitosa")?"msg-ok":"msg-err"}`} style={{marginTop:12}}>{result}</div>}
   </div>);
