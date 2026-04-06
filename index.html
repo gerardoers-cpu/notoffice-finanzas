@@ -1,0 +1,1980 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NotOffice — Finanzas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,sans-serif;background:#f8fafc;color:#1e293b}
+.app{display:flex;min-height:100vh}
+.sidebar{width:250px;background:#fff;border-right:1px solid #e2e8f0;padding:16px 12px;flex-shrink:0;overflow-y:auto}
+.sidebar-brand{display:flex;align-items:center;gap:8px;padding:8px 8px 16px;border-bottom:1px solid #e2e8f0;margin-bottom:12px}
+.sidebar-brand span{font-weight:700;font-size:15px;color:#1e293b}
+.nav-section{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:#94a3b8;font-weight:700;padding:12px 8px 6px;margin-top:4px}
+.nav-btn{width:100%;display:flex;align-items:center;gap:10px;padding:9px 12px;border:none;border-radius:8px;background:transparent;color:#64748b;font-size:13px;cursor:pointer;transition:all .15s;text-align:left;font-family:inherit}
+.nav-btn:hover{background:#f1f5f9;color:#1e293b}
+.nav-btn.active{background:#059669;color:#fff}
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.header{background:#fff;border-bottom:1px solid #e2e8f0;padding:12px 24px;display:flex;align-items:center;justify-content:space-between}
+.header h1{font-size:18px;font-weight:600}
+.content{flex:1;overflow-y:auto;padding:24px}
+.ci{max-width:1100px;margin:0 auto}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}.g5{grid-template-columns:repeat(5,1fr)}
+@media(max-width:900px){.g3,.g4,.g5{grid-template-columns:repeat(2,1fr)}.sidebar{display:none}}
+.card{background:#fff;border-radius:12px;padding:16px;border:1px solid #e2e8f0}
+.kpi-label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8}
+.kpi-value{font-size:22px;font-weight:700;margin-top:4px}
+.kpi-sub{font-size:11px;color:#94a3b8;margin-top:2px}
+.sl{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#94a3b8;margin:16px 0 8px;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;border-bottom:2px solid #e2e8f0;font-weight:600}
+td{padding:10px 12px;border-bottom:1px solid #f1f5f9}
+tr:hover td{background:#f8fafc}
+.tg{color:#059669}.tr{color:#e11d48}.tb{color:#0284c7}.ta{color:#d97706}.tp{color:#7c3aed}
+.text-right{text-align:right}.text-center{text-align:center}.font-bold{font-weight:700}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.bg{background:#d1fae5;color:#065f46}.ba{background:#fef3c7;color:#92400e}.br{background:#ffe4e6;color:#9f1239}.bb{background:#dbeafe;color:#1e40af}.bpp{background:#ede9fe;color:#5b21b6}
+.btn{padding:8px 16px;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;transition:all .15s}
+.btn-green{background:#059669;color:#fff}.btn-green:hover{background:#047857}
+.btn-red{background:#e11d48;color:#fff}.btn-blue{background:#0284c7;color:#fff}
+.btn-gray{background:#f1f5f9;color:#475569}.btn-gray:hover{background:#e2e8f0}
+.btn-sm{padding:5px 10px;font-size:11px}
+input,select{padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;background:#fff;color:#1e293b;outline:none}
+input:focus,select:focus{border-color:#059669;box-shadow:0 0 0 3px rgba(5,150,105,.1)}
+.form-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:8px}
+.form-card{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;margin-bottom:12px}
+.form-card h4{font-size:13px;font-weight:600;margin-bottom:10px}
+.alert{padding:12px 16px;border-radius:10px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;font-size:13px}
+.alert-amber{background:#fffbeb;border:1px solid #fde68a}
+.total-bar{background:linear-gradient(135deg,#ecfdf5,#f0fdf4);border:2px solid #a7f3d0;border-radius:14px;padding:20px;display:flex;justify-content:space-between;align-items:center}
+.del-btn{background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:14px;padding:2px}.del-btn:hover{color:#e11d48}
+.back-link{color:#0284c7;cursor:pointer;font-size:13px;border:none;background:none;font-family:inherit}.back-link:hover{text-decoration:underline}
+.detail-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:14px}
+.user-bar{display:flex;align-items:center;gap:8px;font-size:13px;color:#64748b}
+.user-bar strong{color:#1e293b}
+select.msel{padding:6px 10px;font-size:12px;border-radius:6px}
+.tabs{display:flex;gap:4px;margin-bottom:16px;background:#f1f5f9;border-radius:10px;padding:4px;flex-wrap:wrap}
+.tab{padding:8px 16px;border:none;border-radius:8px;background:transparent;font-size:12px;font-weight:500;cursor:pointer;font-family:inherit;color:#64748b;transition:all .15s}
+.tab.active{background:#fff;color:#1e293b;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.info-box{font-size:12px;color:#64748b;background:#f8fafc;padding:10px 14px;border-radius:8px;margin-bottom:12px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useMemo,useEffect,useRef}=React;
+
+const fmt=n=>"S/ "+Math.round(n).toLocaleString("es-PE");
+const pct=(a,b)=>b>0?((a/b)*100).toFixed(1):"0.0";
+const ML=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const MONTHS=ML.map((_,i)=>{const m=String(i+1).padStart(2,"0");return{value:`2026-${m}`,label:`${ML[i]} 2026`}});
+
+/* ── CSS bar chart ── */
+function SimpleBar({data,keys,colors}){
+  const maxVal=Math.max(...data.flatMap(d=>keys.map(k=>Math.abs(d[k]||0))),1);
+  return(<div style={{display:"flex",alignItems:"flex-end",gap:8,height:180,padding:"8px 0"}}>
+    {data.map((d,i)=>(<div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4,height:"100%",justifyContent:"flex-end"}}>
+      <div style={{display:"flex",alignItems:"flex-end",gap:2,flex:1,width:"100%",justifyContent:"center"}}>
+        {keys.map((k,ki)=>{const v=d[k]||0;const h=Math.max((Math.abs(v)/maxVal)*140,4);
+          return(<div key={ki} style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
+            <div style={{fontSize:8,color:"#64748b",marginBottom:2,whiteSpace:"nowrap"}}>{fmt(v)}</div>
+            <div style={{width:keys.length>1?18:32,height:h,background:v>=0?colors[ki]:"#e11d48",borderRadius:"4px 4px 0 0"}}/>
+          </div>);})}
+      </div>
+      <div style={{fontSize:10,color:"#94a3b8",fontWeight:600}}>{d.label||d.month||d.name}</div>
+    </div>))}
+  </div>);
+}
+function Leg({items}){return(<div style={{display:"flex",justifyContent:"center",gap:16,marginTop:8}}>
+  {items.map(([l,c],i)=>(<span key={i} style={{fontSize:11,display:"flex",alignItems:"center",gap:5,color:"#64748b"}}>
+    <span style={{width:12,height:12,borderRadius:3,background:c,display:"inline-block"}}/>{l}</span>))}
+</div>);}
+
+const Ic=({d,size=16,color="currentColor"})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={d}/></svg>);
+const ic={
+  home:"M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z",
+  receipt:"M4 2v20l4-3 4 3 4-3 4 3V2z",
+  briefcase:"M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2",
+  users:"M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2M9 11a4 4 0 100-8 4 4 0 000 8z",
+  down:"M23 6l-9.5 9.5-5-5L1 18",
+  pie:"M21.21 15.89A10 10 0 118 2.83M22 12A10 10 0 0012 2v10z",
+  file:"M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6",
+  trend:"M22 12h-4l-3 9L9 3l-3 9H2",
+  plus:"M12 5v14M5 12h14",
+  check:"M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3",
+  alert:"M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01",
+  building:"M6 22V4a2 2 0 012-2h8a2 2 0 012 2v18z",
+  eye:"M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z",
+  settings:"M12 15a3 3 0 100-6 3 3 0 000 6z",
+  dollar:"M12 1v22M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6",
+  repeat:"M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3",
+  barchart:"M18 20V10M12 20V4M6 20v-6",
+  calculator:"M4 2h16a2 2 0 012 2v16a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2zM8 6h8M8 10h2M14 10h2M8 14h2M14 14h2M8 18h8",
+  gear:"M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z",
+};
+
+/* ══════════ DEMO DATA ══════════ */
+const INIT_CLIENTS=[
+  {id:1,name:"Marca Alpha",fee:8500},{id:2,name:"Marca Beta",fee:12000},{id:3,name:"Marca Gamma",fee:6500},
+  {id:4,name:"Marca Delta",fee:15000},{id:5,name:"Marca Épsilon",fee:9500},{id:6,name:"Marca Zeta",fee:11000},
+];
+
+/* regimen: "planilla" → neto input, EsSalud=9%, AFP=11.5% auto
+   Sueldo Bruto = neto + AFP | Inversión Total = neto + AFP + EsSalud
+   "rh" → recibo por honorarios, bruto=monto, no cargas
+   assignments: [{id,clientId(null=transversal),role,amount}] — how inversión is distributed */
+const mkP=(id,nm,neto,assigns)=>{const es=Math.round(neto*0.09);const afp=Math.round(neto*0.115);
+  return{id,name:nm,regimen:"planilla",neto,essalud:es,afp,bruto:neto+afp,inversion:neto+afp+es,assignments:assigns};};
+const mkR=(id,nm,neto,assigns)=>({id,name:nm,regimen:"rh",neto,essalud:0,afp:0,bruto:neto,inversion:neto,assignments:assigns});
+/* helpers: cost a person allocates to a specific client, or to transversal */
+const tDed=(t,cId)=>t.assignments.filter(a=>a.clientId===cId).reduce((s,a)=>s+a.amount,0);
+const tTrans=(t)=>t.assignments.filter(a=>a.clientId===null).reduce((s,a)=>s+a.amount,0);
+const tAllDed=(t)=>t.assignments.filter(a=>a.clientId!==null).reduce((s,a)=>s+a.amount,0);
+
+const INIT_TEAM=[
+  mkP(1,"Carlos Mendoza",1400,[{id:1001,clientId:1,role:"Community Manager",amount:1561}]),
+  mkP(2,"Ana López",1800,[{id:1002,clientId:1,role:"Diseñadora",amount:1500},{id:1003,clientId:null,role:"Coord. Diseño (bono)",amount:507}]),
+  mkP(3,"Juan Pérez",2300,[{id:1004,clientId:2,role:"Account Manager",amount:2565}]),
+  mkP(4,"María García",1400,[{id:1005,clientId:2,role:"Community Manager",amount:1561}]),
+  mkP(5,"Luis Torres",2100,[{id:1006,clientId:2,role:"Diseñador",amount:1400},{id:1007,clientId:3,role:"Diseñador",amount:942}]),
+  mkP(6,"Diego Ramírez",1400,[{id:1008,clientId:3,role:"Community Manager",amount:1561}]),
+  mkP(7,"Sofía Hernández",2300,[{id:1009,clientId:4,role:"Account Manager",amount:2565}]),
+  mkP(8,"Roberto Díaz",1400,[{id:1010,clientId:4,role:"Community Manager",amount:1561}]),
+  mkP(9,"Fernanda Ruiz",1800,[{id:1011,clientId:4,role:"Diseñadora",amount:2007}]),
+  mkR(10,"Andrea Vega",1600,[{id:1012,clientId:4,role:"Pauta Digital",amount:1000},{id:1013,clientId:5,role:"Pauta Digital",amount:600}]),
+  mkP(11,"Pablo Morales",1400,[{id:1014,clientId:5,role:"Community Manager",amount:1561}]),
+  mkP(12,"Laura Sánchez",2300,[{id:1015,clientId:6,role:"Account Manager",amount:2565}]),
+  mkR(13,"Daniela Flores",1400,[{id:1016,clientId:6,role:"Community Manager",amount:1400}]),
+  mkP(14,"Ricardo Ortiz",4200,[{id:1017,clientId:null,role:"Director Creativo",amount:4683}]),
+  mkP(15,"Gabriela Mora",3800,[{id:1018,clientId:null,role:"Directora de Cuentas",amount:4237}]),
+  mkP(16,"Alejandro Cruz",3000,[{id:1019,clientId:null,role:"Estratega Digital",amount:3345}]),
+  mkR(17,"Valeria Reyes",2500,[{id:1020,clientId:null,role:"Diseñadora UI/UX",amount:2500}]),
+  mkP(18,"Miguel Ángel",2800,[{id:1021,clientId:null,role:"Desarrollo Web",amount:3122}]),
+  mkP(19,"Ynes Martínez",1800,[{id:1022,clientId:null,role:"Administración y Pagos",amount:2007}]),
+];
+
+const genInvoices=()=>{
+  const inv=[];let id=1;
+  /* Recurrentes (fees mensuales) */
+  ["01","02","03","04"].forEach(m=>{
+    INIT_CLIENTS.forEach(c=>{
+      const st=m==="04"?(c.id===2||c.id===5?"Emitida":"Por cobrar"):"Cobrada";
+      inv.push({id:id++,clientId:c.id,number:`FAC-${String(id).padStart(3,"0")}`,concept:`Fee ${ML[parseInt(m)-1]}`,amount:c.fee,date:`2026-${m}-05`,status:st,month:`2026-${m}`,type:"recurrente"});
+    });
+  });
+  /* No Recurrentes (proyectos, one-time) */
+  inv.push({id:id++,clientId:1,number:"FAC-NR-001",concept:"Campaña Navidad",amount:18000,date:"2026-01-15",status:"Cobrada",month:"2026-01",type:"no_recurrente"});
+  inv.push({id:id++,clientId:2,number:"FAC-NR-002",concept:"Lanzamiento App",amount:25000,date:"2026-02-20",status:"Cobrada",month:"2026-02",type:"no_recurrente"});
+  inv.push({id:id++,clientId:4,number:"FAC-NR-003",concept:"Campaña 5G",amount:32000,date:"2026-02-22",status:"Por cobrar",month:"2026-02",type:"no_recurrente"});
+  inv.push({id:id++,clientId:5,number:"FAC-NR-004",concept:"Activación Verano",amount:15000,date:"2026-03-10",status:"Emitida",month:"2026-03",type:"no_recurrente"});
+  inv.push({id:id++,clientId:3,number:"FAC-NR-005",concept:"Promo Semana Santa",amount:9000,date:"2026-04-01",status:"Emitida",month:"2026-04",type:"no_recurrente"});
+  /* Paid Media (pauta digital) */
+  inv.push({id:id++,clientId:1,number:"FAC-PM-001",concept:"Pauta Meta Ads Ene",amount:5000,date:"2026-01-10",status:"Cobrada",month:"2026-01",type:"paid"});
+  inv.push({id:id++,clientId:2,number:"FAC-PM-002",concept:"Pauta Google Ads Ene",amount:3500,date:"2026-01-12",status:"Cobrada",month:"2026-01",type:"paid"});
+  inv.push({id:id++,clientId:1,number:"FAC-PM-003",concept:"Pauta Meta Ads Feb",amount:5000,date:"2026-02-08",status:"Cobrada",month:"2026-02",type:"paid"});
+  inv.push({id:id++,clientId:4,number:"FAC-PM-004",concept:"Pauta Google Ads Mar",amount:8000,date:"2026-03-05",status:"Por cobrar",month:"2026-03",type:"paid"});
+  inv.push({id:id++,clientId:5,number:"FAC-PM-005",concept:"Pauta TikTok Ads Abr",amount:4500,date:"2026-04-02",status:"Emitida",month:"2026-04",type:"paid"});
+  inv.push({id:id++,clientId:3,number:"FAC-PM-006",concept:"Pauta Meta Ads Abr",amount:3000,date:"2026-04-03",status:"Por cobrar",month:"2026-04",type:"paid"});
+  return inv;
+};
+
+const INIT_PROJECTS=[
+  {id:1,clientId:1,name:"Campaña Navidad",revenue:18000,month:"2026-01",status:"Completado",expenses:[{id:101,name:"Producción gráfica",amount:2500},{id:102,name:"Pauta pagada",amount:3000},{id:103,name:"Influencer",amount:1000}]},
+  {id:2,clientId:2,name:"Lanzamiento App",revenue:25000,month:"2026-02",status:"Completado",expenses:[{id:201,name:"Desarrollo landing",amount:4000},{id:202,name:"Pauta digital",amount:3500},{id:203,name:"Producción video",amount:2000}]},
+  {id:3,clientId:4,name:"Campaña 5G",revenue:32000,month:"2026-02",status:"Completado",expenses:[{id:301,name:"Producción TVC",amount:8000},{id:302,name:"Pauta medios",amount:4000},{id:303,name:"Activación BTL",amount:2000}]},
+  {id:4,clientId:5,name:"Activación Verano",revenue:15000,month:"2026-03",status:"En curso",expenses:[{id:401,name:"Montaje evento",amount:3000},{id:402,name:"Producción material",amount:1500},{id:403,name:"Logística",amount:1000}]},
+  {id:5,clientId:6,name:"Rediseño Web",revenue:20000,month:"2026-03",status:"En curso",expenses:[{id:501,name:"Diseño UX/UI",amount:3500},{id:502,name:"Desarrollo front",amount:3000},{id:503,name:"Hosting/dominio",amount:1500}]},
+  {id:6,clientId:3,name:"Promo Semana Santa",revenue:9000,month:"2026-04",status:"Pendiente",expenses:[{id:601,name:"Arte gráfico",amount:1500},{id:602,name:"Pauta redes",amount:1500}]},
+];
+const pCost=p=>(p.expenses||[]).reduce((s,e)=>s+e.amount,0);
+const INIT_FIXED=[{id:1,name:"Renta Oficina",amount:3500},{id:2,name:"Luz",amount:450},{id:3,name:"Internet Fibra",amount:250},{id:4,name:"Seguros",amount:800},{id:5,name:"Contabilidad Externa",amount:1200}];
+const INIT_DIGITAL=[{id:1,name:"Google Workspace",amount:850},{id:2,name:"Adobe Creative Cloud",amount:1500},{id:3,name:"Freepik Premium",amount:320},{id:4,name:"Hootsuite",amount:650},{id:5,name:"Slack Business",amount:420},{id:6,name:"Canva Pro",amount:280},{id:7,name:"Notion Team",amount:300}];
+const INIT_VAR=[{id:1,name:"Caja chica Enero",amount:910,month:"2026-01"},{id:2,name:"Caja chica Febrero",amount:720,month:"2026-02"},{id:3,name:"Caja chica Marzo",amount:850,month:"2026-03"},{id:4,name:"Caja chica Abril",amount:680,month:"2026-04"}];
+const INIT_OFFICE=[{id:1,name:"Insumos de oficina",amount:350},{id:2,name:"Mantenimiento",amount:500},{id:3,name:"Limpieza",amount:600}];
+const INIT_INV=[{id:1,name:"Equipo cómputo",amount:4500,month:"2026-01"},{id:2,name:"Mobiliario",amount:2800,month:"2026-03"}];
+
+/* ═══ SUPABASE CONFIG ═══ */
+const SB_CONFIG_KEY="finanzas_sb_config";
+const getSBConfig=()=>{try{return JSON.parse(localStorage.getItem(SB_CONFIG_KEY)||"null");}catch(e){return null;}};
+const setSBConfig=(cfg)=>{localStorage.setItem(SB_CONFIG_KEY,JSON.stringify(cfg));};
+let _sb=null;
+const getSB=()=>{
+  if(_sb)return _sb;
+  const cfg=getSBConfig();
+  if(cfg?.url&&cfg?.key){_sb=supabase.createClient(cfg.url,cfg.key);return _sb;}
+  return null;
+};
+
+/* ═══ PERSISTENCE (Supabase + localStorage fallback) ═══ */
+const STORAGE_KEY="finanzas_agencia_v2";
+const loadStateLocal=()=>{try{const s=localStorage.getItem(STORAGE_KEY);return s?JSON.parse(s):null;}catch(e){return null;}};
+const saveStateLocal=(data)=>{try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}catch(e){}};
+
+const loadStateCloud=async()=>{
+  const sb=getSB();if(!sb)return null;
+  try{const{data,error}=await sb.from("app_state").select("data").eq("id","main").single();
+    if(error||!data)return null;return data.data&&Object.keys(data.data).length>0?data.data:null;
+  }catch(e){console.warn("Cloud load failed:",e);return null;}
+};
+const saveStateCloud=async(state,email)=>{
+  const sb=getSB();if(!sb)return false;
+  try{const{error}=await sb.from("app_state").upsert({id:"main",data:state,updated_at:new Date().toISOString(),updated_by:email||"unknown"});
+    return!error;}catch(e){console.warn("Cloud save failed:",e);return false;}
+};
+
+const initFees=()=>{
+  const f={};
+  const demoSvc={
+    1:[{id:1,name:"Pauta Digital",amount:2500},{id:2,name:"Community extra",amount:800}],
+    2:[{id:3,name:"Pauta Digital",amount:4000}],
+    4:[{id:4,name:"Pauta Digital",amount:5000},{id:5,name:"Producción Video",amount:3000}],
+    5:[{id:6,name:"SEO mensual",amount:1500}],
+  };
+  MONTHS.forEach(({value:m})=>{f[m]={};INIT_CLIENTS.forEach(c=>{
+    f[m][c.id]={base:c.fee,services:(demoSvc[c.id]||[]).map(s=>({...s}))};
+  });});return f;
+};
+
+/* ═══ CSV Export helper ═══ */
+const exportCSV=(filename,headers,rows)=>{
+  const esc=v=>{const s=String(v==null?"":v);return s.includes(",")||s.includes('"')||s.includes('\n')?'"'+s.replace(/"/g,'""')+'"':s;};
+  const csv=[headers.map(esc).join(","),...rows.map(r=>r.map(esc).join(","))].join("\n");
+  const blob=new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);
+};
+
+/* ═══════════════════════════════════════ */
+function App({userEmail="local",onLogout,cloudMode=false}){
+  const[initialLoaded,setInitialLoaded]=useState(false);
+  const saved=useRef(loadStateLocal()).current;
+  const[page,setPage]=useState("recurrentes");
+  const[vm,setVm]=useState("2026-04");
+  const[selClient,setSelClient]=useState(null);
+  const[showForm,setShowForm]=useState(null);
+  const[statusFilter,setStatusFilter]=useState("");
+  const[facturaTab,setFacturaTab]=useState("recurrente");
+  const[gastoTab,setGastoTab]=useState("fijos");
+  const[saveMsg,setSaveMsg]=useState("");
+
+  const[clients,setClients]=useState(saved?.clients||INIT_CLIENTS);
+  const[team,setTeam]=useState(saved?.team||INIT_TEAM);
+  const[invoices,setInvoices]=useState(saved?.invoices||genInvoices);
+  const[projects,setProjects]=useState(saved?.projects||INIT_PROJECTS);
+  const[fixedExp,setFixedExp]=useState(saved?.fixedExp||INIT_FIXED);
+  const[digitalExp,setDigitalExp]=useState(saved?.digitalExp||INIT_DIGITAL);
+  const[variableExp,setVariableExp]=useState(saved?.variableExp||INIT_VAR);
+  const[officeExp,setOfficeExp]=useState(saved?.officeExp||INIT_OFFICE);
+  const[investExp,setInvestExp]=useState(saved?.investExp||INIT_INV);
+
+  /* Per-month fees: { month: { clientId: { base:number, services:[{id,name,amount}] } } } */
+  const[clientFees,setClientFees]=useState(saved?.clientFees||initFees);
+  const getEntry=(cId,m)=>(clientFees[m]&&clientFees[m][cId])||{base:0,services:[]};
+  const getFee=(cId,m)=>{const e=getEntry(cId,m);return e.base+e.services.reduce((s,sv)=>s+sv.amount,0);};
+  const setBase=(cId,m,v)=>setClientFees(prev=>{const e=getEntry(cId,m);return{...prev,[m]:{...prev[m],[cId]:{...e,base:v}}};});
+  const addSvc=(cId,m,name,amount)=>setClientFees(prev=>{const e=getEntry(cId,m);return{...prev,[m]:{...prev[m],[cId]:{...e,services:[...e.services,{id:Date.now(),name,amount}]}}};});
+  const delSvc=(cId,m,sId)=>setClientFees(prev=>{const e=getEntry(cId,m);return{...prev,[m]:{...prev[m],[cId]:{...e,services:e.services.filter(s=>s.id!==sId)}}};});
+  const[expandedClient,setExpandedClient]=useState(null);
+  const[editPerson,setEditPerson]=useState(null);
+  const[editInvoice,setEditInvoice]=useState(null);
+  /* Cotizador state */
+  const[simName,setSimName]=useState("Nuevo Cliente");
+  const[simFee,setSimFee]=useState("");
+  const[simTeam,setSimTeam]=useState([{id:1,role:"",amount:0}]);
+  const[simTransTeam,setSimTransTeam]=useState([]);
+  const[simGastos,setSimGastos]=useState([]);
+  const[simMarginTarget,setSimMarginTarget]=useState(30);
+  const[simMonth,setSimMonth]=useState(vm);
+
+  /* ── Snapshots por mes (para history correcta) ── */
+  const[monthSnapshots,setMonthSnapshots]=useState(saved?.monthSnapshots||{});
+  /* Snapshot: guarda equipo y gastos fijos del mes actual para tener history real */
+  const takeSnapshot=()=>{
+    setMonthSnapshots(prev=>({...prev,[vm]:{
+      team:team.map(t=>({id:t.id,name:t.name,regimen:t.regimen,neto:t.neto,inversion:t.inversion||t.bruto,bruto:t.bruto,assignments:t.assignments})),
+      fixedExp:fixedExp.map(e=>({...e})),digitalExp:digitalExp.map(e=>({...e})),officeExp:officeExp.map(e=>({...e})),
+      savedAt:new Date().toISOString()
+    }}));
+  };
+
+  /* ── Caja chica from cloud (read-only in main app) ── */
+  const[cajaChica,setCajaChica]=useState([]);
+  const[loadingCaja,setLoadingCaja]=useState(false);
+  const loadCajaChica=async(month)=>{
+    const sb=getSB();if(!sb)return;
+    setLoadingCaja(true);
+    try{
+      const{data,error}=await sb.from("caja_chica").select("*").eq("mes",month).order("fecha",{ascending:false});
+      if(!error&&data)setCajaChica(data);
+    }catch(e){console.warn("Caja chica load:",e);}
+    setLoadingCaja(false);
+  };
+  useEffect(()=>{if(cloudMode)loadCajaChica(vm);},[vm,cloudMode]);
+  const totalCajaCloud=cajaChica.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+
+  /* ── Load from cloud on first mount ── */
+  useEffect(()=>{
+    if(!cloudMode){setInitialLoaded(true);return;}
+    loadStateCloud().then(cloudData=>{
+      if(cloudData&&cloudData.clients){
+        setClients(cloudData.clients);setTeam(cloudData.team||[]);setInvoices(cloudData.invoices||[]);
+        setProjects(cloudData.projects||[]);setFixedExp(cloudData.fixedExp||[]);setDigitalExp(cloudData.digitalExp||[]);
+        setVariableExp(cloudData.variableExp||[]);setOfficeExp(cloudData.officeExp||[]);setInvestExp(cloudData.investExp||[]);
+        setClientFees(cloudData.clientFees||initFees());setMonthSnapshots(cloudData.monthSnapshots||{});
+        setSaveMsg("Datos cargados de la nube");setTimeout(()=>setSaveMsg(""),3000);
+      }
+      setInitialLoaded(true);
+    });
+  },[]);
+
+  /* ── Auto-save on data change ── */
+  useEffect(()=>{
+    if(!initialLoaded)return; /* don't save until cloud data is loaded */
+    const state={clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots};
+    const timer=setTimeout(()=>{
+      saveStateLocal(state); /* always save locally as backup */
+      if(cloudMode){
+        saveStateCloud(state,userEmail).then(ok=>{
+          setSaveMsg(ok?"Guardado en la nube":"Guardado local (nube falló)");
+          setTimeout(()=>setSaveMsg(""),2500);
+        });
+      }else{
+        setSaveMsg("Guardado");setTimeout(()=>setSaveMsg(""),2000);
+      }
+    },1500);
+    return()=>clearTimeout(timer);
+  },[clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,initialLoaded]);
+
+  const NAV=[
+    {section:"Ingresos"},
+    {id:"recurrentes",label:"Recurrentes (Fees)",icon:"repeat"},
+    {id:"proyectos",label:"Proyectos",icon:"briefcase"},
+    {section:"Egresos"},
+    {id:"planilla",label:"Planilla / RH",icon:"users"},
+    {id:"gastos",label:"Gastos",icon:"down"},
+    {section:"Control"},
+    {id:"facturas",label:"Facturas",icon:"receipt"},
+    {section:"Simulación"},
+    {id:"cotizador",label:"Cotizador",icon:"calculator"},
+    {section:"Reportes"},
+    {id:"comercial",label:"Comercial",icon:"barchart"},
+    {id:"rentabilidad",label:"Rentabilidad x Cliente",icon:"pie"},
+    {id:"cashflow",label:"Cashflow",icon:"dollar"},
+    {id:"alertas",label:"Alertas",icon:"alert"},
+    {section:""},
+    {id:"config",label:"Configuración",icon:"gear"},
+  ];
+
+  /* ── calculations ── */
+  const calc=useMemo(()=>{
+    const totalFees=clients.reduce((s,c)=>s+getFee(c.id,vm),0);
+    const mInv=invoices.filter(i=>i.month===vm);
+    /* Excluir paid media de métricas de ingreso real */
+    const realInv=invoices.filter(i=>i.type!=="paid");
+    const paidInv=invoices.filter(i=>i.type==="paid");
+    const allCob=realInv.filter(i=>i.status==="Cobrada");
+    const allPC=realInv.filter(i=>i.status==="Por cobrar");
+    const allEm=realInv.filter(i=>i.status==="Emitida");
+    const totalCob=allCob.reduce((s,i)=>s+i.amount,0);
+    const totalPC=allPC.reduce((s,i)=>s+i.amount,0);
+    const totalEm=allEm.reduce((s,i)=>s+i.amount,0);
+    /* Paid media totals (pass-through) */
+    const paidPC=paidInv.filter(i=>i.status!=="Cobrada");
+    const paidCob=paidInv.filter(i=>i.status==="Cobrada");
+    const totalPaidPC=paidPC.reduce((s,i)=>s+i.amount,0);
+    const totalPaidCob=paidCob.reduce((s,i)=>s+i.amount,0);
+    const mCob=mInv.filter(i=>i.status==="Cobrada"&&i.type!=="paid");
+    const mPC=mInv.filter(i=>i.status==="Por cobrar"&&i.type!=="paid");
+    const mEm=mInv.filter(i=>i.status==="Emitida");
+    const mProj=projects.filter(p=>p.month===vm);
+    const totalPR=mProj.reduce((s,p)=>s+p.revenue,0);
+    const totalPCost=mProj.reduce((s,p)=>s+pCost(p),0);
+    const dedPay=team.reduce((s,t)=>s+tAllDed(t),0);
+    const transPay=team.reduce((s,t)=>s+tTrans(t),0);
+    const totalPay=dedPay+transPay;
+    const tFixed=fixedExp.reduce((s,e)=>s+e.amount,0);
+    const tDigital=digitalExp.reduce((s,e)=>s+e.amount,0);
+    const tVar=variableExp.filter(e=>e.month===vm).reduce((s,e)=>s+e.amount,0);
+    const tOffice=officeExp.reduce((s,e)=>s+e.amount,0);
+    const tInvest=investExp.filter(e=>e.month===vm).reduce((s,e)=>s+e.amount,0);
+    const tCajaCloud=totalCajaCloud||0;
+    const overhead=transPay+tFixed+tDigital+tVar+tCajaCloud+tOffice;
+    const structExp=totalPay+tFixed+tDigital+tVar+tCajaCloud+tOffice+tInvest;
+    const structProfit=totalFees-structExp;
+    const projProfit=totalPR-totalPCost;
+    const netProfit=structProfit+projProfit;
+    const totalIncome=totalFees+totalPR;
+    const totalExpenses=structExp+totalPCost;
+    const clientProfit=clients.map(c=>{
+      const cFee=getFee(c.id,vm);
+      const cTeam=team.reduce((s,t)=>s+tDed(t,c.id),0);
+      const cOH=totalFees>0?(cFee/totalFees)*overhead:0;
+      const cNet=cFee-cTeam-cOH;
+      const cMargin=cFee>0?(cNet/cFee)*100:0;
+      const cP=mProj.filter(p=>p.clientId===c.id);
+      const cPR=cP.reduce((s,p)=>s+p.revenue,0);const cPC=cP.reduce((s,p)=>s+pCost(p),0);
+      const cInv=invoices.filter(i=>i.clientId===c.id);
+      return{...c,fee:cFee,teamCost:cTeam,oh:cOH,structNet:cNet,margin:cMargin,projRev:cPR,projCost:cPC,projProfit:cPR-cPC,
+        totalNet:cNet+(cPR-cPC),teamMembers:team.filter(t=>t.assignments.some(a=>a.clientId===c.id)),projects:cP,
+        cobrado:cInv.filter(i=>i.status==="Cobrada").reduce((s,i)=>s+i.amount,0),
+        porCobrar:cInv.filter(i=>i.status==="Por cobrar").reduce((s,i)=>s+i.amount,0)};
+    });
+    return{totalFees,totalCob,totalPC,totalEm,allCob,allPC,allEm,mInv,mCob,mPC,mEm,totalPR,totalPCost,dedPay,transPay,totalPay,
+      tFixed,tDigital,tVar,tCajaCloud,tOffice,tInvest,overhead,structExp,structProfit,projProfit,netProfit,totalIncome,totalExpenses,clientProfit,
+      totalPaidPC,totalPaidCob,paidPC,paidCob};
+  },[clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,vm,clientFees,totalCajaCloud]);
+
+  const history=useMemo(()=>{
+    return MONTHS.map(({value:m,label})=>{
+      const fees=clients.reduce((s,c)=>s+getFee(c.id,m),0);
+      const pR=projects.filter(p=>p.month===m).reduce((s,p)=>s+p.revenue,0);
+      const pC=projects.filter(p=>p.month===m).reduce((s,p)=>s+pCost(p),0);
+      /* Usar snapshot del mes si existe, sino datos actuales */
+      const snap=monthSnapshots[m];
+      const pay=snap?snap.team.reduce((s,t)=>s+(t.inversion||t.bruto||0),0):team.reduce((s,t)=>s+(t.inversion||t.bruto),0);
+      const fx=snap?snap.fixedExp.reduce((s,e)=>s+e.amount,0):fixedExp.reduce((s,e)=>s+e.amount,0);
+      const dg=snap?snap.digitalExp.reduce((s,e)=>s+e.amount,0):digitalExp.reduce((s,e)=>s+e.amount,0);
+      const vr=variableExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+      const of_=snap?snap.officeExp.reduce((s,e)=>s+e.amount,0):officeExp.reduce((s,e)=>s+e.amount,0);
+      const iv=investExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+      const sExp=pay+fx+dg+vr+of_+iv;
+      const hasData=invoices.some(i=>i.month===m)||projects.some(p=>p.month===m)||vr>0||iv>0||fees>0;
+      return{month:label.split(" ")[0],m:m,fees,sExp,sProfit:fees-sExp,pProfit:pR-pC,total:(fees-sExp)+(pR-pC),income:fees+pR,pCost:pC,hasData,snapped:!!snap};
+    });
+  },[clients,team,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,invoices,clientFees,monthSnapshots]);
+
+  const filtInv=useMemo(()=>{
+    let list=invoices.filter(i=>i.month===vm&&i.type===facturaTab);
+    if(statusFilter)list=list.filter(i=>i.status===statusFilter);
+    return list.sort((a,b)=>b.date.localeCompare(a.date));
+  },[invoices,vm,statusFilter,facturaTab]);
+
+  const pageLabel=NAV.find(n=>n.id===page)?.label||"";
+  const go=(p)=>{setPage(p);setSelClient(null);setShowForm(null);};
+
+  return(
+    <div className="app">
+      <div className="sidebar">
+        <div className="sidebar-brand"><Ic d={ic.building} size={20} color="#059669"/><span>NotOffice Finanzas</span></div>
+        {NAV.map((n,i)=>n.section!==undefined&&!n.id?(
+          <div key={i} className="nav-section">{n.section}</div>
+        ):(
+          <button key={n.id} className={`nav-btn ${page===n.id?"active":""}`} onClick={()=>go(n.id)}>
+            <Ic d={ic[n.icon]} size={15} color={page===n.id?"#fff":"#94a3b8"}/>{n.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="main">
+        <div className="header">
+          <h1>{pageLabel}</h1>
+          <div style={{display:"flex",alignItems:"center",gap:16}}>
+            {saveMsg&&<span style={{fontSize:11,color:"#059669",fontWeight:600,background:"#ecfdf5",padding:"4px 10px",borderRadius:6}}>{saveMsg}</span>}
+            <button className="btn btn-sm btn-gray" title="Cerrar mes: guarda snapshot de planilla y gastos actuales para este mes" onClick={()=>{takeSnapshot();setSaveMsg("Mes cerrado ✓");setTimeout(()=>setSaveMsg(""),3000);}}>Cerrar {ML[parseInt(vm.split("-")[1])-1]}</button>
+            <select className="msel" value={vm} onChange={e=>setVm(e.target.value)}>
+              {MONTHS.map(m=><option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+            <div className="user-bar">
+              <span style={{width:8,height:8,borderRadius:"50%",background:cloudMode?"#059669":"#d97706",marginRight:2}} title={cloudMode?"Conectado a la nube":"Modo local"}/>
+              <span style={{width:28,height:28,borderRadius:"50%",background:"#059669",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700}}>{(userEmail||"YM").slice(0,2).toUpperCase()}</span>
+              <strong style={{maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{userEmail==="local"?"Ynes Martínez":userEmail}</strong>
+              {cloudMode&&<button onClick={onLogout} style={{background:"none",border:"none",cursor:"pointer",color:"#94a3b8",fontSize:11,fontFamily:"inherit"}}>Salir</button>}
+            </div>
+          </div>
+        </div>
+
+        <div className="content"><div className="ci">
+
+        {/* ═══ INGRESOS > RECURRENTES ═══ */}
+        {page==="recurrentes"&&(()=>{
+          const activos=clients.filter(c=>getFee(c.id,vm)>0);
+          const inactivos=clients.filter(c=>getFee(c.id,vm)===0);
+          const activar=(cId)=>{const pi=MONTHS.findIndex(m=>m.value===vm)-1;const prevM=pi>=0?MONTHS[pi].value:null;
+            const prevE=prevM?getEntry(cId,prevM):null;const base=prevE&&prevE.base>0?prevE.base:(clients.find(x=>x.id===cId)?.fee||0);
+            setClientFees(prev=>({...prev,[vm]:{...prev[vm],[cId]:{base,services:prevE?prevE.services.map(s=>({...s,id:Date.now()+Math.random()})):[]}}}));};
+          const desactivar=(cId)=>setClientFees(prev=>({...prev,[vm]:{...prev[vm],[cId]:{base:0,services:[]}}}));
+          /* Detectar si el mes actual tiene datos configurados */
+          const mesData=clientFees[vm]||{};
+          const mesTieneDatos=Object.values(mesData).some(e=>e&&e.base>0);
+          const prevMonthIdx=MONTHS.findIndex(m=>m.value===vm)-1;
+          const prevMonth=prevMonthIdx>=0?MONTHS[prevMonthIdx]:null;
+          const prevTieneDatos=prevMonth?Object.values(clientFees[prevMonth.value]||{}).some(e=>e&&e.base>0):false;
+          const copiarDelMesAnterior=()=>{if(!prevMonth)return;
+            if(mesTieneDatos&&!confirm("Este mes ya tiene datos. ¿Sobrescribir con los datos de "+prevMonth.label+"?"))return;
+            setClientFees(pf=>{const nf={...pf};nf[vm]={};clients.forEach(c=>{const pe=getEntry(c.id,prevMonth.value);
+              nf[vm][c.id]={base:pe.base,services:pe.services.map(s=>({...s,id:Date.now()+Math.random()}))};});return nf;});};
+          return(<>
+          {!mesTieneDatos&&prevTieneDatos&&(
+            <div style={{background:"linear-gradient(135deg,#ecfdf5,#f0fdf4)",border:"2px dashed #059669",borderRadius:12,padding:20,marginBottom:16,textAlign:"center"}}>
+              <div style={{fontSize:16,fontWeight:700,color:"#059669",marginBottom:6}}>Nuevo mes sin configurar</div>
+              <div style={{fontSize:13,color:"#475569",marginBottom:12}}>Pre-llena los fees de <strong>{ML[parseInt(vm.split("-")[1])-1]}</strong> copiando los datos de <strong>{prevMonth.label}</strong>. Después solo ajusta lo que cambió.</div>
+              <button className="btn btn-green" style={{fontSize:14,padding:"10px 24px"}} onClick={copiarDelMesAnterior}>
+                <Ic d={ic.repeat} size={16} color="#fff"/> Pre-llenar desde {prevMonth.label}
+              </button>
+            </div>
+          )}
+          <div className="info-box">Fee base + servicios por cliente, editables mes a mes. Pre-llena desde el mes anterior y ajusta solo lo que cambió.</div>
+          <div className="grid g3" style={{marginBottom:16}}>
+            <div className="card" style={{borderLeft:"4px solid #059669"}}><div className="kpi-label">Total Ingresos — {ML[parseInt(vm.split("-")[1])-1]}</div><div className="kpi-value tg">{fmt(calc.totalFees)}</div><div className="kpi-sub">{activos.length} activos · {inactivos.length} inactivos</div></div>
+            <div className="card"><div className="kpi-label">Facturado (mes)</div><div className="kpi-value">{fmt(calc.mInv.filter(i=>i.type==="recurrente").reduce((s,i)=>s+i.amount,0))}</div><div className="kpi-sub">{calc.mInv.filter(i=>i.type==="recurrente").length} facturas emitidas</div></div>
+            <div className="card" style={{borderColor:"#fde68a"}}><div className="kpi-label">Proyección Anual</div><div className="kpi-value tp">{fmt(MONTHS.reduce((s,{value:m})=>s+clients.reduce((ss,c)=>ss+getFee(c.id,m),0),0))}</div></div>
+          </div>
+          {/* Agregar cliente inline */}
+          <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
+            <button className="btn btn-green" onClick={()=>setShowForm(showForm==="newclient"?null:"newclient")}><Ic d={ic.plus} size={14} color="#fff"/> Nuevo Cliente</button>
+          </div>
+          {showForm==="newclient"&&<div className="form-card" style={{marginBottom:12}}><h4 style={{color:"#059669"}}>Agregar Cliente</h4>
+            <form onSubmit={e=>{e.preventDefault();const f=new FormData(e.target);const nm=(f.get("n")||"").trim();const fee=parseInt(f.get("f"));
+              if(!nm){alert("Ingresa un nombre de cliente.");return;}
+              if(!fee||fee<=0){alert("El fee debe ser mayor a S/ 0.");return;}
+              if(clients.some(c=>c.name.toLowerCase()===nm.toLowerCase())){alert("Ya existe un cliente con ese nombre.");return;}
+              const nid=Date.now();setClients(p=>[...p,{id:nid,name:nm,fee}]);
+                setClientFees(prev=>{const nf={...prev};MONTHS.forEach(({value:m})=>{
+                  const mIdx=MONTHS.findIndex(x=>x.value===m);const vmIdx=MONTHS.findIndex(x=>x.value===vm);
+                  nf[m]={...nf[m],[nid]:{base:mIdx>=vmIdx?fee:0,services:[]}};
+                });return nf;});
+                setShowForm(null);
+            }}>
+              <div className="form-row">
+                <input name="n" placeholder="Nombre del cliente" required style={{flex:2}}/>
+                <input name="f" type="number" placeholder="Fee mensual (S/)" required style={{flex:1}}/>
+                <button type="submit" className="btn btn-green">Agregar</button>
+                <button type="button" className="btn btn-gray" onClick={()=>setShowForm(null)}>Cancelar</button>
+              </div>
+              <div style={{fontSize:11,color:"#94a3b8",marginTop:4}}>Se activará desde {ML[parseInt(vm.split("-")[1])-1]} en adelante</div>
+            </form>
+          </div>}
+
+          {activos.map(c=>{
+            const entry=getEntry(c.id,vm);const cFee=getFee(c.id,vm);const isExp=expandedClient===c.id;
+            const mFac=invoices.find(i=>i.clientId===c.id&&i.month===vm&&i.type==="recurrente");
+            return(<div key={c.id} className="card" style={{marginBottom:8,borderLeft:"4px solid #059669"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setExpandedClient(isExp?null:c.id)}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:16,color:"#94a3b8"}}>{isExp?"▾":"▸"}</span>
+                  <span style={{fontWeight:600}}>{c.name}</span>
+                  {entry.services.length>0&&<span className="badge bb" style={{fontSize:10}}>{entry.services.length} servicio{entry.services.length>1?"s":""}</span>}
+                  {mFac&&<span className={`badge ${mFac.status==="Cobrada"?"bg":mFac.status==="Por cobrar"?"ba":"bb"}`} style={{fontSize:10}}>{mFac.status}</span>}
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:16}}>
+                  <span style={{fontSize:12,color:"#94a3b8"}}>{pct(cFee,calc.totalFees)}%</span>
+                  <span style={{fontWeight:700,fontSize:16}} className="tg">{fmt(cFee)}</span>
+                </div>
+              </div>
+              {isExp&&(<div style={{marginTop:12,borderTop:"1px solid #f1f5f9",paddingTop:12}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                  <span style={{fontSize:12,fontWeight:600,color:"#64748b",minWidth:80}}>Nombre</span>
+                  <input value={c.name} onChange={e=>setClients(clients.map(x=>x.id===c.id?{...x,name:e.target.value}:x))}
+                    style={{flex:1,fontWeight:600,fontSize:13,padding:"5px 8px"}}/>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+                  <span style={{fontSize:12,fontWeight:600,color:"#64748b",minWidth:80}}>Fee base</span>
+                  <input type="number" value={entry.base||""} onChange={e=>setBase(c.id,vm,parseInt(e.target.value)||0)}
+                    style={{width:140,textAlign:"right",fontWeight:700,color:"#059669",fontSize:14}}/>
+                </div>
+                <div style={{fontSize:12,fontWeight:600,color:"#64748b",marginBottom:6}}>Servicios adicionales</div>
+                {entry.services.map(sv=>(<div key={sv.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,padding:"4px 8px",background:"#f8fafc",borderRadius:6}}>
+                  <span style={{flex:1,fontSize:12}}>{sv.name}</span>
+                  <span style={{fontWeight:600,fontSize:12,color:"#0284c7"}}>{fmt(sv.amount)}</span>
+                  <button className="del-btn" onClick={()=>delSvc(c.id,vm,sv.id)}>✕</button>
+                </div>))}
+                <SvcForm onAdd={(n,a)=>addSvc(c.id,vm,n,a)}/>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:10,paddingTop:10,borderTop:"1px solid #f1f5f9"}}>
+                  <div style={{display:"flex",gap:6}}>
+                  <button className="btn btn-sm btn-red" style={{opacity:.7}} onClick={e=>{e.stopPropagation();if(confirm("¿Desactivar "+c.name+" en "+ML[parseInt(vm.split("-")[1])-1]+"?"))desactivar(c.id);}}>Desactivar este mes</button>
+                  <button className="btn btn-sm" style={{background:"#fee2e2",color:"#9f1239",fontSize:11,padding:"3px 8px",borderRadius:6}} onClick={e=>{e.stopPropagation();if(confirm("¿Eliminar "+c.name+" de toda la base de datos? Esta acción no se puede deshacer.")){setClients(clients.filter(x=>x.id!==c.id));setExpandedClient(null);}}}>Eliminar cliente</button>
+                </div>
+                  <div><span style={{fontSize:11,color:"#94a3b8"}}>Base {fmt(entry.base)} + Servicios {fmt(entry.services.reduce((s,sv)=>s+sv.amount,0))} = </span>
+                  <span style={{fontWeight:700}} className="tg">{fmt(cFee)}</span></div>
+                </div>
+              </div>)}
+            </div>);
+          })}
+
+          {inactivos.length>0&&(<>
+            <div className="sl" style={{marginTop:16,color:"#94a3b8"}}>Clientes inactivos este mes ({inactivos.length})</div>
+            {inactivos.map(c=>(<div key={c.id} className="card" style={{marginBottom:6,borderLeft:"4px solid #e2e8f0",opacity:.6}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontWeight:600,color:"#94a3b8"}}>{c.name}</span>
+                  <span className="badge br" style={{fontSize:10}}>Inactivo</span>
+                </div>
+                <button className="btn btn-sm btn-green" onClick={()=>activar(c.id)}>Activar en {ML[parseInt(vm.split("-")[1])-1]}</button>
+              </div>
+            </div>))}
+          </>)}
+
+          <div className="total-bar" style={{marginTop:12}}>
+            <div><div style={{fontSize:11,color:"#64748b",textTransform:"uppercase"}}>Total Ingresos Recurrentes — {ML[parseInt(vm.split("-")[1])-1]}</div>
+              <div style={{fontSize:24,fontWeight:700}} className="tg">{fmt(calc.totalFees)}</div></div>
+            <div style={{textAlign:"right"}}><div style={{fontSize:11,color:"#64748b"}}>Clientes activos</div>
+              <div style={{fontSize:18,fontWeight:700}}>{activos.length} / {clients.length}</div></div>
+          </div>
+          {prevMonth&&<div style={{marginTop:12,display:"flex",gap:8}}>
+            <button className="btn btn-gray" onClick={copiarDelMesAnterior}><Ic d={ic.repeat} size={13} color="#64748b"/> {mesTieneDatos?"Sobrescribir":"Pre-llenar"} desde {prevMonth.label}</button>
+          </div>}
+        </>);})()}
+
+        {/* ═══ INGRESOS > PROYECTOS ═══ */}
+        {page==="proyectos"&&(<>
+          <div className="info-box">Proyectos independientes con ingreso y costo directo. <strong>NO</strong> entran en la estructura mensual ni overhead.</div>
+          <div className="grid g4" style={{marginBottom:16}}>
+            <div className="card"><div className="kpi-label">Ingreso (mes)</div><div className="kpi-value tg">{fmt(calc.totalPR)}</div></div>
+            <div className="card"><div className="kpi-label">Costo (mes)</div><div className="kpi-value tr">{fmt(calc.totalPCost)}</div></div>
+            <div className="card"><div className="kpi-label">Utilidad (mes)</div><div className={`kpi-value ${calc.projProfit>=0?"tg":"tr"}`}>{fmt(calc.projProfit)}</div></div>
+            <div className="card"><div className="kpi-label">Utilidad Anual</div><div className="kpi-value tp">{fmt(projects.reduce((s,p)=>s+(p.revenue-pCost(p)),0))}</div></div>
+          </div>
+          <div style={{textAlign:"right",marginBottom:12}}>
+            <button className="btn btn-blue" onClick={()=>setShowForm("project")}><Ic d={ic.plus} size={14} color="#fff"/> Nuevo Proyecto</button>
+          </div>
+          {showForm==="project"&&<ProjectForm clients={clients} month={vm} onAdd={p=>{setProjects(prev=>[...prev,{...p,id:Date.now()}]);setShowForm(null);}} onClose={()=>setShowForm(null)}/>}
+          <div className="card" style={{padding:0,overflow:"hidden"}}>
+            <table>
+              <thead><tr><th>Proyecto</th><th>Cliente</th><th>Mes</th><th className="text-right">Ingreso</th><th className="text-right">Costo</th><th className="text-right">Utilidad</th><th className="text-center">Margen</th><th className="text-center">Estado</th></tr></thead>
+              <tbody>
+                {projects.sort((a,b)=>b.month.localeCompare(a.month)).map(p=>{const ut=p.revenue-pCost(p);const mg=p.revenue>0?(ut/p.revenue)*100:0;return(
+                  <tr key={p.id}><td style={{fontWeight:600}}>{p.name}</td><td>{clients.find(c=>c.id===p.clientId)?.name||"—"}</td>
+                    <td style={{color:"#94a3b8",fontSize:12}}>{p.month}</td>
+                    <td className="text-right tg">{fmt(p.revenue)}</td><td className="text-right tr">{fmt(pCost(p))}</td>
+                    <td className={`text-right font-bold ${ut>=0?"tg":"tr"}`}>{fmt(ut)}</td>
+                    <td className="text-center"><span className={`badge ${mg>=30?"bg":mg>=15?"ba":"br"}`}>{mg.toFixed(1)}%</span></td>
+                    <td className="text-center"><span className={`badge ${p.status==="Completado"?"bg":p.status==="En curso"?"bb":"ba"}`}>{p.status}</span></td>
+                  </tr>);})}
+              </tbody>
+              <tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e2e8f0"}}>
+                <td colSpan={3}>TOTAL</td><td className="text-right tg">{fmt(projects.reduce((s,p)=>s+p.revenue,0))}</td>
+                <td className="text-right tr">{fmt(projects.reduce((s,p)=>s+pCost(p),0))}</td>
+                <td className="text-right">{fmt(projects.reduce((s,p)=>s+(p.revenue-pCost(p)),0))}</td><td colSpan={2}></td>
+              </tr></tfoot>
+            </table>
+          </div>
+        </>)}
+
+        {/* ═══ EGRESOS > PLANILLA / RH ═══ */}
+        {page==="planilla"&&(<>
+          <div className="grid g5" style={{marginBottom:16}}>
+            <div className="card"><div className="kpi-label">Planilla</div><div className="kpi-value tr">{fmt(team.filter(t=>t.regimen==="planilla").reduce((s,t)=>s+(t.inversion||t.bruto),0))}</div><div className="kpi-sub">{team.filter(t=>t.regimen==="planilla").length} personas</div></div>
+            <div className="card"><div className="kpi-label">RH (Honorarios)</div><div className="kpi-value ta">{fmt(team.filter(t=>t.regimen==="rh").reduce((s,t)=>s+(t.inversion||t.bruto),0))}</div><div className="kpi-sub">{team.filter(t=>t.regimen==="rh").length} personas</div></div>
+            <div className="card"><div className="kpi-label">EsSalud</div><div className="kpi-value ta">{fmt(team.reduce((s,t)=>s+t.essalud,0))}</div></div>
+            <div className="card"><div className="kpi-label">AFP</div><div className="kpi-value ta">{fmt(team.reduce((s,t)=>s+t.afp,0))}</div></div>
+            <div className="card" style={{borderColor:"#fecaca"}}><div className="kpi-label">Costo Total</div><div className="kpi-value tr">{fmt(calc.totalPay)}</div><div className="kpi-sub">Marcas {fmt(calc.dedPay)} · Trans {fmt(calc.transPay)}</div></div>
+          </div>
+          <div className="info-box"><strong>Planilla:</strong> Neto + EsSalud + AFP = Bruto. <strong>RH:</strong> Solo monto. Clic en una persona para ver desglose y editar asignaciones.</div>
+          <div style={{textAlign:"right",marginBottom:12}}>
+            <button className="btn btn-blue" onClick={()=>setShowForm("team")}><Ic d={ic.plus} size={14} color="#fff"/> Agregar Persona</button>
+          </div>
+          {showForm==="team"&&<TeamForm clients={clients} onAdd={t=>{setTeam(prev=>[...prev,{...t,id:Date.now()}]);setShowForm(null);}} onClose={()=>setShowForm(null)}/>}
+
+          {/* ── Equipos por marca ── */}
+          <div className="sl">Equipos por Marca</div>
+          {(()=>{
+            /* PersonCard inline — reused in both brand & transversal sections */
+            const PersonCard=({m,ctxLabel,ctxAmount})=>{
+              const isExp=editPerson===m.id;
+              const totalAssigned=m.assignments.reduce((s,a)=>s+a.amount,0);
+              const diff=(m.inversion||m.bruto)-totalAssigned;
+              const otherAssigns=m.assignments.length>1;
+              return(<div style={{padding:"8px 12px",background:isExp?"#fff":"#f8fafc",borderRadius:8,marginBottom:4,border:isExp?"1px solid #e2e8f0":"1px solid transparent"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setEditPerson(isExp?null:m.id)}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:12,color:"#94a3b8"}}>{isExp?"▾":"▸"}</span>
+                    <span style={{fontWeight:600,fontSize:13}}>{m.name}</span>
+                    <span style={{fontSize:11,color:"#64748b"}}>{ctxLabel}</span>
+                    <span className={`badge ${m.regimen==="planilla"?"bb":"bpp"}`} style={{fontSize:9}}>{m.regimen==="planilla"?"P":"RH"}</span>
+                    {otherAssigns&&<span className="badge" style={{fontSize:9,background:"#ede9fe",color:"#7c3aed"}}>{m.assignments.length} asign.</span>}
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    {ctxAmount!=null&&<span style={{fontWeight:700,fontSize:13}} className="tr">{fmt(ctxAmount)}</span>}
+                    {otherAssigns&&<span style={{fontSize:10,color:"#94a3b8"}}>inv. {fmt(m.inversion||m.bruto)}</span>}
+                  </div>
+                </div>
+                {isExp&&(<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #f1f5f9"}}>
+                  <div style={{background:"#f0f4f8",borderRadius:8,padding:10,marginBottom:10}}>
+                    <div style={{fontSize:11,fontWeight:600,color:"#64748b",marginBottom:6}}>Sueldo</div>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+                      <span style={{fontSize:12,minWidth:50}}>Neto</span>
+                      <input type="number" value={m.neto} onChange={e=>{
+                        const newNeto=parseInt(e.target.value)||0;
+                        if(m.regimen==="planilla"){const es=Math.round(newNeto*0.09);const afp=Math.round(newNeto*0.115);
+                          setTeam(team.map(t=>t.id===m.id?{...t,neto:newNeto,essalud:es,afp,bruto:newNeto+afp,inversion:newNeto+afp+es}:t));
+                        }else{setTeam(team.map(t=>t.id===m.id?{...t,neto:newNeto,bruto:newNeto,inversion:newNeto}:t));}
+                      }} style={{width:120,textAlign:"right",fontWeight:600,fontSize:13,padding:"4px 8px"}}/>
+                    </div>
+                    {m.regimen==="planilla"&&<>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#94a3b8",paddingLeft:10}}><span>+ AFP (11.5%)</span><span>{fmt(m.afp)}</span></div>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#059669",paddingLeft:10,marginBottom:4}}><span>= Sueldo Bruto</span><span style={{fontWeight:600}}>{fmt(m.bruto)}</span></div>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#94a3b8",paddingLeft:10}}><span>+ EsSalud (9%)</span><span>{fmt(m.essalud)}</span></div>
+                    </>}
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:13,fontWeight:700,borderTop:"1px solid #e2e8f0",paddingTop:4}}><span>Inversión Total Empresa</span><span className="tr">{fmt(m.inversion||m.bruto)}</span></div>
+                  </div>
+                  <div style={{fontSize:11,fontWeight:600,color:"#64748b",marginBottom:6}}>Distribución del costo</div>
+                  {m.assignments.map(a=><AssignRow key={a.id} a={a} clients={clients} canDel={m.assignments.length>1}
+                    onChange={up=>setTeam(team.map(t=>t.id===m.id?{...t,assignments:t.assignments.map(x=>x.id===a.id?{...x,...up}:x)}:t))}
+                    onDel={()=>{if(m.assignments.length<=1){if(confirm("¿Eliminar a "+m.name+"?"))setTeam(team.filter(t=>t.id!==m.id));}
+                      else setTeam(team.map(t=>t.id===m.id?{...t,assignments:t.assignments.filter(x=>x.id!==a.id)}:t));}}/>)}
+                  <button className="btn btn-sm btn-gray" style={{marginTop:4,fontSize:11}} onClick={()=>setTeam(team.map(t=>t.id===m.id?{...t,assignments:[...t.assignments,{id:Date.now(),clientId:null,role:"",amount:0}]}:t))}>+ Bono / otra marca</button>
+                  {diff!==0&&<div style={{fontSize:11,padding:"4px 8px",borderRadius:6,marginTop:6,
+                    background:diff>0?"#fffbeb":"#fff1f2",color:diff>0?"#92400e":"#e11d48",fontWeight:600}}>
+                    {diff>0?"⚠ Sin asignar: "+fmt(diff):"⚠ Excede inversión: "+fmt(Math.abs(diff))}
+                  </div>}
+                  <div style={{display:"flex",justifyContent:"flex-end",marginTop:8,paddingTop:6,borderTop:"1px solid #f1f5f9"}}>
+                    <button className="btn btn-sm btn-red" style={{opacity:.7,fontSize:11}} onClick={()=>{if(confirm("¿Eliminar a "+m.name+"?"))setTeam(team.filter(t=>t.id!==m.id));}}>Eliminar</button>
+                  </div>
+                </div>)}
+              </div>);};
+
+            const onlyTrans=team.filter(t=>t.assignments.every(a=>a.clientId===null));
+            return(<>
+              {clients.map(c=>{
+                const cMembers=team.filter(t=>t.assignments.some(a=>a.clientId===c.id));
+                if(!cMembers.length)return null;
+                const cCost=team.reduce((s,t)=>s+tDed(t,c.id),0);
+                return(<div className="card" key={c.id} style={{marginBottom:8}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{fontWeight:700,color:"#059669"}}>{c.name}</span>
+                      <span style={{fontSize:11,color:"#94a3b8"}}>{cMembers.length} persona{cMembers.length>1?"s":""}</span>
+                    </div>
+                    <span className="font-bold tr">{fmt(cCost)}</span>
+                  </div>
+                  {cMembers.map(m=>{
+                    const myAssigns=m.assignments.filter(a=>a.clientId===c.id);
+                    const myAmount=myAssigns.reduce((s,a)=>s+a.amount,0);
+                    const myRoles=myAssigns.map(a=>a.role).join(", ");
+                    return <PersonCard key={m.id} m={m} ctxLabel={myRoles} ctxAmount={myAmount}/>;
+                  })}
+                </div>);
+              })}
+
+              {/* ── Transversales ── */}
+              <div className="sl" style={{marginTop:12}}>Equipo Transversal</div>
+              <div className="card">
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontWeight:700,color:"#d97706"}}>Transversal</span>
+                    <span style={{fontSize:11,color:"#94a3b8"}}>{onlyTrans.length} persona{onlyTrans.length>1?"s":""} exclusivas + bonos</span>
+                  </div>
+                  <span className="font-bold ta">{fmt(calc.transPay)}</span>
+                </div>
+                {onlyTrans.map(m=>{
+                  const myRoles=m.assignments.map(a=>a.role).join(", ");
+                  return <PersonCard key={m.id} m={m} ctxLabel={myRoles} ctxAmount={m.inversion||m.bruto}/>;
+                })}
+                {/* Bonos transversales de gente que también tiene marca */}
+                {(()=>{const bonos=[];team.forEach(t=>{if(t.assignments.every(a=>a.clientId===null))return;
+                  t.assignments.filter(a=>a.clientId===null).forEach(a=>bonos.push({person:t,assign:a}));});
+                  if(!bonos.length)return null;
+                  return(<><div style={{fontSize:11,fontWeight:600,color:"#94a3b8",margin:"10px 0 6px",borderTop:"1px solid #f1f5f9",paddingTop:8}}>Bonos transversales (personas con marca)</div>
+                    {bonos.map(b=>(<div key={b.assign.id} style={{display:"flex",justifyContent:"space-between",padding:"4px 10px",background:"#fffbeb",borderRadius:6,marginBottom:3,fontSize:12}}>
+                      <span><span style={{fontWeight:600}}>{b.person.name}</span> <span style={{color:"#94a3b8"}}>— {b.assign.role}</span></span>
+                      <span style={{fontWeight:600,color:"#d97706"}}>{fmt(b.assign.amount)}</span>
+                    </div>))}</>);
+                })()}
+              </div>
+            </>);
+          })()}
+        </>)}
+
+        {/* ═══ EGRESOS > GASTOS ═══ */}
+        {page==="gastos"&&(<>
+          <div className="grid g5" style={{marginBottom:16}}>
+            <div className="card"><div className="kpi-label">Fijos</div><div className="kpi-value tr">{fmt(calc.tFixed)}</div></div>
+            <div className="card"><div className="kpi-label">Digitales</div><div className="kpi-value tb">{fmt(calc.tDigital)}</div></div>
+            <div className="card"><div className="kpi-label">Caja Chica</div><div className="kpi-value ta">{fmt(calc.tVar)}</div></div>
+            <div className="card"><div className="kpi-label">App Móvil</div><div className="kpi-value tp">{fmt(calc.tCajaCloud)}</div></div>
+            <div className="card"><div className="kpi-label">Costos Proy.</div><div className="kpi-value tr">{fmt(calc.totalPCost)}</div></div>
+          </div>
+          {cloudMode&&totalCajaCloud>0&&<div className="card" style={{marginBottom:16,borderLeft:"4px solid #7c3aed",background:"#faf5ff"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div><div style={{fontSize:12,fontWeight:600,color:"#7c3aed"}}>Caja Chica (App Móvil)</div><div style={{fontSize:11,color:"#94a3b8"}}>{cajaChica.length} gastos registrados desde celulares</div></div>
+              <div style={{fontSize:18,fontWeight:700,color:"#7c3aed"}}>{fmt(totalCajaCloud)}</div>
+            </div>
+          </div>}
+          <div className="tabs">
+            {[["fijos","Fijos"],["digital","Digitales"],["variable","Caja Chica"],["oficina","Oficina"],["inversion","Inversión"],["proyectos","Costos Proyecto"],["cajaApp","App Móvil"]].map(([k,l])=>(
+              <button key={k} className={`tab ${gastoTab===k?"active":""}`} onClick={()=>{setGastoTab(k);if(k==="cajaApp"&&cloudMode)loadCajaChica(vm);}}>{l}</button>
+            ))}
+          </div>
+          {gastoTab==="fijos"&&<ExpBlock title="Gastos Fijos (mensuales)" items={fixedExp} total={calc.tFixed} color="tr" onAdd={e=>setFixedExp(p=>[...p,{...e,id:Date.now()}])} onDel={id=>setFixedExp(fixedExp.filter(e=>e.id!==id))}/>}
+          {gastoTab==="digital"&&<ExpBlock title="Servicios Digitales" items={digitalExp} total={calc.tDigital} color="tb" onAdd={e=>setDigitalExp(p=>[...p,{...e,id:Date.now()}])} onDel={id=>setDigitalExp(digitalExp.filter(e=>e.id!==id))}/>}
+          {gastoTab==="variable"&&<ExpBlock title={`Caja Chica / Variables (${vm})`} items={variableExp.filter(e=>e.month===vm)} total={calc.tVar} color="ta" onAdd={e=>setVariableExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setVariableExp(variableExp.filter(e=>e.id!==id))}/>}
+          {gastoTab==="oficina"&&<ExpBlock title="Gastos de Oficina" items={officeExp} total={calc.tOffice} color="" onAdd={e=>setOfficeExp(p=>[...p,{...e,id:Date.now()}])} onDel={id=>setOfficeExp(officeExp.filter(e=>e.id!==id))}/>}
+          {gastoTab==="inversion"&&<ExpBlock title={`Inversión (${vm})`} items={investExp.filter(e=>e.month===vm)} total={calc.tInvest} color="tb" onAdd={e=>setInvestExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setInvestExp(investExp.filter(e=>e.id!==id))}/>}
+          {gastoTab==="proyectos"&&(()=>{
+            const mProjs=projects.filter(p=>p.month===vm);const allProjs=projects.filter(p=>p.status!=="Completado"||p.month===vm);
+            const shown=mProjs.length>0?mProjs:allProjs.length>0?allProjs:projects.slice(-3);
+            return(<div>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}><span style={{fontWeight:600,fontSize:13}}>Costos por Proyecto</span><span className="font-bold tp">{fmt(calc.totalPCost)}</span></div>
+            <div className="info-box">Cada proyecto tiene sus propios gastos. Agrega costos conforme se van generando. El total de gastos es lo que aparece en reportes.</div>
+            {shown.map(p=>{const pc=pCost(p);const ut=p.revenue-pc;const mg=p.revenue>0?(ut/p.revenue)*100:0;const isExp=expandedClient===("proj-"+p.id);
+              return(<div key={p.id} className="card" style={{marginBottom:8,borderLeft:`4px solid ${p.status==="Completado"?"#059669":p.status==="En curso"?"#0284c7":"#d97706"}`}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setExpandedClient(isExp?null:"proj-"+p.id)}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{fontSize:14,color:"#94a3b8"}}>{isExp?"▾":"▸"}</span>
+                    <span style={{fontWeight:600}}>{p.name}</span>
+                    <span style={{fontSize:11,color:"#94a3b8"}}>{clients.find(c=>c.id===p.clientId)?.name}</span>
+                    <span className={`badge ${p.status==="Completado"?"bg":p.status==="En curso"?"bb":"ba"}`} style={{fontSize:10}}>{p.status}</span>
+                    <span className="badge" style={{fontSize:10,background:"#f1f5f9",color:"#64748b"}}>{(p.expenses||[]).length} gastos</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:16}}>
+                    <span style={{fontSize:12,color:"#94a3b8"}}>{fmt(p.revenue)}</span>
+                    <span style={{fontWeight:700,fontSize:14}} className="tr">{fmt(pc)}</span>
+                    <span className={`badge ${mg>=30?"bg":mg>=15?"ba":"br"}`} style={{fontSize:10}}>{mg.toFixed(0)}%</span>
+                  </div>
+                </div>
+                {isExp&&(<div style={{marginTop:12,borderTop:"1px solid #f1f5f9",paddingTop:12}}>
+                  <div className="grid g3" style={{marginBottom:10}}>
+                    <div style={{textAlign:"center"}}><div className="kpi-sub">Ingreso</div><div style={{fontWeight:700}} className="tg">{fmt(p.revenue)}</div></div>
+                    <div style={{textAlign:"center"}}><div className="kpi-sub">Costo total</div><div style={{fontWeight:700}} className="tr">{fmt(pc)}</div></div>
+                    <div style={{textAlign:"center"}}><div className="kpi-sub">Utilidad</div><div style={{fontWeight:700}} className={ut>=0?"tg":"tr"}>{fmt(ut)}</div></div>
+                  </div>
+                  <div style={{fontSize:12,fontWeight:600,color:"#64748b",marginBottom:6}}>Gastos del proyecto</div>
+                  {(p.expenses||[]).map(ex=>(<div key={ex.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,padding:"5px 10px",background:"#fff1f2",borderRadius:6,fontSize:12}}>
+                    <span style={{flex:1}}>{ex.name}</span>
+                    <span style={{fontWeight:600,color:"#e11d48"}}>{fmt(ex.amount)}</span>
+                    <button className="del-btn" onClick={()=>{setProjects(projects.map(pp=>pp.id===p.id?{...pp,expenses:pp.expenses.filter(e=>e.id!==ex.id)}:pp));}}>✕</button>
+                  </div>))}
+                  <ProjExpForm onAdd={(n,a)=>{setProjects(projects.map(pp=>pp.id===p.id?{...pp,expenses:[...(pp.expenses||[]),{id:Date.now(),name:n,amount:a}]}:pp));}}/>
+                </div>)}
+              </div>);
+            })}
+            {shown.length===0&&<div style={{color:"#94a3b8",fontSize:12,textAlign:"center",padding:16}}>No hay proyectos.</div>}
+          </div>);})()}
+          {gastoTab==="cajaApp"&&(
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                <div><span style={{fontWeight:600,fontSize:13}}>Gastos desde App Móvil</span><span style={{fontSize:11,color:"#94a3b8",marginLeft:8}}>({cajaChica.length} gastos)</span></div>
+                <div><span className="font-bold tp">{fmt(totalCajaCloud)}</span>
+                  <button className="btn btn-sm btn-gray" style={{marginLeft:8}} onClick={()=>loadCajaChica(vm)}>↻ Actualizar</button>
+                </div>
+              </div>
+              <div className="info-box">Estos gastos fueron registrados por Andrea, Gerardo e Ynes desde la app de caja chica en sus celulares. Se integran automáticamente al sistema.</div>
+              {!cloudMode&&<div className="alert alert-amber">Conecta a Supabase (nube) para ver los gastos de la app móvil.</div>}
+              {loadingCaja?<div style={{textAlign:"center",padding:20,color:"#94a3b8"}}>Cargando gastos...</div>:
+              cajaChica.length===0?<div style={{textAlign:"center",padding:20,color:"#94a3b8"}}>No hay gastos de app móvil en este mes.</div>:(
+              <div className="card" style={{padding:0,overflow:"hidden"}}>
+                <table>
+                  <thead><tr><th>Fecha</th><th>Persona</th><th>Concepto</th><th>Categoría</th><th className="text-right">Monto</th><th>Foto</th></tr></thead>
+                  <tbody>
+                    {cajaChica.map(g=>(
+                      <tr key={g.id}>
+                        <td style={{fontSize:12}}>{new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}</td>
+                        <td style={{fontSize:12}}>{g.user_name||g.user_email.split("@")[0]}</td>
+                        <td>{g.concepto}</td>
+                        <td><span className="badge">{g.categoria}</span></td>
+                        <td className="text-right font-bold tr">{fmt(g.monto)}</td>
+                        <td className="text-center">{g.foto_url?<a href={g.foto_url} target="_blank" rel="noopener" style={{fontSize:16}}>📎</a>:"—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{padding:"10px 12px",borderTop:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:13}}>
+                  <span>Total App Móvil</span><span className="tp">{fmt(totalCajaCloud)}</span>
+                </div>
+              </div>)}
+              {cajaChica.length>0&&<div style={{marginTop:8,textAlign:"right"}}>
+                <button className="btn btn-sm btn-gray" onClick={()=>{
+                  exportCSV("caja-chica-"+vm+".csv",
+                    ["Fecha","Persona","Email","Concepto","Categoría","Monto","Foto URL"],
+                    cajaChica.map(g=>[g.fecha,g.user_name,g.user_email,g.concepto,g.categoria,g.monto,g.foto_url||""])
+                  );
+                }}>Exportar CSV</button>
+              </div>}
+            </div>
+          )}
+        </>)}
+
+        {/* ═══ CONTROL > FACTURAS ═══ */}
+        {page==="facturas"&&(()=>{
+          const tabInv=invoices.filter(i=>i.type===facturaTab);
+          const tabMInv=tabInv.filter(i=>i.month===vm);
+          const tabCob=tabMInv.filter(i=>i.status==="Cobrada");
+          const tabPC=tabMInv.filter(i=>i.status==="Por cobrar");
+          const tabEm=tabMInv.filter(i=>i.status==="Emitida");
+          const tabAllPC=tabInv.filter(i=>i.status==="Por cobrar");
+          const tabAllEm=tabInv.filter(i=>i.status==="Emitida");
+          const FTABS=[{id:"recurrente",label:"Recurrentes",desc:"Fees mensuales de clientes"},{id:"no_recurrente",label:"No Recurrentes",desc:"Proyectos y servicios puntuales"},{id:"paid",label:"Paid Media",desc:"Facturas de pauta digital"}];
+          return(<>
+          <div className="info-box">Control de facturación y cobranza. Tres tipos: recurrentes (fees), no recurrentes (proyectos) y paid media (pauta).</div>
+          {/* Tabs */}
+          <div style={{display:"flex",gap:4,marginBottom:16}}>
+            {FTABS.map(t=><button key={t.id} className={`btn ${facturaTab===t.id?"btn-green":"btn-gray"}`} onClick={()=>{setFacturaTab(t.id);setStatusFilter("");}} style={{flex:1,fontSize:12,padding:"8px 12px"}}>
+              <div style={{fontWeight:600}}>{t.label}</div>
+              <div style={{fontSize:10,opacity:.7,marginTop:2}}>{t.desc}</div>
+            </button>)}
+          </div>
+          {/* KPIs del tab actual */}
+          <div className="grid g4" style={{marginBottom:16}}>
+            <div className="card"><div className="kpi-label">Total (mes)</div><div className="kpi-value">{tabMInv.length}</div><div className="kpi-sub">{fmt(tabMInv.reduce((s,i)=>s+i.amount,0))}</div></div>
+            <div className="card" style={{borderColor:"#bfdbfe"}}><div className="kpi-label">Emitidas (mes)</div><div className="kpi-value" style={{color:"#2563eb"}}>{tabEm.length}</div><div className="kpi-sub">{fmt(tabEm.reduce((s,i)=>s+i.amount,0))}</div></div>
+            <div className="card" style={{borderColor:"#fde68a"}}><div className="kpi-label">Por Cobrar (mes)</div><div className="kpi-value ta">{tabPC.length}</div><div className="kpi-sub">{fmt(tabPC.reduce((s,i)=>s+i.amount,0))}</div></div>
+            <div className="card" style={{borderColor:"#bbf7d0"}}><div className="kpi-label">Cobradas (mes)</div><div className="kpi-value tg">{tabCob.length}</div><div className="kpi-sub">{fmt(tabCob.reduce((s,i)=>s+i.amount,0))}</div></div>
+          </div>
+          {/* Resumen general pendiente */}
+          <div className="grid g2" style={{marginBottom:16}}>
+            <div className="card" style={{borderLeft:"4px solid #2563eb"}}><div className="kpi-label">Emitidas (total acum.)</div><div className="kpi-value" style={{color:"#2563eb"}}>{tabAllEm.length}</div><div className="kpi-sub">{fmt(tabAllEm.reduce((s,i)=>s+i.amount,0))}</div></div>
+            <div className="card" style={{borderLeft:"4px solid #d97706"}}><div className="kpi-label">Por Cobrar (total acum.)</div><div className="kpi-value ta">{tabAllPC.length}</div><div className="kpi-sub">{fmt(tabAllPC.reduce((s,i)=>s+i.amount,0))}</div></div>
+          </div>
+          {/* Filtro + botón */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} style={{minWidth:160}}>
+              <option value="">Todas</option><option>Emitida</option><option>Por cobrar</option><option>Cobrada</option>
+            </select>
+            <button className="btn btn-green" onClick={()=>setShowForm("invoice")}><Ic d={ic.plus} size={14} color="#fff"/> Nueva Factura</button>
+          </div>
+          {showForm==="invoice"&&<InvoiceForm clients={clients} month={vm} type={facturaTab} onAdd={inv=>{setInvoices(p=>[...p,{...inv,id:Date.now()}]);setShowForm(null);}} onClose={()=>setShowForm(null)}/>}
+          <div className="card" style={{padding:0,overflow:"hidden"}}>
+            <table>
+              <thead><tr><th>Factura</th><th>Fecha</th><th>Cliente</th><th>Concepto</th><th className="text-right">Monto</th><th className="text-center">Estado</th><th></th></tr></thead>
+              <tbody>
+                {filtInv.map(inv=>{
+                  const stColor=inv.status==="Cobrada"?"bg":inv.status==="Por cobrar"?"ba":"bb";
+                  const isEditing=editInvoice===inv.id;
+                  if(isEditing){
+                    return(<tr key={inv.id} style={{background:"#f0fdf4"}}>
+                      <td><input value={inv.number} onChange={e=>setInvoices(invoices.map(i=>i.id===inv.id?{...i,number:e.target.value}:i))} style={{width:100,fontSize:12,padding:"4px 6px"}}/></td>
+                      <td><input type="date" value={inv.date} onChange={e=>setInvoices(invoices.map(i=>i.id===inv.id?{...i,date:e.target.value}:i))} style={{fontSize:11,padding:"4px 6px"}}/></td>
+                      <td><select value={inv.clientId} onChange={e=>setInvoices(invoices.map(i=>i.id===inv.id?{...i,clientId:parseInt(e.target.value)}:i))} style={{fontSize:12,padding:"4px 6px"}}>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></td>
+                      <td><input value={inv.concept} onChange={e=>setInvoices(invoices.map(i=>i.id===inv.id?{...i,concept:e.target.value}:i))} style={{width:"100%",fontSize:12,padding:"4px 6px"}}/></td>
+                      <td><input type="number" value={inv.amount} onChange={e=>setInvoices(invoices.map(i=>i.id===inv.id?{...i,amount:parseInt(e.target.value)||0}:i))} style={{width:90,fontSize:12,padding:"4px 6px",textAlign:"right"}}/></td>
+                      <td className="text-center"><select value={inv.status} onChange={e=>setInvoices(invoices.map(i=>i.id===inv.id?{...i,status:e.target.value}:i))} style={{fontSize:11,padding:"4px 6px"}}><option>Emitida</option><option>Por cobrar</option><option>Cobrada</option></select></td>
+                      <td className="text-center" style={{whiteSpace:"nowrap"}}>
+                        <button className="btn btn-sm btn-green" onClick={()=>setEditInvoice(null)} style={{fontSize:10,padding:"3px 8px"}}>OK</button>
+                        <button className="del-btn" style={{marginLeft:4}} onClick={()=>{if(confirm("¿Eliminar factura "+inv.number+"?"))setInvoices(invoices.filter(i=>i.id!==inv.id));setEditInvoice(null);}}>✕</button>
+                      </td>
+                    </tr>);
+                  }
+                  return(<tr key={inv.id}>
+                  <td style={{fontWeight:600}}>{inv.number}</td><td style={{color:"#94a3b8",fontSize:12}}>{inv.date}</td>
+                  <td>{clients.find(c=>c.id===inv.clientId)?.name||"—"}</td><td>{inv.concept}</td>
+                  <td className="text-right font-bold tg">{fmt(inv.amount)}</td>
+                  <td className="text-center"><span className={`badge ${stColor}`}>{inv.status}</span></td>
+                  <td className="text-center" style={{whiteSpace:"nowrap"}}>
+                    {inv.status==="Emitida"&&<button className="btn btn-sm" style={{background:"#d97706",color:"#fff",fontSize:11,padding:"3px 8px",borderRadius:6}} onClick={()=>setInvoices(invoices.map(i=>i.id===inv.id?{...i,status:"Por cobrar"}:i))}>→ Por Cobrar</button>}
+                    {inv.status==="Por cobrar"&&<button className="btn btn-green btn-sm" onClick={()=>setInvoices(invoices.map(i=>i.id===inv.id?{...i,status:"Cobrada"}:i))}>Cobrar</button>}
+                    <button className="btn btn-sm btn-gray" style={{marginLeft:4,fontSize:10,padding:"3px 6px"}} onClick={()=>setEditInvoice(inv.id)} title="Editar factura">✎</button>
+                  </td>
+                </tr>);})}
+                {filtInv.length===0&&<tr><td colSpan={7} className="text-center" style={{color:"#94a3b8",padding:24}}>No hay facturas en esta categoría.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </>);})()}
+
+        {/* ═══ SIMULACIÓN > COTIZADOR ═══ */}
+        {page==="cotizador"&&(()=>{
+          /* Current real numbers — based on simMonth (independent of global vm) */
+          const curTotalFees=clients.reduce((s,c)=>s+getFee(c.id,simMonth),0);
+          const curTransPay=team.reduce((s,t)=>s+tTrans(t),0);
+          const curFixed=fixedExp.reduce((s,e)=>s+e.amount,0);
+          const curDigital=digitalExp.reduce((s,e)=>s+e.amount,0);
+          const curVar=variableExp.filter(e=>e.month===simMonth).reduce((s,e)=>s+e.amount,0);
+          const curOffice=officeExp.reduce((s,e)=>s+e.amount,0);
+          const curOverhead=curTransPay+curFixed+curDigital+curVar+curOffice;
+          const curClientProfit=clients.map(c=>{const f=getFee(c.id,simMonth);const tc=team.reduce((s,t)=>s+tDed(t,c.id),0);return{...c,fee:f,teamCost:tc};}).filter(c=>c.fee>0);
+
+          /* Sim calculations */
+          const simDedCost=simTeam.reduce((s,t)=>s+(t.amount||0),0);
+          const simTransCost=simTransTeam.reduce((s,t)=>s+(t.amount||0),0);
+          const simDirectGastos=simGastos.filter(g=>g.tipo==="directo").reduce((s,g)=>s+(g.amount||0),0);
+          const simOHGastos=simGastos.filter(g=>g.tipo==="overhead").reduce((s,g)=>s+(g.amount||0),0);
+          const simDirectTotal=simDedCost+simDirectGastos; /* costos que se cargan directo al cliente */
+          const simFeeVal=parseInt(simFee)||0;
+
+          /* New totals WITH new client — transversal + gastos OH suben overhead; gastos fijos/oficina no cambian */
+          const newTotalFees=curTotalFees+simFeeVal;
+          const newOverhead=curOverhead+simTransCost+simOHGastos;
+          const newTotalTrans=curTransPay+simTransCost;
+
+          /* New client's numbers */
+          const newClientOH=newTotalFees>0?(simFeeVal/newTotalFees)*newOverhead:0;
+          const newClientUtil=simFeeVal-simDirectTotal-newClientOH;
+          const newClientMargin=simFeeVal>0?(newClientUtil/simFeeVal)*100:0;
+
+          /* Fee mínimo (margen 0%): fee = directTotal + (fee/(curFees+fee))*newOH → quadratic */
+          const D=simDirectTotal;
+          const a_=1;const b_=curTotalFees-newOverhead-D;const c_=-D*curTotalFees;
+          const disc=b_*b_-4*a_*c_;
+          const feeMinimo=disc>=0?Math.ceil((-b_+Math.sqrt(disc))/(2*a_)):D;
+
+          /* Fee sugerido for target margin */
+          const m_=simMarginTarget/100;
+          const a2=1-m_;const b2=(1-m_)*curTotalFees-D-newOverhead;const c2=-D*curTotalFees;
+          const disc2=b2*b2-4*a2*c2;
+          const feeSugerido=disc2>=0&&a2!==0?Math.ceil((-b2+Math.sqrt(disc2))/(2*a2)):Math.ceil(D/(1-m_));
+
+          /* Impact on existing clients */
+          const impactData=curClientProfit.map(c=>{
+            const curOH=curTotalFees>0?(c.fee/curTotalFees)*curOverhead:0;
+            const curUtil=c.fee-c.teamCost-curOH;
+            const curMg=c.fee>0?(curUtil/c.fee)*100:0;
+            const newOH=newTotalFees>0?(c.fee/newTotalFees)*newOverhead:0;
+            const newUtil=c.fee-c.teamCost-newOH;
+            const newMg=c.fee>0?(newUtil/c.fee)*100:0;
+            return{name:c.name,fee:c.fee,teamCost:c.teamCost,curOH,curUtil,curMg,newOH,newUtil,newMg,deltaUtil:newUtil-curUtil,deltaMg:newMg-curMg};
+          });
+
+          return(<>
+          <div className="sl">Cotizador — Simular Nuevo Cliente</div>
+          <div className="info-box">Ingresa el equipo que necesitaría el nuevo cliente y ve cuánto cobrar. El overhead se redistribuye automáticamente entre todos los clientes.</div>
+          <div className="card" style={{marginBottom:16,display:"flex",alignItems:"center",gap:12}}>
+            <label style={{fontSize:12,fontWeight:600,color:"#475569",whiteSpace:"nowrap"}}>Mes base de simulación</label>
+            <select value={simMonth} onChange={e=>setSimMonth(e.target.value)} style={{flex:1,maxWidth:200}}>
+              {MONTHS.map(m=><option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+            <span style={{fontSize:11,color:"#94a3b8"}}>Fees y gastos se toman de este mes</span>
+          </div>
+
+          {/* Input form */}
+          <div className="card" style={{marginBottom:16}}>
+            <div style={{fontWeight:600,fontSize:14,marginBottom:12,color:"#059669"}}>Datos del Nuevo Cliente</div>
+            <div className="form-row" style={{marginBottom:8}}>
+              <div style={{flex:2}}><label style={{fontSize:11,color:"#64748b",display:"block",marginBottom:4}}>Nombre</label>
+                <input value={simName} onChange={e=>setSimName(e.target.value)} style={{width:"100%"}}/></div>
+              <div style={{flex:1}}><label style={{fontSize:11,color:"#64748b",display:"block",marginBottom:4}}>Fee a evaluar (S/)</label>
+                <input type="number" value={simFee} onChange={e=>setSimFee(e.target.value)} placeholder="Ej: 12000" style={{width:"100%"}}/></div>
+              <div style={{flex:1}}><label style={{fontSize:11,color:"#64748b",display:"block",marginBottom:4}}>Margen objetivo (%)</label>
+                <input type="number" value={simMarginTarget} onChange={e=>setSimMarginTarget(parseInt(e.target.value)||0)} style={{width:"100%"}}/></div>
+            </div>
+            <div style={{fontWeight:600,fontSize:12,marginBottom:8,marginTop:12}}>Equipo Dedicado</div>
+            {simTeam.map((t,i)=>(<div key={t.id} style={{display:"flex",gap:6,marginBottom:4,alignItems:"center"}}>
+              <input value={t.role} onChange={e=>{const nt=[...simTeam];nt[i]={...t,role:e.target.value};setSimTeam(nt);}} placeholder="Rol (ej: Diseñador)" style={{flex:1,fontSize:12,padding:"5px 8px"}}/>
+              <input type="number" value={t.amount||""} onChange={e=>{const nt=[...simTeam];nt[i]={...t,amount:parseInt(e.target.value)||0};setSimTeam(nt);}} placeholder="Costo bruto (S/)" style={{width:130,fontSize:12,padding:"5px 8px",textAlign:"right"}}/>
+              {simTeam.length>1&&<button type="button" className="del-btn" onClick={()=>setSimTeam(simTeam.filter((_,j)=>j!==i))}>✕</button>}
+            </div>))}
+            <button className="btn btn-sm btn-gray" style={{marginTop:4}} onClick={()=>setSimTeam([...simTeam,{id:Date.now(),role:"",amount:0}])}>+ Agregar persona</button>
+            <div style={{fontWeight:600,fontSize:12,marginBottom:4,marginTop:12}}>Equipo Transversal <span style={{fontWeight:400,color:"#94a3b8"}}>(opcional — se suma a planilla transversal y se reparte como overhead)</span></div>
+            {simTransTeam.map((t,i)=>(<div key={t.id} style={{display:"flex",gap:6,marginBottom:4,alignItems:"center"}}>
+              <input value={t.role} onChange={e=>{const nt=[...simTransTeam];nt[i]={...t,role:e.target.value};setSimTransTeam(nt);}} placeholder="Rol (ej: Coord. Diseño)" style={{flex:1,fontSize:12,padding:"5px 8px"}}/>
+              <input type="number" value={t.amount||""} onChange={e=>{const nt=[...simTransTeam];nt[i]={...t,amount:parseInt(e.target.value)||0};setSimTransTeam(nt);}} placeholder="Costo bruto (S/)" style={{width:130,fontSize:12,padding:"5px 8px",textAlign:"right"}}/>
+              <button type="button" className="del-btn" onClick={()=>setSimTransTeam(simTransTeam.filter((_,j)=>j!==i))}>✕</button>
+            </div>))}
+            <button className="btn btn-sm btn-gray" style={{marginTop:4}} onClick={()=>setSimTransTeam([...simTransTeam,{id:Date.now(),role:"",amount:0}])}>+ Agregar transversal</button>
+            <div style={{fontWeight:600,fontSize:12,marginBottom:4,marginTop:12}}>Otros Gastos <span style={{fontWeight:400,color:"#94a3b8"}}>(gasolina, correo, viáticos, herramientas, etc.)</span></div>
+            {simGastos.map((g,i)=>(<div key={g.id} style={{display:"flex",gap:6,marginBottom:4,alignItems:"center"}}>
+              <input value={g.name} onChange={e=>{const ng=[...simGastos];ng[i]={...g,name:e.target.value};setSimGastos(ng);}} placeholder="Concepto (ej: Gasolina)" style={{flex:1,fontSize:12,padding:"5px 8px"}}/>
+              <input type="number" value={g.amount||""} onChange={e=>{const ng=[...simGastos];ng[i]={...g,amount:parseInt(e.target.value)||0};setSimGastos(ng);}} placeholder="Monto (S/)" style={{width:110,fontSize:12,padding:"5px 8px",textAlign:"right"}}/>
+              <select value={g.tipo} onChange={e=>{const ng=[...simGastos];ng[i]={...g,tipo:e.target.value};setSimGastos(ng);}} style={{width:130,fontSize:11,padding:"5px 6px"}}>
+                <option value="directo">Directo cliente</option><option value="overhead">Overhead gral.</option>
+              </select>
+              <button type="button" className="del-btn" onClick={()=>setSimGastos(simGastos.filter((_,j)=>j!==i))}>✕</button>
+            </div>))}
+            <button className="btn btn-sm btn-gray" style={{marginTop:4}} onClick={()=>setSimGastos([...simGastos,{id:Date.now(),name:"",amount:0,tipo:"directo"}])}>+ Agregar gasto</button>
+          </div>
+
+          {/* Results */}
+          <div className="card" style={{marginBottom:16,borderLeft:"4px solid #059669"}}>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>Resultado: {simName}</div>
+            <div className="grid g3" style={{marginBottom:16}}>
+              <div className="card" style={{background:"#f0fdf4"}}><div className="kpi-label">Fee Mínimo (margen 0%)</div><div className="kpi-value tg">{fmt(feeMinimo)}</div><div className="kpi-sub">Punto de equilibrio</div></div>
+              <div className="card" style={{background:"#eff6ff"}}><div className="kpi-label">Fee Sugerido ({simMarginTarget}%)</div><div className="kpi-value tb">{fmt(feeSugerido)}</div><div className="kpi-sub">Margen objetivo</div></div>
+              <div className="card" style={{background:newClientMargin>=simMarginTarget?"#f0fdf4":newClientMargin>=0?"#fffbeb":"#fff1f2"}}><div className="kpi-label">Fee Ingresado</div><div className="kpi-value" style={{color:newClientMargin>=simMarginTarget?"#059669":newClientMargin>=0?"#d97706":"#e11d48"}}>{simFeeVal>0?fmt(simFeeVal):"—"}</div><div className="kpi-sub">{simFeeVal>0?`Margen: ${newClientMargin.toFixed(1)}%`:"Ingresa un fee"}</div></div>
+            </div>
+            {simFeeVal>0&&<>
+              <div style={{fontWeight:600,fontSize:12,marginBottom:8}}>Desglose con fee de {fmt(simFeeVal)}</div>
+              <div className="detail-row"><span>Fee</span><span className="tg font-bold">{fmt(simFeeVal)}</span></div>
+              <div className="detail-row"><span>(−) Equipo Dedicado ({simTeam.filter(t=>t.amount>0).length} persona{simTeam.filter(t=>t.amount>0).length!==1?"s":""})</span><span className="tr">{fmt(simDedCost)}</span></div>
+              {simDirectGastos>0&&<div className="detail-row"><span>(−) Gastos Directos ({simGastos.filter(g=>g.tipo==="directo"&&g.amount>0).length} concepto{simGastos.filter(g=>g.tipo==="directo"&&g.amount>0).length!==1?"s":""})</span><span className="tr">{fmt(simDirectGastos)}</span></div>}
+              {simTransCost>0&&<div className="detail-row" style={{paddingLeft:16,fontSize:12,color:"#7c3aed"}}><span>↳ Transversal nuevo ({simTransTeam.filter(t=>t.amount>0).length}): {fmt(simTransCost)} → overhead</span></div>}
+              {simOHGastos>0&&<div className="detail-row" style={{paddingLeft:16,fontSize:12,color:"#7c3aed"}}><span>↳ Gastos overhead ({simGastos.filter(g=>g.tipo==="overhead"&&g.amount>0).length}): {fmt(simOHGastos)} → overhead</span></div>}
+              <div className="detail-row"><span>(−) Overhead ({newTotalFees>0?((simFeeVal/newTotalFees)*100).toFixed(1):0}% de {fmt(newOverhead)})</span><span className="ta">{fmt(Math.round(newClientOH))}</span></div>
+              <div className="detail-row" style={{fontWeight:700,borderTop:"2px solid #e2e8f0",paddingTop:8}}><span>Utilidad</span><span className={newClientUtil>=0?"tg":"tr"}>{fmt(Math.round(newClientUtil))}</span></div>
+              <div className="detail-row"><span>Margen</span><span className={`badge ${newClientMargin>=simMarginTarget?"bg":newClientMargin>=0?"ba":"br"}`}>{newClientMargin.toFixed(1)}%</span></div>
+            </>}
+          </div>
+
+          {/* Impact on existing clients */}
+          {simFeeVal>0&&<div className="card" style={{padding:0,overflow:"hidden"}}>
+            <div style={{padding:"12px 16px",fontWeight:700,fontSize:14,borderBottom:"1px solid #e2e8f0"}}>Impacto en Clientes Actuales</div>
+            <div style={{padding:"8px 16px",fontSize:11,color:"#64748b",background:"#f8fafc"}}>Al agregar {simName} con fee de {fmt(simFeeVal)}, el overhead se redistribuye. Todos los clientes actuales bajan su % de OH.</div>
+            <table style={{fontSize:12}}>
+              <thead><tr><th>Cliente</th><th className="text-right">Fee</th><th className="text-right">OH Antes</th><th className="text-right">OH Después</th><th className="text-right">Util. Antes</th><th className="text-right">Util. Después</th><th className="text-right">Δ Utilidad</th><th className="text-center">Margen</th></tr></thead>
+              <tbody>
+                {impactData.map((c,i)=>(<tr key={i}>
+                  <td style={{fontWeight:600}}>{c.name}</td>
+                  <td className="text-right">{fmt(c.fee)}</td>
+                  <td className="text-right" style={{color:"#94a3b8"}}>{fmt(Math.round(c.curOH))}</td>
+                  <td className="text-right ta">{fmt(Math.round(c.newOH))}</td>
+                  <td className="text-right" style={{color:"#94a3b8"}}>{fmt(Math.round(c.curUtil))}</td>
+                  <td className={`text-right font-bold ${c.newUtil>=0?"tg":"tr"}`}>{fmt(Math.round(c.newUtil))}</td>
+                  <td className="text-right tg">+{fmt(Math.round(c.deltaUtil))}</td>
+                  <td className="text-center"><span className={`badge ${c.newMg>=30?"bg":c.newMg>=15?"ba":"br"}`}>{c.curMg.toFixed(0)}% → {c.newMg.toFixed(0)}%</span></td>
+                </tr>))}
+                {/* New client row */}
+                <tr style={{background:"#f0fdf4"}}>
+                  <td style={{fontWeight:600,color:"#059669"}}>{simName} (nuevo)</td>
+                  <td className="text-right tg">{fmt(simFeeVal)}</td>
+                  <td className="text-right">—</td>
+                  <td className="text-right ta">{fmt(Math.round(newClientOH))}</td>
+                  <td className="text-right">—</td>
+                  <td className={`text-right font-bold ${newClientUtil>=0?"tg":"tr"}`}>{fmt(Math.round(newClientUtil))}</td>
+                  <td className="text-right">—</td>
+                  <td className="text-center"><span className={`badge ${newClientMargin>=30?"bg":newClientMargin>=15?"ba":"br"}`}>{newClientMargin.toFixed(0)}%</span></td>
+                </tr>
+                {/* Totals */}
+                <tr style={{fontWeight:700,borderTop:"2px solid #e2e8f0",background:"#f8fafc"}}>
+                  <td>TOTAL</td>
+                  <td className="text-right tg">{fmt(newTotalFees)}</td>
+                  <td className="text-right">{fmt(Math.round(curOverhead))}</td>
+                  <td className="text-right ta">{fmt(Math.round(newOverhead))}</td>
+                  <td className="text-right">{fmt(Math.round(impactData.reduce((s,c)=>s+c.curUtil,0)))}</td>
+                  <td className="text-right tg">{fmt(Math.round(impactData.reduce((s,c)=>s+c.newUtil,0)+newClientUtil))}</td>
+                  <td className="text-right tg">+{fmt(Math.round(impactData.reduce((s,c)=>s+c.deltaUtil,0)+newClientUtil))}</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>}
+
+          {simFeeVal===0&&<div className="card" style={{textAlign:"center",padding:32,color:"#94a3b8"}}>
+            <div style={{fontSize:14,fontWeight:600}}>Ingresa un fee para ver el análisis completo</div>
+            <div style={{fontSize:12,marginTop:4}}>O usa el fee sugerido de {fmt(feeSugerido)} para {simMarginTarget}% de margen</div>
+          </div>}
+        </>);})()}
+
+        {/* ═══ REPORTES > COMERCIAL ═══ */}
+        {page==="comercial"&&(()=>{
+          const hData=history.map(h=>({...h,ventas:h.income,utilidad:h.total}));
+          const maxV=Math.max(...hData.map(h=>h.ventas),1);
+          const maxU=Math.max(...hData.map(h=>Math.abs(h.utilidad)),1);
+          const chartH=260;
+          const barH=chartH-40;
+          const accVentas=hData.reduce((s,h)=>s+h.ventas,0);
+          const accUtil=hData.reduce((s,h)=>s+h.utilidad,0);
+          const accMg=accVentas>0?(accUtil/accVentas*100):0;
+          const mVentas=hData.filter(h=>h.ventas>0);
+          const avgVentas=mVentas.length>0?accVentas/mVentas.length:0;
+          const bestMonth=hData.reduce((b,h)=>h.ventas>b.ventas?h:b,hData[0]);
+          const bestUtilM=hData.reduce((b,h)=>h.utilidad>b.utilidad?h:b,hData[0]);
+          return(<>
+          <div className="sl">Reporte Comercial — 2026</div>
+          {/* KPIs anuales */}
+          <div className="grid g4" style={{marginBottom:20}}>
+            <div className="card" style={{borderLeft:"4px solid #059669"}}><div className="kpi-label">Ventas Acumuladas</div><div className="kpi-value tg">{fmt(accVentas)}</div><div className="kpi-sub">{mVentas.length} meses con ventas</div></div>
+            <div className="card" style={{borderLeft:`4px solid ${accUtil>=0?"#0284c7":"#e11d48"}`}}><div className="kpi-label">Utilidad Acumulada</div><div className={`kpi-value ${accUtil>=0?"tb":"tr"}`}>{fmt(accUtil)}</div><div className="kpi-sub">Margen: {accMg.toFixed(1)}%</div></div>
+            <div className="card" style={{borderLeft:"4px solid #7c3aed"}}><div className="kpi-label">Promedio Mensual</div><div className="kpi-value" style={{color:"#7c3aed"}}>{fmt(Math.round(avgVentas))}</div><div className="kpi-sub">ventas / mes</div></div>
+            <div className="card" style={{borderLeft:"4px solid #d97706"}}><div className="kpi-label">Mejor Mes (Ventas)</div><div className="kpi-value ta">{bestMonth.month}</div><div className="kpi-sub">{fmt(bestMonth.ventas)}</div></div>
+          </div>
+          {/* Gráfico: Barras (ventas) + Línea (utilidad) */}
+          <div className="card" style={{marginBottom:20}}>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Ventas vs Utilidad — Mes a Mes</div>
+            <div style={{fontSize:11,color:"#94a3b8",marginBottom:16}}>Barras = Ventas (Fees + Proyectos) · Línea = Utilidad Neta</div>
+            <div style={{position:"relative",height:chartH,display:"flex",alignItems:"flex-end",gap:0,padding:"0 4px"}}>
+              {/* Grid lines */}
+              {[0,25,50,75,100].map(p=><div key={p} style={{position:"absolute",left:0,right:0,bottom:40+barH*(p/100),height:1,background:"#f1f5f9",zIndex:0}}/>)}
+              {/* Y-axis labels */}
+              {[0,50,100].map(p=><div key={p} style={{position:"absolute",left:-4,bottom:36+barH*(p/100),fontSize:9,color:"#cbd5e1"}}>{fmt(Math.round(maxV*(p/100)))}</div>)}
+              {/* Bars */}
+              {hData.map((h,i)=>{
+                const bH=Math.max((h.ventas/maxV)*barH,2);
+                return(<div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:chartH,position:"relative",zIndex:1}}>
+                  <div style={{fontSize:9,color:"#059669",fontWeight:600,marginBottom:2}}>{h.ventas>0?fmt(h.ventas):""}</div>
+                  <div style={{width:"60%",maxWidth:48,height:bH,background:"linear-gradient(180deg,#34d399,#059669)",borderRadius:"6px 6px 0 0",position:"relative"}}/>
+                  <div style={{fontSize:10,color:"#64748b",fontWeight:600,marginTop:6,height:20}}>{h.month}</div>
+                </div>);
+              })}
+              {/* Line overlay (utilidad) */}
+              <svg style={{position:"absolute",left:0,top:0,width:"100%",height:chartH,pointerEvents:"none",zIndex:2}}>
+                {hData.map((h,i)=>{
+                  if(i===0)return null;
+                  const prev=hData[i-1];
+                  const w=100/hData.length;
+                  const x1=(i-1)*w+w/2;
+                  const x2=i*w+w/2;
+                  const scaleU=v=>chartH-40-((v/maxV)*barH);
+                  const y1=scaleU(prev.utilidad);
+                  const y2=scaleU(h.utilidad);
+                  return(<line key={i} x1={`${x1}%`} y1={y1} x2={`${x2}%`} y2={y2} stroke="#0284c7" strokeWidth="2.5" strokeLinecap="round"/>);
+                })}
+                {hData.map((h,i)=>{
+                  const w=100/hData.length;
+                  const cx=i*w+w/2;
+                  const cy=chartH-40-((h.utilidad/maxV)*barH);
+                  return(<g key={i}>
+                    <circle cx={`${cx}%`} cy={cy} r="5" fill="#fff" stroke="#0284c7" strokeWidth="2.5"/>
+                    <text x={`${cx}%`} y={cy-10} textAnchor="middle" fontSize="9" fontWeight="600" fill="#0284c7">{h.utilidad!==0?fmt(h.utilidad):""}</text>
+                  </g>);
+                })}
+              </svg>
+            </div>
+            <Leg items={[["Ventas (Fees + Proyectos)","#059669"],["Utilidad Neta","#0284c7"]]}/>
+          </div>
+          {/* Tabla detalle */}
+          <div className="card" style={{padding:0,overflow:"hidden"}}>
+            <table style={{fontSize:12}}>
+              <thead><tr><th>Mes</th><th className="text-right">Fees</th><th className="text-right">Proyectos</th><th className="text-right" style={{color:"#059669"}}>Ventas Total</th><th className="text-right">Egresos</th><th className="text-right" style={{color:"#0284c7"}}>Utilidad</th><th className="text-center">Margen</th></tr></thead>
+              <tbody>
+                {hData.map((h,i)=>{const mg=h.ventas>0?(h.utilidad/h.ventas*100):0;return(
+                  <tr key={i} style={{background:h.month===MONTHS.find(m=>m.value===vm)?.label.split(" ")[0]?"#f0fdf4":"transparent"}}>
+                    <td style={{fontWeight:600}}>{h.month}</td>
+                    <td className="text-right">{fmt(h.fees)}</td>
+                    <td className="text-right">{fmt(h.income-h.fees)}</td>
+                    <td className="text-right font-bold tg">{fmt(h.ventas)}</td>
+                    <td className="text-right tr">{fmt(h.sExp+h.pCost)}</td>
+                    <td className={`text-right font-bold ${h.utilidad>=0?"tb":"tr"}`}>{fmt(h.utilidad)}</td>
+                    <td className="text-center"><span className={`badge ${mg>=20?"bg":mg>=10?"ba":"br"}`}>{mg.toFixed(1)}%</span></td>
+                  </tr>);})}
+                <tr style={{fontWeight:700,borderTop:"2px solid #e2e8f0",background:"#f8fafc"}}>
+                  <td>TOTAL</td>
+                  <td className="text-right">{fmt(hData.reduce((s,h)=>s+h.fees,0))}</td>
+                  <td className="text-right">{fmt(hData.reduce((s,h)=>s+(h.income-h.fees),0))}</td>
+                  <td className="text-right tg">{fmt(accVentas)}</td>
+                  <td className="text-right tr">{fmt(hData.reduce((s,h)=>s+h.sExp+h.pCost,0))}</td>
+                  <td className={`text-right ${accUtil>=0?"tb":"tr"}`}>{fmt(accUtil)}</td>
+                  <td className="text-center"><span className={`badge ${accMg>=20?"bg":accMg>=10?"ba":"br"}`}>{accMg.toFixed(1)}%</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style={{marginTop:12,display:"flex",gap:8}}>
+            <button className="btn btn-gray" onClick={()=>{
+              const rows=hData.map(h=>{const mg=h.ventas>0?(h.utilidad/h.ventas*100):0;return[h.month,h.fees,h.income-h.fees,h.ventas,h.sExp+h.pCost,h.utilidad,mg.toFixed(1)+"%"];});
+              exportCSV("comercial_2026.csv",["Mes","Fees","Proyectos","Ventas Total","Egresos","Utilidad","Margen"],rows);
+            }}>Exportar CSV</button>
+          </div>
+        </>);})()}
+
+        {/* ═══ REPORTES > ALERTAS ═══ */}
+        {page==="alertas"&&(()=>{
+          /* Generar alertas dinámicas */
+          const alerts=[];
+          /* 1. Clientes con margen negativo */
+          calc.clientProfit.filter(c=>c.margin<0&&c.fee>0).forEach(c=>{
+            alerts.push({type:"danger",icon:ic.down,title:`${c.name}: margen negativo`,desc:`Margen ${c.margin.toFixed(1)}% — el costo del equipo + overhead supera el fee de ${fmt(c.fee)}`,section:"rentabilidad"});
+          });
+          /* 2. Clientes con margen bajo (<15%) */
+          calc.clientProfit.filter(c=>c.margin>=0&&c.margin<15&&c.fee>0).forEach(c=>{
+            alerts.push({type:"warning",icon:ic.alert,title:`${c.name}: margen bajo`,desc:`Margen ${c.margin.toFixed(1)}% — riesgo de ser no rentable si aumentan costos`,section:"rentabilidad"});
+          });
+          /* 3. Facturas emitidas sin avanzar a cobro (sin paid) */
+          const emitidas=invoices.filter(i=>i.status==="Emitida"&&i.type!=="paid");
+          if(emitidas.length>0){
+            alerts.push({type:"info",icon:ic.file,title:`${emitidas.length} factura${emitidas.length>1?"s":""} en estado Emitida`,desc:`Total: ${fmt(emitidas.reduce((s,i)=>s+i.amount,0))} — pendiente de pasar a "Por cobrar"`,section:"facturas"});
+          }
+          /* 4. Facturas por cobrar (sin paid) */
+          if(calc.allPC.length>0){
+            alerts.push({type:"warning",icon:ic.dollar,title:`${calc.allPC.length} factura${calc.allPC.length>1?"s":""} por cobrar`,desc:`Total pendiente: ${fmt(calc.totalPC)} (sin paid media)`,section:"facturas"});
+          }
+          /* Paid media excluido de alertas — es manejo personal */
+          /* 5. Meses en rojo */
+          const redMonths=history.filter(h=>h.hasData&&h.total<0);
+          if(redMonths.length>0){
+            alerts.push({type:"danger",icon:ic.trend,title:`${redMonths.length} mes${redMonths.length>1?"es":""} con utilidad negativa`,desc:redMonths.map(h=>`${h.month}: ${fmt(h.total)}`).join(" · "),section:"comercial"});
+          }
+          /* 6. Egresos > Ingresos en mes actual */
+          if(calc.netProfit<0){
+            alerts.push({type:"danger",icon:ic.down,title:"Mes actual en rojo",desc:`Utilidad neta: ${fmt(calc.netProfit)} — los egresos (${fmt(calc.totalExpenses)}) superan ingresos (${fmt(calc.totalIncome)})`,section:"comercial"});
+          }
+          /* 7. Proyectos con margen bajo */
+          projects.filter(p=>p.month===vm).forEach(p=>{
+            const mg=p.revenue>0?((p.revenue-pCost(p))/p.revenue)*100:0;
+            if(mg<15&&p.revenue>0){alerts.push({type:"warning",icon:ic.briefcase,title:`Proyecto "${p.name}": margen ${mg.toFixed(0)}%`,desc:`Ingreso ${fmt(p.revenue)} vs Costos ${fmt(pCost(p))}`,section:"proyectos"});}
+          });
+          /* Counts */
+          const dangers=alerts.filter(a=>a.type==="danger").length;
+          const warnings=alerts.filter(a=>a.type==="warning").length;
+          const infos=alerts.filter(a=>a.type==="info").length;
+          const colorMap={danger:"#e11d48",warning:"#d97706",info:"#2563eb"};
+          const bgMap={danger:"#fff1f2",warning:"#fffbeb",info:"#eff6ff"};
+          const borderMap={danger:"#fecaca",warning:"#fde68a",info:"#bfdbfe"};
+          return(<>
+          <div className="sl">Centro de Alertas — {MONTHS.find(m=>m.value===vm)?.label}</div>
+          {/* Resumen rápido */}
+          <div className="grid g3" style={{marginBottom:20}}>
+            <div className="card" style={{borderLeft:"4px solid #e11d48"}}><div className="kpi-label">Alertas Críticas</div><div className="kpi-value tr">{dangers}</div></div>
+            <div className="card" style={{borderLeft:"4px solid #d97706"}}><div className="kpi-label">Advertencias</div><div className="kpi-value ta">{warnings}</div></div>
+            <div className="card" style={{borderLeft:"4px solid #2563eb"}}><div className="kpi-label">Informativas</div><div className="kpi-value tb">{infos}</div></div>
+          </div>
+          {/* Quick KPIs */}
+          <div className="grid g4" style={{marginBottom:20}}>
+            <div className="card"><div className="kpi-label">Ingreso Total</div><div className="kpi-value tg">{fmt(calc.totalIncome)}</div></div>
+            <div className="card"><div className="kpi-label">Egreso Total</div><div className="kpi-value tr">{fmt(calc.totalExpenses)}</div></div>
+            <div className="card"><div className="kpi-label">Utilidad</div><div className={`kpi-value ${calc.netProfit>=0?"tg":"tr"}`}>{fmt(calc.netProfit)}</div></div>
+            <div className="card"><div className="kpi-label">Margen</div><div className={`kpi-value ${Number(pct(calc.netProfit,calc.totalIncome))>=20?"tg":"ta"}`}>{pct(calc.netProfit,calc.totalIncome)}%</div></div>
+          </div>
+          {/* Alert cards */}
+          {alerts.length===0&&<div className="card" style={{textAlign:"center",padding:32,color:"#059669"}}><div style={{fontSize:24,marginBottom:8}}>&#10003;</div><div style={{fontWeight:600}}>Todo en orden</div><div style={{fontSize:12,color:"#94a3b8",marginTop:4}}>No hay alertas para este mes</div></div>}
+          {alerts.map((a,i)=>(<div key={i} className="card" style={{borderLeft:`4px solid ${colorMap[a.type]}`,background:bgMap[a.type],marginBottom:8,padding:"12px 16px",cursor:"pointer"}} onClick={()=>setPage(a.section)}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <Ic d={a.icon} size={18} color={colorMap[a.type]}/>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:600,fontSize:13,color:colorMap[a.type]}}>{a.title}</div>
+                <div style={{fontSize:12,color:"#64748b",marginTop:2}}>{a.desc}</div>
+              </div>
+              <span style={{fontSize:10,color:"#94a3b8",whiteSpace:"nowrap"}}>→ {a.section}</span>
+            </div>
+          </div>))}
+          {/* Mini gráficos resumen */}
+          <div className="grid g2" style={{marginTop:16}}>
+            <div className="card"><div style={{fontWeight:600,fontSize:13,marginBottom:12}}>Fees vs Gastos Estructura</div>
+              <SimpleBar data={history.filter(h=>h.hasData)} keys={["fees","sExp"]} colors={["#059669","#e11d48"]}/>
+              <Leg items={[["Fees","#059669"],["Gastos","#e11d48"]]}/></div>
+            <div className="card"><div style={{fontWeight:600,fontSize:13,marginBottom:12}}>Utilidad por Cliente (Fee)</div>
+              <SimpleBar data={calc.clientProfit.map(c=>({name:c.name,util:Math.round(c.structNet)}))} keys={["util"]} colors={["#059669"]}/></div>
+          </div>
+        </>);})()}
+
+        {/* ═══ REPORTES > RENTABILIDAD ═══ */}
+        {page==="rentabilidad"&&(<>
+          {selClient?<ClientDetail c={calc.clientProfit.find(c=>c.id===selClient)} totalFees={calc.totalFees} overhead={calc.overhead}
+            invoices={invoices.filter(i=>i.clientId===selClient)} onBack={()=>setSelClient(null)}/>:(<>
+            <div className="info-box">Fee − Equipo dedicado (costo bruto) − Overhead proporcional (fee ÷ total fees × overhead).</div>
+            <div className="card" style={{padding:0,overflow:"hidden"}}>
+              <table>
+                <thead><tr><th>Cliente</th><th className="text-right">Fee</th><th className="text-right">Equipo</th><th className="text-right">% OH</th><th className="text-right">Overhead</th><th className="text-right">Utilidad</th><th className="text-center">Margen</th><th className="text-right">Proy.</th><th></th></tr></thead>
+                <tbody>{calc.clientProfit.sort((a,b)=>b.structNet-a.structNet).map(c=>(
+                  <tr key={c.id}><td style={{fontWeight:600}}>{c.name}</td><td className="text-right tg">{fmt(c.fee)}</td><td className="text-right tr">{fmt(c.teamCost)}</td>
+                    <td className="text-right">{pct(c.fee,calc.totalFees)}%</td><td className="text-right ta">{fmt(c.oh)}</td>
+                    <td className={`text-right font-bold ${c.structNet>=0?"tg":"tr"}`}>{fmt(c.structNet)}</td>
+                    <td className="text-center"><span className={`badge ${c.margin>=30?"bg":c.margin>=15?"ba":"br"}`}>{c.margin.toFixed(1)}%</span></td>
+                    <td className={`text-right ${c.projProfit?"tb":""}`} style={{fontSize:12}}>{c.projProfit?fmt(c.projProfit):"—"}</td>
+                    <td className="text-center"><button className="btn btn-sm btn-gray" onClick={()=>setSelClient(c.id)}><Ic d={ic.eye} size={13} color="#64748b"/></button></td></tr>
+                ))}</tbody>
+                <tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e2e8f0"}}>
+                  <td>TOTAL</td><td className="text-right tg">{fmt(calc.totalFees)}</td><td className="text-right tr">{fmt(calc.dedPay)}</td>
+                  <td className="text-right">100%</td><td className="text-right ta">{fmt(calc.overhead)}</td>
+                  <td className={`text-right ${calc.structProfit>=0?"tg":"tr"}`}>{fmt(calc.structProfit)}</td>
+                  <td className="text-center">{pct(calc.structProfit,calc.totalFees)}%</td><td className="text-right tb">{fmt(calc.projProfit)}</td><td></td>
+                </tr></tfoot>
+              </table>
+            </div>
+            {/* ── Tendencia histórica por cliente ── */}
+            {(()=>{
+              const activeClients=calc.clientProfit.filter(c=>c.fee>0);
+              const marginHistory=MONTHS.map(({value:m,label})=>{
+                const mFees=clients.reduce((s,c)=>s+getFee(c.id,m),0);
+                const snap=monthSnapshots[m];
+                const mTransPay=snap?snap.team.reduce((s,t)=>t.assignments.filter(a=>a.clientId===null).reduce((sa,a)=>sa+a.amount,0)+s,0):team.reduce((s,t)=>s+tTrans(t),0);
+                const mFx=snap?snap.fixedExp.reduce((s,e)=>s+e.amount,0):fixedExp.reduce((s,e)=>s+e.amount,0);
+                const mDg=snap?snap.digitalExp.reduce((s,e)=>s+e.amount,0):digitalExp.reduce((s,e)=>s+e.amount,0);
+                const mVr=variableExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+                const mOf=snap?snap.officeExp.reduce((s,e)=>s+e.amount,0):officeExp.reduce((s,e)=>s+e.amount,0);
+                const mOH=mTransPay+mFx+mDg+mVr+mOf;
+                const row={month:label.split(" ")[0],m};
+                activeClients.forEach(c=>{
+                  const f=getFee(c.id,m);
+                  const tc=snap?snap.team.reduce((s,t)=>t.assignments.filter(a=>a.clientId===c.id).reduce((sa,a)=>sa+a.amount,0)+s,0):team.reduce((s,t)=>s+tDed(t,c.id),0);
+                  const oh=mFees>0?(f/mFees)*mOH:0;
+                  const mg=f>0?((f-tc-oh)/f)*100:0;
+                  row["c_"+c.id]=Math.round(mg*10)/10;
+                });
+                return row;
+              });
+              const colors=["#059669","#0284c7","#d97706","#7c3aed","#e11d48","#06b6d4"];
+              return(<div className="card" style={{marginTop:16}}>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Tendencia de Margen por Cliente</div>
+                <div style={{fontSize:11,color:"#94a3b8",marginBottom:16}}>Evolución del margen mensual (%) de cada cliente activo</div>
+                {(()=>{
+                  const allVals=marginHistory.flatMap(r=>activeClients.map(c=>r["c_"+c.id]||0));
+                  const maxM=Math.max(...allVals.map(Math.abs),1);const lH=180;
+                  const hasNeg=allVals.some(v=>v<0);const zeroY=hasNeg?lH*0.7:lH;
+                  const scY=v=>zeroY-(v/maxM)*(hasNeg?lH*0.7:lH-10);
+                  return(<div style={{position:"relative",height:lH+40}}>
+                    {hasNeg&&<div style={{position:"absolute",left:0,right:0,top:zeroY,height:1,background:"#e2e8f0"}}/>}
+                    <svg style={{width:"100%",height:lH+40}}>
+                      {activeClients.map((c,ci)=>{
+                        const col=colors[ci%colors.length];
+                        return(<g key={c.id}>
+                          {marginHistory.map((r,i)=>{
+                            if(i===0)return null;const prev=marginHistory[i-1];
+                            const w=100/marginHistory.length;
+                            return(<line key={i} x1={`${(i-1)*w+w/2}%`} y1={scY(prev["c_"+c.id]||0)} x2={`${i*w+w/2}%`} y2={scY(r["c_"+c.id]||0)} stroke={col} strokeWidth="2" strokeLinecap="round" opacity="0.8"/>);
+                          })}
+                          {marginHistory.map((r,i)=>{const w=100/marginHistory.length;const v=r["c_"+c.id]||0;
+                            return(<circle key={i} cx={`${i*w+w/2}%`} cy={scY(v)} r="3.5" fill="#fff" stroke={col} strokeWidth="2"/>);
+                          })}
+                        </g>);
+                      })}
+                      {marginHistory.map((r,i)=>{const w=100/marginHistory.length;
+                        return(<text key={i} x={`${i*w+w/2}%`} y={lH+30} textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="600">{r.month}</text>);
+                      })}
+                    </svg>
+                  </div>);
+                })()}
+                <Leg items={activeClients.map((c,i)=>[c.name,colors[i%colors.length]])}/>
+                {/* Tabla de márgenes */}
+                <div style={{marginTop:12,overflow:"auto"}}>
+                  <table style={{fontSize:11}}>
+                    <thead><tr><th>Cliente</th>{marginHistory.map(r=><th key={r.m} className="text-center">{r.month}</th>)}<th className="text-center">Prom.</th></tr></thead>
+                    <tbody>{activeClients.map((c,ci)=>{
+                      const vals=marginHistory.map(r=>r["c_"+c.id]||0);const avg=vals.reduce((s,v)=>s+v,0)/vals.length;
+                      return(<tr key={c.id}><td style={{fontWeight:600,color:colors[ci%colors.length]}}>{c.name}</td>
+                        {vals.map((v,i)=><td key={i} className="text-center"><span className={`badge ${v>=30?"bg":v>=15?"ba":"br"}`} style={{fontSize:10}}>{v.toFixed(1)}%</span></td>)}
+                        <td className="text-center"><span style={{fontWeight:700,color:avg>=20?"#059669":"#d97706"}}>{avg.toFixed(1)}%</span></td>
+                      </tr>);
+                    })}</tbody>
+                  </table>
+                </div>
+              </div>);
+            })()}
+            {/* Export */}
+            <div style={{marginTop:12,display:"flex",gap:8}}>
+              <button className="btn btn-gray" onClick={()=>{
+                const rows=calc.clientProfit.sort((a,b)=>b.structNet-a.structNet).map(c=>[c.name,c.fee,c.teamCost,pct(c.fee,calc.totalFees)+"%",Math.round(c.oh),Math.round(c.structNet),c.margin.toFixed(1)+"%",c.projProfit||0]);
+                exportCSV("rentabilidad_"+vm+".csv",["Cliente","Fee","Equipo","% OH","Overhead","Utilidad","Margen","Proy. Util."],rows);
+              }}>Exportar CSV</button>
+            </div>
+          </>)}
+        </>)}
+
+        {/* ═══ REPORTES > CASHFLOW ═══ */}
+        {page==="cashflow"&&(()=>{
+          /* Calcular cashflow real mes a mes: cobrado vs egresos (SIN paid media) — usa snapshots */
+          const cfData=MONTHS.map(({value:m,label})=>{
+            const cobrado=invoices.filter(i=>i.month===m&&i.status==="Cobrada"&&i.type!=="paid").reduce((s,i)=>s+i.amount,0);
+            const paidIn=invoices.filter(i=>i.month===m&&i.status==="Cobrada"&&i.type==="paid").reduce((s,i)=>s+i.amount,0);
+            const snap=monthSnapshots[m];
+            const pay=snap?snap.team.reduce((s,t)=>s+(t.inversion||t.bruto||0),0):team.reduce((s,t)=>s+(t.inversion||t.bruto),0);
+            const fx=snap?snap.fixedExp.reduce((s,e)=>s+e.amount,0):fixedExp.reduce((s,e)=>s+e.amount,0);
+            const dg=snap?snap.digitalExp.reduce((s,e)=>s+e.amount,0):digitalExp.reduce((s,e)=>s+e.amount,0);
+            const vr=variableExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+            const of_=snap?snap.officeExp.reduce((s,e)=>s+e.amount,0):officeExp.reduce((s,e)=>s+e.amount,0);
+            const iv=investExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+            const pC=projects.filter(p=>p.month===m).reduce((s,p)=>s+pCost(p),0);
+            const egresos=pay+fx+dg+vr+of_+iv+pC;
+            const flujo=cobrado-egresos;
+            const hasData=cobrado>0||paidIn>0||vr>0||iv>0||pC>0;
+            return{month:label.split(" ")[0],m,cobrado,paidIn,egresos,flujo,hasData,pay,fx,dg,vr,of_,iv,pC};
+          });
+          const cfActive=cfData.filter(h=>h.hasData);
+          const accCob=cfActive.reduce((s,h)=>s+h.cobrado,0);
+          const accEgr=cfActive.reduce((s,h)=>s+h.egresos,0);
+          const accFlujo=accCob-accEgr;
+          const accPaid=cfActive.reduce((s,h)=>s+h.paidIn,0);
+          /* Saldo acumulado */
+          let saldoAcum=0;
+          const cfWithSaldo=cfData.map(h=>{saldoAcum+=h.flujo;return{...h,saldo:saldoAcum};});
+          const maxCF=Math.max(...cfActive.map(h=>Math.max(h.cobrado,h.egresos)),1);
+          const chartH=240;const barH=chartH-40;
+          /* Pendiente de cobro (sin paid) */
+          const totalPendiente=invoices.filter(i=>i.status!=="Cobrada"&&i.type!=="paid").reduce((s,i)=>s+i.amount,0);
+          const paidPendiente=invoices.filter(i=>i.status!=="Cobrada"&&i.type==="paid").reduce((s,i)=>s+i.amount,0);
+          return(<>
+          <div className="sl">Cashflow — Flujo de Caja Real 2026</div>
+          <div className="info-box">Dinero que realmente entró (facturas cobradas) vs dinero que salió (planilla + gastos + costos proyecto). Paid media no se incluye — es manejo personal aparte.</div>
+          {/* KPIs */}
+          <div className="grid g4" style={{marginBottom:20}}>
+            <div className="card" style={{borderLeft:"4px solid #059669"}}><div className="kpi-label">Total Cobrado</div><div className="kpi-value tg">{fmt(accCob)}</div><div className="kpi-sub">{cfActive.length} meses</div></div>
+            <div className="card" style={{borderLeft:"4px solid #e11d48"}}><div className="kpi-label">Total Egresos</div><div className="kpi-value tr">{fmt(accEgr)}</div></div>
+            <div className="card" style={{borderLeft:`4px solid ${accFlujo>=0?"#059669":"#e11d48"}`}}><div className="kpi-label">Flujo Neto</div><div className={`kpi-value ${accFlujo>=0?"tg":"tr"}`}>{fmt(accFlujo)}</div></div>
+            <div className="card" style={{borderLeft:"4px solid #d97706"}}><div className="kpi-label">Pendiente de Cobro</div><div className="kpi-value ta">{fmt(totalPendiente)}</div></div>
+          </div>
+          {/* Gráfico barras dobles: cobrado vs egresos */}
+          <div className="card" style={{marginBottom:20}}>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Cobrado vs Egresos — Mes a Mes</div>
+            <div style={{fontSize:11,color:"#94a3b8",marginBottom:16}}>Solo meses con actividad</div>
+            <div style={{position:"relative",height:chartH,display:"flex",alignItems:"flex-end",gap:0,padding:"0 4px"}}>
+              {[0,25,50,75,100].map(p=><div key={p} style={{position:"absolute",left:0,right:0,bottom:40+barH*(p/100),height:1,background:"#f1f5f9",zIndex:0}}/>)}
+              {cfActive.map((h,i)=>{
+                const hCob=Math.max((h.cobrado/maxCF)*barH,2);
+                const hEgr=Math.max((h.egresos/maxCF)*barH,2);
+                return(<div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:chartH,position:"relative",zIndex:1}}>
+                  <div style={{display:"flex",alignItems:"flex-end",gap:3,flex:1,justifyContent:"center"}}>
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
+                      <div style={{fontSize:8,color:"#059669",fontWeight:600,marginBottom:2}}>{fmt(h.cobrado)}</div>
+                      <div style={{width:22,height:hCob,background:"#059669",borderRadius:"4px 4px 0 0"}}/>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
+                      <div style={{fontSize:8,color:"#e11d48",fontWeight:600,marginBottom:2}}>{fmt(h.egresos)}</div>
+                      <div style={{width:22,height:hEgr,background:"#e11d48",borderRadius:"4px 4px 0 0"}}/>
+                    </div>
+                  </div>
+                  <div style={{fontSize:10,color:"#64748b",fontWeight:600,marginTop:6,height:20}}>{h.month}</div>
+                </div>);
+              })}
+            </div>
+            <Leg items={[["Cobrado","#059669"],["Egresos","#e11d48"]]}/>
+          </div>
+          {/* Saldo acumulado línea */}
+          <div className="card" style={{marginBottom:20}}>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Saldo Acumulado</div>
+            <div style={{fontSize:11,color:"#94a3b8",marginBottom:16}}>Evolución del flujo neto acumulado mes a mes</div>
+            {(()=>{
+              const sData=cfWithSaldo.filter(h=>h.hasData);
+              const maxS=Math.max(...sData.map(h=>Math.abs(h.saldo)),1);
+              const lH=160;
+              return(<div style={{position:"relative",height:lH+40}}>
+                <div style={{position:"absolute",left:0,right:0,top:lH/2,height:1,background:"#e2e8f0"}}/>
+                <svg style={{width:"100%",height:lH+40}}>
+                  {sData.map((h,i)=>{
+                    if(i===0)return null;
+                    const prev=sData[i-1];
+                    const w=100/sData.length;
+                    const x1=(i-1)*w+w/2;const x2=i*w+w/2;
+                    const scY=v=>lH/2-((v/maxS)*(lH/2-10));
+                    return(<line key={i} x1={`${x1}%`} y1={scY(prev.saldo)} x2={`${x2}%`} y2={scY(h.saldo)} stroke={h.saldo>=0?"#059669":"#e11d48"} strokeWidth="2.5" strokeLinecap="round"/>);
+                  })}
+                  {sData.map((h,i)=>{
+                    const w=100/sData.length;const cx=i*w+w/2;
+                    const scY=v=>lH/2-((v/maxS)*(lH/2-10));
+                    const cy=scY(h.saldo);
+                    return(<g key={i}>
+                      <circle cx={`${cx}%`} cy={cy} r="5" fill="#fff" stroke={h.saldo>=0?"#059669":"#e11d48"} strokeWidth="2.5"/>
+                      <text x={`${cx}%`} y={cy-12} textAnchor="middle" fontSize="9" fontWeight="600" fill={h.saldo>=0?"#059669":"#e11d48"}>{fmt(h.saldo)}</text>
+                      <text x={`${cx}%`} y={lH+20} textAnchor="middle" fontSize="10" fill="#64748b" fontWeight="600">{h.month}</text>
+                    </g>);
+                  })}
+                </svg>
+              </div>);
+            })()}
+          </div>
+          {/* Tabla detalle */}
+          <div className="card" style={{padding:0,overflow:"hidden"}}>
+            <table style={{fontSize:12}}>
+              <thead><tr><th>Mes</th><th className="text-right">Cobrado</th><th className="text-right">Planilla</th><th className="text-right">Gastos Op.</th><th className="text-right">Costos Proy.</th><th className="text-right">Total Egresos</th><th className="text-right">Flujo</th><th className="text-right">Saldo Acum.</th></tr></thead>
+              <tbody>
+                {cfWithSaldo.filter(h=>h.hasData).map((h,i)=>(<tr key={i}>
+                  <td style={{fontWeight:600}}>{h.month}</td>
+                  <td className="text-right tg">{fmt(h.cobrado)}</td>
+                  <td className="text-right" style={{color:"#64748b"}}>{fmt(h.pay)}</td>
+                  <td className="text-right" style={{color:"#64748b"}}>{fmt(h.fx+h.dg+h.vr+h.of_+h.iv)}</td>
+                  <td className="text-right" style={{color:"#64748b"}}>{fmt(h.pC)}</td>
+                  <td className="text-right tr">{fmt(h.egresos)}</td>
+                  <td className={`text-right font-bold ${h.flujo>=0?"tg":"tr"}`}>{fmt(h.flujo)}</td>
+                  <td className={`text-right font-bold ${h.saldo>=0?"tg":"tr"}`}>{fmt(h.saldo)}</td>
+                </tr>))}
+                <tr style={{fontWeight:700,borderTop:"2px solid #e2e8f0",background:"#f8fafc"}}>
+                  <td>TOTAL</td><td className="text-right tg">{fmt(accCob)}</td>
+                  <td className="text-right" colSpan={3}></td>
+                  <td className="text-right tr">{fmt(accEgr)}</td>
+                  <td className={`text-right ${accFlujo>=0?"tg":"tr"}`}>{fmt(accFlujo)}</td>
+                  <td className={`text-right ${saldoAcum>=0?"tg":"tr"}`}>{fmt(cfWithSaldo.filter(h=>h.hasData).slice(-1)[0]?.saldo||0)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style={{marginTop:12,display:"flex",gap:8}}>
+            <button className="btn btn-gray" onClick={()=>{
+              const rows=cfWithSaldo.filter(h=>h.hasData).map(h=>[h.month,h.cobrado,h.pay,h.fx+h.dg+h.vr+h.of_+h.iv,h.pC,h.egresos,h.flujo,h.saldo]);
+              exportCSV("cashflow_2026.csv",["Mes","Cobrado","Planilla","Gastos Op.","Costos Proy.","Total Egresos","Flujo","Saldo Acum."],rows);
+            }}>Exportar CSV</button>
+          </div>
+        </>);})()}
+
+        {/* ═══ CONFIGURACIÓN ═══ */}
+        {page==="config"&&(<>
+          <div className="sl">Clientes</div>
+          <div style={{textAlign:"right",marginBottom:12}}>
+            <button className="btn btn-green" onClick={()=>setShowForm("client")}><Ic d={ic.plus} size={14} color="#fff"/> Nuevo Cliente</button>
+          </div>
+          {showForm==="client"&&(
+            <div className="form-card"><h4 style={{color:"#059669"}}>Nuevo Cliente</h4>
+              <form onSubmit={e=>{e.preventDefault();const f=new FormData(e.target);const nm=f.get("n");const fee=parseInt(f.get("f"));
+                if(nm&&fee){const nid=Date.now();setClients(p=>[...p,{id:nid,name:nm,fee}]);
+                  setClientFees(prev=>{const nf={...prev};MONTHS.forEach(({value:m})=>{nf[m]={...nf[m],[nid]:{base:fee,services:[]}};});return nf;});
+                  setShowForm(null);}
+              }}>
+                <div className="form-row">
+                  <input name="n" placeholder="Nombre del cliente" required/>
+                  <input name="f" type="number" placeholder="Fee mensual (S/)" required/>
+                </div>
+                <div style={{display:"flex",gap:6}}><button type="submit" className="btn btn-green">Guardar</button><button type="button" className="btn btn-gray" onClick={()=>setShowForm(null)}>Cancelar</button></div>
+              </form>
+            </div>
+          )}
+          <div className="card" style={{padding:0,overflow:"hidden"}}>
+            <table>
+              <thead><tr><th>Cliente</th><th className="text-right">Fee Base</th><th className="text-right">Fee {ML[parseInt(vm.split("-")[1])-1]}</th><th className="text-right">Costo Equipo</th><th className="text-center">Asignaciones</th><th></th></tr></thead>
+              <tbody>{clients.map(c=>{
+                const nAssigns=team.reduce((s,t)=>s+t.assignments.filter(a=>a.clientId===c.id).length,0);
+                const cTeamCost=team.reduce((s,t)=>s+tDed(t,c.id),0);
+                const cFee=getFee(c.id,vm);
+                return(<tr key={c.id}><td style={{fontWeight:600}}>{c.name}</td>
+                  <td className="text-right" style={{color:"#94a3b8"}}>{fmt(c.fee)}</td>
+                  <td className="text-right tg font-bold">{fmt(cFee)}</td>
+                  <td className="text-right tr">{fmt(cTeamCost)}</td>
+                  <td className="text-center">{nAssigns}</td>
+                  <td><button className="del-btn" onClick={()=>{if(confirm("¿Eliminar "+c.name+"?")){setClients(clients.filter(x=>x.id!==c.id));
+                    setClientFees(prev=>{const nf={...prev};MONTHS.forEach(({value:m})=>{nf[m]={...nf[m]};delete nf[m][c.id];});return nf;});}}}>✕</button></td>
+                </tr>);
+              })}</tbody>
+              <tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e2e8f0"}}>
+                <td>TOTAL ({clients.length})</td><td className="text-right tg">{fmt(calc.totalFees)}</td><td></td>
+                <td className="text-right tr">{fmt(calc.dedPay)}</td><td className="text-center">{team.reduce((s,t)=>s+t.assignments.filter(a=>a.clientId!==null).length,0)}</td><td></td>
+              </tr></tfoot>
+            </table>
+          </div>
+
+          <div className="sl" style={{marginTop:24}}>Información General</div>
+          <div className="card" style={{marginBottom:12}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,padding:12,background:"#f0fdf4",borderRadius:8}}>
+              <span style={{width:40,height:40,borderRadius:"50%",background:"#059669",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>YM</span>
+              <div><div style={{fontWeight:600}}>Ynes Martínez</div><div style={{fontSize:12,color:"#64748b"}}>Administración y Pagos · Acceso completo</div></div>
+            </div>
+          </div>
+          <div className="card">
+            <div style={{fontWeight:600,marginBottom:12}}>Cómo se calcula la rentabilidad</div>
+            <div style={{fontSize:12,color:"#64748b",lineHeight:1.8}}>
+              <strong className="tg">ESTRUCTURA:</strong> Fee − Equipo dedicado (costo) − Overhead proporcional<br/>
+              Overhead = (Fee cliente ÷ Total fees) × (Transversales + Fijos + Digitales + Variables + Oficina)<br/>
+              <strong>Planilla:</strong> Neto + EsSalud + AFP = Costo. <strong>RH:</strong> Solo monto (sin EsSalud/AFP)<br/><br/>
+              <strong className="tb">PROYECTOS:</strong> Ingreso − Costo directo (independiente de estructura/overhead)
+            </div>
+          </div>
+          <div className="sl" style={{marginTop:24}}>Conexión a la Nube</div>
+          <SupabaseSetup/>
+          <div className="sl" style={{marginTop:16}}>Datos y Almacenamiento</div>
+          <div className="card">
+            <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>Los datos se guardan automáticamente en tu navegador (localStorage). Si cambias de navegador o borras datos, se perderán.</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              <button className="btn btn-gray" onClick={()=>{
+                const data={clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots};
+                const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+                const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="finanzas_backup_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(url);
+              }}>Exportar Backup (JSON)</button>
+              <button className="btn btn-gray" onClick={()=>{
+                const inp=document.createElement("input");inp.type="file";inp.accept=".json";
+                inp.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+                  r.onload=ev=>{try{const d=JSON.parse(ev.target.result);
+                    if(d.clients&&d.team){setClients(d.clients);setTeam(d.team);setInvoices(d.invoices||[]);setProjects(d.projects||[]);
+                      setFixedExp(d.fixedExp||[]);setDigitalExp(d.digitalExp||[]);setVariableExp(d.variableExp||[]);setOfficeExp(d.officeExp||[]);setInvestExp(d.investExp||[]);
+                      setClientFees(d.clientFees||initFees());setMonthSnapshots(d.monthSnapshots||{});
+                      setSaveMsg("Backup restaurado");setTimeout(()=>setSaveMsg(""),3000);
+                    }else alert("Archivo inválido");}catch(err){alert("Error al leer: "+err.message);}};r.readAsText(f);};inp.click();
+              }}>Importar Backup</button>
+              <button className="btn btn-red" style={{opacity:.7}} onClick={()=>{
+                if(confirm("¿Restaurar todos los datos a los valores de demostración? Se perderá todo lo ingresado.")){
+                  localStorage.removeItem(STORAGE_KEY);location.reload();
+                }
+              }}>Restaurar Demo</button>
+            </div>
+          </div>
+        </>)}
+
+        </div></div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══ SUB-COMPONENTS ═══ */
+function ClientDetail({c,totalFees,overhead,invoices,onBack}){
+  if(!c)return null;
+  const cob=invoices.filter(i=>i.status==="Cobrada");const pc=invoices.filter(i=>i.status==="Por cobrar");const em=invoices.filter(i=>i.status==="Emitida");
+  return(<>
+    <button className="back-link" onClick={onBack}>← Volver</button>
+    <h2 style={{fontSize:20,fontWeight:700,margin:"12px 0"}}>{c.name}</h2>
+    <div className="card" style={{marginBottom:12}}>
+      <div style={{fontWeight:600,fontSize:13,marginBottom:12,color:"#059669"}}>Rentabilidad del Fee</div>
+      <div className="detail-row"><span>Fee Mensual</span><span className="tg font-bold">{fmt(c.fee)}</span></div>
+      <div className="detail-row"><span>(−) Equipo Dedicado ({c.teamMembers.length})</span><span className="tr">{fmt(c.teamCost)}</span></div>
+      <div className="detail-row"><span>(−) Overhead ({pct(c.fee,totalFees)}% de {fmt(overhead)})</span><span className="ta">{fmt(c.oh)}</span></div>
+      <div className="detail-row" style={{fontWeight:700,fontSize:16,borderTop:"2px solid #e2e8f0",paddingTop:12}}>
+        <span>Utilidad</span><span className={c.structNet>=0?"tg":"tr"}>{fmt(c.structNet)}</span></div>
+      <div className="detail-row"><span>Margen</span><span className={`badge ${c.margin>=30?"bg":c.margin>=15?"ba":"br"}`}>{c.margin.toFixed(1)}%</span></div>
+    </div>
+    {c.teamMembers.length>0&&<div className="card" style={{marginBottom:12}}>
+      <div style={{fontWeight:600,fontSize:13,marginBottom:8}}>Equipo asignado a esta marca</div>
+      <table style={{fontSize:12}}>
+        <thead><tr><th>Nombre</th><th>Rol</th><th className="text-center">Régimen</th><th className="text-right">Asignado</th><th className="text-right">Bruto total</th></tr></thead>
+        <tbody>{c.teamMembers.map(m=>{
+          const mAssigns=m.assignments.filter(a=>a.clientId===c.id);
+          return mAssigns.map(a=>(<tr key={a.id}><td>{m.name}{m.assignments.length>1&&<span style={{fontSize:10,color:"#7c3aed",marginLeft:4}}>●</span>}</td>
+            <td style={{color:"#94a3b8"}}>{a.role}</td>
+            <td className="text-center"><span className={`badge ${m.regimen==="planilla"?"bb":"bpp"}`}>{m.regimen==="planilla"?"Planilla":"RH"}</span></td>
+            <td className="text-right font-bold tr">{fmt(a.amount)}</td>
+            <td className="text-right" style={{color:"#94a3b8",fontSize:11}}>{fmt(m.inversion||m.bruto)}</td></tr>));
+        })}</tbody>
+      </table>
+    </div>}
+    <div className="card" style={{marginBottom:12}}>
+      <div style={{fontWeight:600,fontSize:13,marginBottom:12}}>Facturas ({invoices.length})</div>
+      <div className="grid g4" style={{marginBottom:12}}>
+        <div style={{textAlign:"center"}}><div className="kpi-value" style={{color:"#2563eb"}}>{em.length}</div><div className="kpi-sub">Emitidas · {fmt(em.reduce((s,i)=>s+i.amount,0))}</div></div>
+        <div style={{textAlign:"center"}}><div className="kpi-value ta">{pc.length}</div><div className="kpi-sub">Por cobrar · {fmt(pc.reduce((s,i)=>s+i.amount,0))}</div></div>
+        <div style={{textAlign:"center"}}><div className="kpi-value tg">{cob.length}</div><div className="kpi-sub">Cobradas · {fmt(cob.reduce((s,i)=>s+i.amount,0))}</div></div>
+        <div style={{textAlign:"center"}}><div className="kpi-value">{fmt(invoices.reduce((s,i)=>s+i.amount,0))}</div><div className="kpi-sub">Total</div></div>
+      </div>
+    </div>
+    {c.projects.length>0&&<div className="card">
+      <div style={{fontWeight:600,fontSize:13,marginBottom:8,color:"#0284c7"}}>Proyectos (mes)</div>
+      {c.projects.map(p=>(<div key={p.id} style={{display:"flex",justifyContent:"space-between",padding:8,background:"#eff6ff",borderRadius:6,marginBottom:4,fontSize:13}}>
+        <span>{p.name}</span><div style={{display:"flex",gap:16}}><span className="tg">{fmt(p.revenue)}</span><span className="tr">−{fmt(pCost(p))}</span><span className="tb font-bold">{fmt(p.revenue-pCost(p))}</span></div>
+      </div>))}
+    </div>}
+  </>);
+}
+
+function SvcForm({onAdd}){
+  const[show,setShow]=useState(false);const[n,setN]=useState("");const[a,setA]=useState("");
+  if(!show)return <button className="btn btn-sm btn-gray" style={{marginTop:4}} onClick={()=>setShow(true)}>+ Agregar servicio</button>;
+  return(<form onSubmit={e=>{e.preventDefault();if(!n.trim()){alert("Nombre del servicio requerido.");return;}const v=parseInt(a);if(!v||v<=0){alert("El monto debe ser mayor a 0.");return;}onAdd(n.trim(),v);setN("");setA("");setShow(false);}} style={{display:"flex",gap:6,marginTop:6}}>
+    <input value={n} onChange={e=>setN(e.target.value)} placeholder="Nombre servicio" required style={{flex:1,fontSize:12,padding:"5px 8px"}}/>
+    <input type="number" value={a} onChange={e=>setA(e.target.value)} placeholder="Monto" required min="1" style={{width:100,fontSize:12,padding:"5px 8px"}}/>
+    <button type="submit" className="btn btn-sm btn-green">OK</button>
+    <button type="button" className="btn btn-sm btn-gray" onClick={()=>setShow(false)}>✕</button>
+  </form>);
+}
+
+function ProjExpForm({onAdd}){
+  const[show,setShow]=useState(false);const[n,setN]=useState("");const[a,setA]=useState("");
+  if(!show)return <button className="btn btn-sm btn-gray" style={{marginTop:4}} onClick={()=>setShow(true)}>+ Agregar gasto</button>;
+  return(<form onSubmit={e=>{e.preventDefault();if(n&&a){onAdd(n,parseInt(a));setN("");setA("");setShow(false);}}} style={{display:"flex",gap:6,marginTop:6}}>
+    <input value={n} onChange={e=>setN(e.target.value)} placeholder="Concepto del gasto" required style={{flex:1,fontSize:12,padding:"5px 8px"}}/>
+    <input type="number" value={a} onChange={e=>setA(e.target.value)} placeholder="Monto" required style={{width:100,fontSize:12,padding:"5px 8px"}}/>
+    <button type="submit" className="btn btn-sm btn-green">OK</button>
+    <button type="button" className="btn btn-sm btn-gray" onClick={()=>setShow(false)}>✕</button>
+  </form>);
+}
+
+function ExpBlock({title,items,total,color,onAdd,onDel}){
+  const[adding,setAdding]=useState(false);const[name,setName]=useState("");const[amount,setAmount]=useState("");
+  const submit=e=>{e.preventDefault();if(!name.trim()){alert("Ingresa un nombre.");return;}const a=parseInt(amount);if(!a||a<=0){alert("El monto debe ser mayor a 0.");return;}onAdd({name:name.trim(),amount:a});setName("");setAmount("");setAdding(false);};
+  return(<div className="card">
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+      <span style={{fontWeight:600,fontSize:13}}>{title}</span>
+      <div style={{display:"flex",alignItems:"center",gap:8}}><span className={`font-bold ${color}`}>{fmt(total)}</span><button className="btn btn-sm btn-gray" onClick={()=>setAdding(!adding)}>+</button></div>
+    </div>
+    {adding&&<form onSubmit={submit} style={{display:"flex",gap:6,marginBottom:8}}>
+      <input value={name} onChange={e=>setName(e.target.value)} placeholder="Nombre" required style={{flex:1}}/>
+      <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Monto" required style={{width:100}}/>
+      <button type="submit" className="btn btn-sm btn-green">OK</button><button type="button" className="btn btn-sm btn-gray" onClick={()=>setAdding(false)}>✕</button>
+    </form>}
+    {items.map(e=>(<div key={e.id} style={{display:"flex",justifyContent:"space-between",padding:"5px 8px",background:"#f8fafc",borderRadius:6,marginBottom:3,fontSize:12}}>
+      <span>{e.name}</span><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontWeight:600}}>{fmt(e.amount)}</span><button className="del-btn" onClick={()=>onDel(e.id)}>✕</button></div>
+    </div>))}
+    {items.length===0&&<div style={{color:"#94a3b8",fontSize:12,textAlign:"center",padding:12}}>Sin gastos. Usa + para agregar.</div>}
+  </div>);
+}
+
+function InvoiceForm({clients,month,type,onAdd,onClose}){
+  const typeLabel=type==="recurrente"?"Recurrente":type==="no_recurrente"?"No Recurrente":"Paid Media";
+  const prefix=type==="recurrente"?"FAC":type==="no_recurrente"?"FAC-NR":"FAC-PM";
+  const[fd,setFd]=useState({clientId:"",number:"",concept:"",amount:"",date:`2026-${month.split("-")[1]}-${String(new Date().getDate()).padStart(2,"0")}`,status:"Emitida"});
+  const submit=e=>{e.preventDefault();
+    if(!fd.clientId){alert("Selecciona un cliente.");return;}
+    const amt=parseInt(fd.amount);if(!amt||amt<=0){alert("El monto debe ser mayor a S/ 0.");return;}
+    if(!fd.concept.trim()){alert("Ingresa un concepto para la factura.");return;}
+    onAdd({...fd,clientId:parseInt(fd.clientId),amount:amt,month,type,number:fd.number||`${prefix}-${Date.now().toString().slice(-5)}`});};
+  return(<div className="form-card"><h4 style={{color:"#059669"}}>Nueva Factura — {typeLabel}</h4>
+    <form onSubmit={submit}>
+      <div className="form-row"><select value={fd.clientId} onChange={e=>setFd({...fd,clientId:e.target.value})} required><option value="">Cliente</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
+        <input value={fd.number} onChange={e=>setFd({...fd,number:e.target.value})} placeholder="# Factura"/>
+        <input value={fd.concept} onChange={e=>setFd({...fd,concept:e.target.value})} placeholder="Concepto"/>
+      </div>
+      <div className="form-row"><input type="number" value={fd.amount} onChange={e=>setFd({...fd,amount:e.target.value})} placeholder="Monto (S/)" required/>
+        <input type="date" value={fd.date} onChange={e=>setFd({...fd,date:e.target.value})}/>
+        <select value={fd.status} onChange={e=>setFd({...fd,status:e.target.value})}><option>Emitida</option><option>Por cobrar</option><option>Cobrada</option></select>
+      </div>
+      <div style={{display:"flex",gap:6}}><button type="submit" className="btn btn-green">Guardar</button><button type="button" className="btn btn-gray" onClick={onClose}>Cancelar</button></div>
+    </form>
+  </div>);
+}
+
+function AssignRow({a,clients,onChange,onDel,canDel}){
+  const isDed=a.clientId!==null&&a.clientId!==undefined&&a.clientId!=="__trans__";
+  const selVal=isDed?String(a.clientId):"__trans__";
+  return(<div style={{display:"flex",gap:4,marginBottom:4,alignItems:"center"}}>
+    <select value={selVal} onChange={e=>{const v=e.target.value;onChange({...a,clientId:v==="__trans__"?null:parseInt(v)});}} style={{width:140,fontSize:12,padding:"5px 6px"}}>
+      <option value="__trans__">Transversal / Bono</option>
+      {clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+    </select>
+    <input value={a.role} onChange={e=>onChange({...a,role:e.target.value})} placeholder="Rol / Concepto" style={{flex:1,fontSize:12,padding:"5px 6px"}}/>
+    <input type="number" value={a.amount||""} onChange={e=>onChange({...a,amount:parseInt(e.target.value)||0})} placeholder="Monto" style={{width:100,fontSize:12,padding:"5px 6px",textAlign:"right"}}/>
+    {canDel&&<button type="button" className="del-btn" onClick={onDel}>✕</button>}
+  </div>);
+}
+
+function TeamForm({clients,onAdd,onClose}){
+  const[fd,setFd]=useState({name:"",regimen:"planilla",neto:""});
+  const[assigns,setAssigns]=useState([{id:Date.now(),clientId:null,role:"",amount:0}]);
+  const isRH=fd.regimen==="rh";
+  const neto=parseInt(fd.neto)||0;
+  const essalud=isRH?0:Math.round(neto*0.09);
+  const afp=isRH?0:Math.round(neto*0.115);
+  const bruto=neto+afp; /* sueldo bruto = neto + AFP */
+  const inversion=neto+afp+essalud; /* inversión total empresa */
+  const totalAssigned=assigns.reduce((s,a)=>s+(a.amount||0),0);
+  const submit=e=>{e.preventDefault();
+    if(!fd.name.trim()){alert("Ingresa el nombre de la persona.");return;}
+    if(!neto||neto<=0){alert("El sueldo neto debe ser mayor a S/ 0.");return;}
+    if(neto>50000){alert("Verifica el sueldo: S/ "+neto.toLocaleString()+" parece muy alto.");return;}
+    const valid=assigns.filter(a=>a.role&&a.amount>0);
+    if(valid.length===0){alert("Agrega al menos una asignación con rol y monto.");return;}
+    onAdd({name:fd.name,regimen:fd.regimen,neto,essalud,afp,bruto,inversion,
+      assignments:valid.map(a=>({...a,id:Date.now()+Math.random()}))});};
+  return(<div className="form-card" style={{background:"#eff6ff",borderColor:"#bfdbfe"}}>
+    <h4 style={{color:"#0284c7"}}>Nueva Persona</h4>
+    <form onSubmit={submit}>
+      <div className="form-row">
+        <input value={fd.name} onChange={e=>setFd({...fd,name:e.target.value})} placeholder="Nombre completo" required/>
+        <select value={fd.regimen} onChange={e=>setFd({...fd,regimen:e.target.value})}>
+          <option value="planilla">Planilla (con EsSalud/AFP)</option><option value="rh">RH - Recibo por Honorarios</option>
+        </select>
+      </div>
+      <div className="form-row" style={{alignItems:"center"}}>
+        <input type="number" value={fd.neto} onChange={e=>setFd({...fd,neto:e.target.value})} placeholder={isRH?"Monto RH (S/)":"Sueldo Neto (S/)"} required/>
+        {!isRH&&neto>0&&<div style={{fontSize:11,color:"#64748b",lineHeight:1.6}}>
+          <div>AFP (11.5%): <strong>{fmt(afp)}</strong> → Bruto: <strong>{fmt(bruto)}</strong></div>
+          <div>EsSalud (9%): <strong>{fmt(essalud)}</strong> → <span className="tr" style={{fontWeight:700}}>Inversión: {fmt(inversion)}</span></div>
+        </div>}
+        {isRH&&neto>0&&<div style={{fontSize:12,fontWeight:600}}><span style={{color:"#94a3b8"}}>Total:</span> <span className="tr">{fmt(neto)}</span></div>}
+      </div>
+      <div style={{fontSize:12,fontWeight:600,color:"#64748b",margin:"8px 0 6px"}}>Distribución del costo ({assigns.length} asignación{assigns.length>1?"es":""})</div>
+      {assigns.map(a=><AssignRow key={a.id} a={a} clients={clients} canDel={assigns.length>1}
+        onChange={up=>setAssigns(p=>p.map(x=>x.id===a.id?up:x))} onDel={()=>setAssigns(p=>p.filter(x=>x.id!==a.id))}/>)}
+      <button type="button" className="btn btn-sm btn-gray" onClick={()=>setAssigns(p=>[...p,{id:Date.now(),clientId:null,role:"",amount:0}])} style={{marginBottom:8}}>+ Otra asignación (bono / otra marca)</button>
+      {inversion>0&&<div style={{fontSize:11,padding:"6px 10px",borderRadius:6,marginBottom:6,
+        background:totalAssigned===inversion?"#f0fdf4":totalAssigned>inversion?"#fff1f2":"#fffbeb",
+        color:totalAssigned===inversion?"#059669":totalAssigned>inversion?"#e11d48":"#92400e"}}>
+        Asignado: {fmt(totalAssigned)} / {fmt(inversion)} {totalAssigned===inversion?" — OK ✓":totalAssigned>inversion?" — Excede la inversión":" — Falta asignar "+fmt(inversion-totalAssigned)}
+      </div>}
+      <div style={{display:"flex",gap:6}}><button type="submit" className="btn btn-blue">Agregar</button><button type="button" className="btn btn-gray" onClick={onClose}>Cancelar</button></div>
+    </form>
+  </div>);
+}
+
+function ProjectForm({clients,month,onAdd,onClose}){
+  const[fd,setFd]=useState({clientId:"",name:"",revenue:"",status:"Pendiente"});
+  const submit=e=>{e.preventDefault();if(!fd.clientId||!fd.name||!fd.revenue)return;
+    onAdd({...fd,clientId:parseInt(fd.clientId),revenue:parseInt(fd.revenue),expenses:[],month});};
+  return(<div className="form-card" style={{background:"#eff6ff",borderColor:"#bfdbfe"}}>
+    <h4 style={{color:"#0284c7"}}>Nuevo Proyecto</h4>
+    <form onSubmit={submit}>
+      <div className="form-row"><select value={fd.clientId} onChange={e=>setFd({...fd,clientId:e.target.value})} required><option value="">Cliente</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
+        <input value={fd.name} onChange={e=>setFd({...fd,name:e.target.value})} placeholder="Nombre del proyecto" required/></div>
+      <div className="form-row"><input type="number" value={fd.revenue} onChange={e=>setFd({...fd,revenue:e.target.value})} placeholder="Ingreso (S/)" required/>
+        <select value={fd.status} onChange={e=>setFd({...fd,status:e.target.value})}><option>Pendiente</option><option>En curso</option><option>Completado</option></select></div>
+      <div className="info-box" style={{marginBottom:8}}>Los costos del proyecto se agregan después en Egresos → Costos Proyecto.</div>
+      <div style={{display:"flex",gap:6}}><button type="submit" className="btn btn-blue">Agregar</button><button type="button" className="btn btn-gray" onClick={onClose}>Cancelar</button></div>
+    </form>
+  </div>);
+}
+
+/* ═══ AUTH WRAPPER ═══ */
+function AuthWrapper(){
+  const[user,setUser]=useState(null);
+  const[loading,setLoading]=useState(true);
+  const[authMode,setAuthMode]=useState("login"); /* login, setup */
+  const[email,setEmail]=useState("");
+  const[password,setPassword]=useState("");
+  const[error,setError]=useState("");
+  const[info,setInfo]=useState("");
+
+  const sbCfg=getSBConfig();
+  const hasConfig=!!(sbCfg?.url&&sbCfg?.key);
+
+  useEffect(()=>{
+    if(!hasConfig){setLoading(false);setUser({email:"local",mode:"local"});return;}
+    const sb=getSB();if(!sb){setLoading(false);return;}
+    sb.auth.getSession().then(({data:{session}})=>{
+      if(session?.user)setUser({email:session.user.email,mode:"cloud"});
+      setLoading(false);
+    });
+    const{data:{subscription}}=sb.auth.onAuthStateChange((_,session)=>{
+      if(session?.user)setUser({email:session.user.email,mode:"cloud"});
+      else setUser(null);
+    });
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  const handleLogin=async(e)=>{
+    e.preventDefault();setError("");
+    const sb=getSB();if(!sb){setError("Supabase no configurado");return;}
+    const{error:err}=await sb.auth.signInWithPassword({email,password});
+    if(err)setError(err.message==="Invalid login credentials"?"Email o contraseña incorrectos":err.message);
+  };
+  const handleSignup=async(e)=>{
+    e.preventDefault();setError("");setInfo("");
+    const sb=getSB();if(!sb){setError("Supabase no configurado");return;}
+    const{error:err}=await sb.auth.signUp({email,password});
+    if(err)setError(err.message);
+    else setInfo("Cuenta creada. Revisa tu email para confirmar (puede estar en spam).");
+  };
+  const handleGoogleLogin=async()=>{
+    setError("");
+    const sb=getSB();if(!sb){setError("Supabase no configurado");return;}
+    const{error:err}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin}});
+    if(err)setError(err.message);
+  };
+  const handleLogout=async()=>{const sb=getSB();if(sb)await sb.auth.signOut();setUser(null);};
+
+  if(loading)return(<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",fontFamily:"Inter,sans-serif"}}>
+    <div style={{textAlign:"center"}}><div style={{fontSize:24,fontWeight:700,color:"#059669",marginBottom:8}}>NotOffice Finanzas</div><div style={{color:"#94a3b8"}}>Cargando...</div></div>
+  </div>);
+
+  /* No Supabase config — run in local mode silently */
+  if(!hasConfig&&user?.mode==="local")return <App userEmail="local" onLogout={()=>{}} cloudMode={false}/>;
+
+  /* Supabase configured but not logged in */
+  if(hasConfig&&!user)return(
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"#f8fafc",fontFamily:"Inter,sans-serif"}}>
+      <div style={{background:"#fff",borderRadius:16,padding:32,width:380,boxShadow:"0 4px 24px rgba(0,0,0,.08)"}}>
+        <div style={{textAlign:"center",marginBottom:24}}>
+          <div style={{fontSize:28,fontWeight:700,color:"#059669",marginBottom:4}}>NotOffice Finanzas</div>
+          <div style={{fontSize:13,color:"#94a3b8"}}>Ingresa con tu cuenta para acceder</div>
+        </div>
+        {error&&<div style={{background:"#fff1f2",color:"#e11d48",padding:"8px 12px",borderRadius:8,fontSize:12,marginBottom:12}}>{error}</div>}
+        {info&&<div style={{background:"#ecfdf5",color:"#059669",padding:"8px 12px",borderRadius:8,fontSize:12,marginBottom:12}}>{info}</div>}
+        <form onSubmit={handleLogin}>
+          <div style={{marginBottom:12}}><label style={{fontSize:11,color:"#64748b",display:"block",marginBottom:4}}>Email</label>
+            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} required style={{width:"100%",padding:"10px 14px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:14,fontFamily:"inherit"}}/></div>
+          <div style={{marginBottom:16}}><label style={{fontSize:11,color:"#64748b",display:"block",marginBottom:4}}>Contraseña</label>
+            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} required minLength={6} style={{width:"100%",padding:"10px 14px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:14,fontFamily:"inherit"}}/></div>
+          <button type="submit" style={{width:"100%",padding:"12px",background:"#059669",color:"#fff",border:"none",borderRadius:8,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:"inherit",marginBottom:8}}>Ingresar</button>
+          <button type="button" onClick={handleSignup} style={{width:"100%",padding:"10px",background:"#f1f5f9",color:"#475569",border:"none",borderRadius:8,fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"inherit"}}>Crear cuenta nueva</button>
+        </form>
+        <div style={{display:"flex",alignItems:"center",gap:12,margin:"16px 0"}}>
+          <div style={{flex:1,height:1,background:"#e2e8f0"}}/>
+          <span style={{fontSize:12,color:"#94a3b8"}}>o</span>
+          <div style={{flex:1,height:1,background:"#e2e8f0"}}/>
+        </div>
+        <button onClick={handleGoogleLogin} style={{width:"100%",padding:"12px",background:"#fff",color:"#1e293b",border:"1px solid #e2e8f0",borderRadius:8,fontSize:14,fontWeight:500,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:10}}>
+          <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          Ingresar con Google (@notoffice.pe)
+        </button>
+        <div style={{marginTop:16,textAlign:"center"}}>
+          <button onClick={()=>{setSBConfig(null);_sb=null;location.reload();}} style={{background:"none",border:"none",color:"#94a3b8",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Desconectar de la nube (modo local)</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  /* Logged in */
+  return <App userEmail={user?.email||"local"} onLogout={handleLogout} cloudMode={hasConfig}/>;
+}
+
+/* ═══ SETUP SUPABASE (in Config page) ═══ */
+function SupabaseSetup({onDone}){
+  const cfg=getSBConfig()||{};
+  const[url,setUrl]=useState(cfg.url||"");
+  const[key,setKey]=useState(cfg.key||"");
+  const[testing,setTesting]=useState(false);
+  const[result,setResult]=useState("");
+  const test=async()=>{
+    if(!url||!key){setResult("Completa ambos campos.");return;}
+    setTesting(true);setResult("");
+    try{const sb=supabase.createClient(url,key);
+      const{data,error}=await sb.from("app_state").select("id").limit(1);
+      if(error)setResult("Error: "+error.message+". Verifica la URL, key, y que hayas ejecutado el SQL.");
+      else{setResult("Conexión exitosa. Guardando...");setSBConfig({url,key});_sb=null;
+        setTimeout(()=>{if(onDone)onDone();else location.reload();},1500);}
+    }catch(e){setResult("Error de conexión: "+e.message);}
+    setTesting(false);
+  };
+  return(<div className="card" style={{marginBottom:16,borderLeft:"4px solid #059669"}}>
+    <div style={{fontWeight:700,fontSize:14,marginBottom:8,color:"#059669"}}>Conectar a la Nube (Supabase)</div>
+    <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>Conecta a Supabase para tener datos compartidos, backups automáticos, y acceso desde cualquier dispositivo. Sigue la guía de despliegue para obtener estos datos.</div>
+    <div style={{marginBottom:8}}><label style={{fontSize:11,color:"#64748b",display:"block",marginBottom:4}}>Supabase URL</label>
+      <input value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://xxx.supabase.co" style={{width:"100%",padding:"8px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit"}}/></div>
+    <div style={{marginBottom:12}}><label style={{fontSize:11,color:"#64748b",display:"block",marginBottom:4}}>Supabase Anon Key</label>
+      <input value={key} onChange={e=>setKey(e.target.value)} placeholder="eyJhbGci..." style={{width:"100%",padding:"8px 12px",border:"1px solid #e2e8f0",borderRadius:8,fontSize:13,fontFamily:"inherit"}}/></div>
+    <div style={{display:"flex",gap:8,alignItems:"center"}}>
+      <button className="btn btn-green" onClick={test} disabled={testing}>{testing?"Probando...":"Probar y Conectar"}</button>
+      {cfg.url&&<button className="btn btn-gray" onClick={()=>{setSBConfig(null);_sb=null;location.reload();}}>Desconectar</button>}
+    </div>
+    {result&&<div style={{marginTop:8,fontSize:12,padding:"8px 12px",borderRadius:8,background:result.includes("exitosa")?"#ecfdf5":"#fff1f2",color:result.includes("exitosa")?"#059669":"#e11d48"}}>{result}</div>}
+    {cfg.url&&<div style={{marginTop:8,fontSize:11,color:"#059669"}}>Conectado a: {cfg.url}</div>}
+  </div>);
+}
+
+ReactDOM.render(<AuthWrapper/>,document.getElementById("root"));
+</script>
+</body>
+</html>
