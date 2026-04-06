@@ -406,6 +406,10 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[tarifario,setTarifario]=useState([]);
   const[loadingMov,setLoadingMov]=useState(false);
   const[showAddPersona,setShowAddPersona]=useState(false);
+  /* ── Roles state ── */
+  const[userRoles,setUserRoles]=useState([]);
+  const loadRoles=async()=>{const sb=getSB();if(!sb)return;const{data}=await sb.from("user_roles").select("*").eq("activo",true).order("rol").order("nombre");if(data)setUserRoles(data);};
+  useEffect(()=>{if(cloudMode)loadRoles();},[cloudMode]);
   const loadCajaChica=async(month)=>{
     const sb=getSB();if(!sb)return;
     setLoadingCaja(true);
@@ -2126,6 +2130,92 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           </div>
           <div className="sl" style={{marginTop:24}}>Conexión a la Nube</div>
           <SupabaseSetup/>
+
+          {cloudMode && (<>
+          <div className="sl" style={{marginTop:24}}>Gestión de Roles y Accesos</div>
+          <div className="card">
+            <div style={{fontSize:12,color:"#71717a",marginBottom:12}}>
+              <strong>admin</strong> → Acceso total (Finanzas, Caja Chica, Movilidad) &nbsp;|&nbsp;
+              <strong>coordinador</strong> → Movilidad completa (registro, validación, tarifario, equipo) &nbsp;|&nbsp;
+              <strong>filmmaker</strong> → Movilidad limitada (registra sus viajes, ve su historial)
+            </div>
+            {(()=>{
+              const[newRoleEmail,setNewRoleEmail]=React.useState("");
+              const[newRoleName,setNewRoleName]=React.useState("");
+              const[newRoleRol,setNewRoleRol]=React.useState("filmmaker");
+              const[editingRole,setEditingRole]=React.useState(null);
+              const[savingRole,setSavingRole]=React.useState(false);
+
+              const addRole=async()=>{
+                if(!newRoleEmail.trim()||!newRoleName.trim())return;
+                const sb=getSB();if(!sb)return;
+                setSavingRole(true);
+                const{error}=await sb.from("user_roles").upsert({email:newRoleEmail.trim().toLowerCase(),nombre:newRoleName.trim(),rol:newRoleRol,activo:true},{onConflict:"email"});
+                if(!error){setNewRoleEmail("");setNewRoleName("");setNewRoleRol("filmmaker");loadRoles();}
+                else alert("Error: "+error.message);
+                setSavingRole(false);
+              };
+
+              const updateRole=async(id,newRol)=>{
+                const sb=getSB();if(!sb)return;
+                await sb.from("user_roles").update({rol:newRol}).eq("id",id);
+                loadRoles();setEditingRole(null);
+              };
+
+              const toggleActive=async(id,current)=>{
+                const sb=getSB();if(!sb)return;
+                await sb.from("user_roles").update({activo:!current}).eq("id",id);
+                loadRoles();
+              };
+
+              const deleteRole=async(id,nombre)=>{
+                if(!confirm("¿Eliminar a "+nombre+" del sistema de roles?"))return;
+                const sb=getSB();if(!sb)return;
+                await sb.from("user_roles").delete().eq("id",id);
+                loadRoles();
+              };
+
+              return(<>
+                <table className="data-table" style={{marginBottom:16}}>
+                  <thead><tr><th>Email</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+                  <tbody>
+                    {userRoles.length===0&&<tr><td colSpan={5} style={{textAlign:"center",color:"#a1a1aa",padding:20}}>No hay usuarios registrados</td></tr>}
+                    {userRoles.map(u=>(
+                      <tr key={u.id} style={{opacity:u.activo?1:.5}}>
+                        <td style={{fontSize:12}}>{u.email}</td>
+                        <td style={{fontWeight:600}}>{u.nombre}</td>
+                        <td>{editingRole===u.id?(
+                          <select defaultValue={u.rol} style={{fontSize:12,padding:"4px 6px"}} onChange={e=>updateRole(u.id,e.target.value)}>
+                            <option value="admin">admin</option>
+                            <option value="coordinador">coordinador</option>
+                            <option value="filmmaker">filmmaker</option>
+                          </select>
+                        ):<span className={`badge ${u.rol==="admin"?"bb":u.rol==="coordinador"?"bpp":"bg"}`}>{u.rol}</span>}</td>
+                        <td><span style={{color:u.activo?"#16a34a":"#dc2626",fontSize:12}}>{u.activo?"Activo":"Inactivo"}</span></td>
+                        <td style={{display:"flex",gap:4}}>
+                          <button className="btn btn-sm btn-gray" onClick={()=>setEditingRole(editingRole===u.id?null:u.id)}>{editingRole===u.id?"✓":"Rol"}</button>
+                          <button className="btn btn-sm btn-gray" onClick={()=>toggleActive(u.id,u.activo)}>{u.activo?"Desact.":"Activar"}</button>
+                          <button className="del-btn" onClick={()=>deleteRole(u.id,u.nombre)}>✕</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                  <input placeholder="Email" value={newRoleEmail} onChange={e=>setNewRoleEmail(e.target.value)} style={{fontSize:12,padding:"6px 10px",border:"1px solid #e4e4e7",borderRadius:8,width:200}}/>
+                  <input placeholder="Nombre" value={newRoleName} onChange={e=>setNewRoleName(e.target.value)} style={{fontSize:12,padding:"6px 10px",border:"1px solid #e4e4e7",borderRadius:8,width:140}}/>
+                  <select value={newRoleRol} onChange={e=>setNewRoleRol(e.target.value)} style={{fontSize:12,padding:"6px 10px",border:"1px solid #e4e4e7",borderRadius:8}}>
+                    <option value="filmmaker">filmmaker</option>
+                    <option value="coordinador">coordinador</option>
+                    <option value="admin">admin</option>
+                  </select>
+                  <button className="btn btn-primary" onClick={addRole} disabled={savingRole||!newRoleEmail.trim()||!newRoleName.trim()}>{savingRole?"Guardando...":"+ Agregar Usuario"}</button>
+                </div>
+              </>);
+            })()}
+          </div>
+          </>)}
+
           <div className="sl" style={{marginTop:16}}>Datos y Almacenamiento</div>
           <div className="card">
             <div style={{fontSize:12,color:"#71717a",marginBottom:12}}>Los datos se guardan automáticamente en tu navegador (localStorage). Si cambias de navegador o borras datos, se perderán.</div>
@@ -2480,6 +2570,8 @@ function ProjectForm({clients,month,onAdd,onClose}){
 /* ═══ AUTH WRAPPER ═══ */
 function AuthWrapper(){
   const[user,setUser]=useState(null);
+  const[userRole,setUserRole]=useState(null);
+  const[roleChecked,setRoleChecked]=useState(false);
   const[loading,setLoading]=useState(true);
   const[authMode,setAuthMode]=useState("login"); /* login, setup */
   const[email,setEmail]=useState("");
@@ -2490,16 +2582,27 @@ function AuthWrapper(){
   const sbCfg=getSBConfig();
   const hasConfig=!!(sbCfg?.url&&sbCfg?.key);
 
+  /* Check user role after login */
+  const checkRole=async(userEmail)=>{
+    const sb=getSB();if(!sb){setRoleChecked(true);return;}
+    try{
+      const{data,error:err}=await sb.from("user_roles").select("rol").eq("email",userEmail).eq("activo",true).single();
+      if(!err&&data)setUserRole(data.rol);
+      else setUserRole(null); /* No role found = no access */
+    }catch(e){setUserRole(null);}
+    setRoleChecked(true);
+  };
+
   useEffect(()=>{
-    if(!hasConfig){setLoading(false);setUser({email:"local",mode:"local"});return;}
+    if(!hasConfig){setLoading(false);setUser({email:"local",mode:"local"});setUserRole("admin");setRoleChecked(true);return;}
     const sb=getSB();if(!sb){setLoading(false);return;}
     sb.auth.getSession().then(({data:{session}})=>{
-      if(session?.user)setUser({email:session.user.email,mode:"cloud"});
+      if(session?.user){setUser({email:session.user.email,mode:"cloud"});checkRole(session.user.email);}
       setLoading(false);
     });
     const{data:{subscription}}=sb.auth.onAuthStateChange((_,session)=>{
-      if(session?.user)setUser({email:session.user.email,mode:"cloud"});
-      else setUser(null);
+      if(session?.user){setUser({email:session.user.email,mode:"cloud"});checkRole(session.user.email);}
+      else{setUser(null);setUserRole(null);setRoleChecked(false);}
     });
     return()=>subscription.unsubscribe();
   },[]);
@@ -2566,7 +2669,26 @@ function AuthWrapper(){
     </div>
   );
 
-  /* Logged in */
+  /* Logged in — check role */
+  if(!roleChecked)return(<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",fontFamily:"Inter,sans-serif"}}>
+    <div style={{textAlign:"center"}}><Logo width={160}/><div style={{color:"#a1a1aa",fontSize:13,marginTop:12}}>Verificando acceso...</div></div></div>);
+
+  if(userRole!=="admin")return(
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",background:"#fafafa",fontFamily:"Inter,sans-serif"}}>
+      <div style={{background:"#fff",borderRadius:24,padding:40,width:420,border:"1px solid #f0f0f0",textAlign:"center"}}>
+        <Logo width={160} color="#18181b"/>
+        <div style={{fontSize:48,margin:"24px 0 12px",opacity:.3}}>🔒</div>
+        <div style={{fontSize:18,fontWeight:800,marginBottom:6}}>Acceso restringido</div>
+        <div style={{fontSize:13,color:"#71717a",marginBottom:20,lineHeight:1.6}}>
+          {user?.email&&<span>Sesión: <strong>{user.email}</strong><br/></span>}
+          Esta aplicación es solo para administradores de NotOffice.<br/>
+          Si necesitas acceso, contacta a Gerardo.
+        </div>
+        <button onClick={handleLogout} style={{padding:"12px 24px",background:"#18181b",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Cerrar sesión</button>
+      </div>
+    </div>
+  );
+
   return <App userEmail={user?.email||"local"} onLogout={handleLogout} cloudMode={hasConfig}/>;
 }
 
