@@ -220,6 +220,8 @@ const INIT_STAFF=[
   {id:19,name:"Ynes Martínez",regimen:"planilla",bruto:2241,role:"Administración y Pagos"},
 ];
 
+const INIT_ROLES=["Community Manager","Diseñador/a","Account Manager","Director/a Creativo/a","Director/a de Cuentas","Estratega Digital","Diseñador/a UI/UX","Desarrollo Web","Administración","Pauta Digital","Ejecutivo/a de Cuentas","Planner","Coordinador/a","Productor/a","Copywriter","Editor/a","Fotógrafo/a"];
+
 const genInvoices=()=>{
   const inv=[];let id=1;
   /* Recurrentes (fees mensuales) */
@@ -353,6 +355,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[officeExp,setOfficeExp]=useState(saved?.officeExp||INIT_OFFICE);
   const[investExp,setInvestExp]=useState(saved?.investExp||INIT_INV);
   const[staff,setStaff]=useState(saved?.staff||INIT_STAFF);
+  const[roles,setRoles]=useState(saved?.roles||INIT_ROLES);
   const[editStaffId,setEditStaffId]=useState(null);
 
   /* Per-month fees: { month: { clientId: { base:number, services:[{id,name,amount}] } } } */
@@ -397,6 +400,11 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[loadingCaja,setLoadingCaja]=useState(false);
   const[newPersonaEmail,setNewPersonaEmail]=useState("");
   const[newPersonaNombre,setNewPersonaNombre]=useState("");
+  /* ── Movilidad state ── */
+  const[movilidad,setMovilidad]=useState([]);
+  const[movilidadAll,setMovilidadAll]=useState([]);
+  const[tarifario,setTarifario]=useState([]);
+  const[loadingMov,setLoadingMov]=useState(false);
   const[showAddPersona,setShowAddPersona]=useState(false);
   const loadCajaChica=async(month)=>{
     const sb=getSB();if(!sb)return;
@@ -432,12 +440,43 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     loadCajaChica(vm);setSaveMsg("Persona eliminada");setTimeout(()=>setSaveMsg(""),3000);
   };
   useEffect(()=>{if(cloudMode)loadCajaChica(vm);},[vm,cloudMode]);
-  const totalCajaCloud=cajaChica.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+  /* ── Movilidad fetch ── */
+  const loadMovilidad=async(month)=>{
+    const sb=getSB();if(!sb)return;
+    setLoadingMov(true);
+    try{
+      const[mRes,mAllRes,tRes]=await Promise.all([
+        sb.from("movilidad").select("*").eq("mes",month).order("fecha",{ascending:false}),
+        sb.from("movilidad").select("*").order("fecha",{ascending:false}),
+        sb.from("tarifario_movilidad").select("*").eq("activo",true).order("nombre")
+      ]);
+      if(!mRes.error&&mRes.data)setMovilidad(mRes.data);
+      if(!mAllRes.error&&mAllRes.data)setMovilidadAll(mAllRes.data);
+      if(!tRes.error&&tRes.data)setTarifario(tRes.data);
+    }catch(e){console.warn("Movilidad load:",e);}
+    setLoadingMov(false);
+  };
+  useEffect(()=>{if(cloudMode)loadMovilidad(vm);},[vm,cloudMode]);
+  /* Solo movilidad aprobada cuenta en finanzas */
+  const movAprobada=movilidad.filter(v=>v.estado==="aprobado");
+  const movAprobadaAll=movilidadAll.filter(v=>v.estado==="aprobado");
+  const movPendiente=movilidad.filter(v=>(v.estado||"pendiente")==="pendiente");
+  /* Movilidad "Agencia" → va al OH general. Movilidad con marca → costo directo de la marca */
+  const movAgencia=movAprobada.filter(v=>v.marca==="Agencia");
+  const movMarcas=movAprobada.filter(v=>v.marca!=="Agencia");
+  const totalMovAgencia=movAgencia.reduce((s,v)=>s+parseFloat(v.tarifa||0),0);
+  const totalMovMarcas=movMarcas.reduce((s,v)=>s+parseFloat(v.tarifa||0),0);
+  const totalMovilidad=movAprobada.reduce((s,v)=>s+parseFloat(v.tarifa||0),0);
+  const totalMovPendiente=movPendiente.reduce((s,v)=>s+parseFloat(v.tarifa||0),0);
+  const totalCajaCloud=cajaChica.filter(g=>(g.tipo||"agencia")==="agencia").reduce((s,g)=>s+parseFloat(g.monto||0),0);
+  const totalCajaCliente=cajaChica.filter(g=>g.tipo==="cliente").reduce((s,g)=>s+parseFloat(g.monto||0),0);
+  const totalCajaClienteAll=cajaChicaAll.filter(g=>g.tipo==="cliente").reduce((s,g)=>s+parseFloat(g.monto||0),0);
+  const cuentasPorCobrar=cajaChicaAll.filter(g=>g.tipo==="cliente"&&g.estado_cobro!=="cobrado");
   const cajaBalances=useMemo(()=>{
     const b={};
     CAJA_PERSONAS_EMAILS.forEach(p=>{
       const totalAsig=cajaAsignaciones.filter(a=>a.persona_email===p).reduce((s,a)=>s+parseFloat(a.monto||0),0);
-      const totalGast=cajaChicaAll.filter(g=>g.user_email===p).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      const totalGast=cajaChicaAll.filter(g=>g.user_email===p&&(g.via_pago||"caja_chica")==="caja_chica").reduce((s,g)=>s+parseFloat(g.monto||0),0);
       b[p]={asignado:totalAsig,gastado:totalGast,saldo:totalAsig-totalGast};
     });
     return b;
@@ -453,6 +492,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
         setVariableExp(cloudData.variableExp||[]);setOfficeExp(cloudData.officeExp||[]);setInvestExp(cloudData.investExp||[]);
         setClientFees(cloudData.clientFees||initFees());setMonthSnapshots(cloudData.monthSnapshots||{});
         if(cloudData.staff)setStaff(cloudData.staff);
+        if(cloudData.roles)setRoles(cloudData.roles);
         setSaveMsg("Datos cargados de la nube");setTimeout(()=>setSaveMsg(""),3000);
       }
       setInitialLoaded(true);
@@ -462,7 +502,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   /* ── Auto-save on data change ── */
   useEffect(()=>{
     if(!initialLoaded)return; /* don't save until cloud data is loaded */
-    const state={clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff};
+    const state={clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles};
     const timer=setTimeout(()=>{
       saveStateLocal(state); /* always save locally as backup */
       if(cloudMode){
@@ -475,7 +515,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
       }
     },1500);
     return()=>clearTimeout(timer);
-  },[clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,initialLoaded]);
+  },[clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles,initialLoaded]);
 
   const NAV=[
     {section:"Ingresos"},
@@ -530,8 +570,10 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     const tOffice=officeExp.reduce((s,e)=>s+e.amount,0);
     const tInvest=investExp.filter(e=>e.month===vm).reduce((s,e)=>s+e.amount,0);
     const tCajaCloud=totalCajaCloud||0;
-    const overhead=transPay+tFixed+tDigital+tVar+tCajaCloud+tOffice;
-    const structExp=totalPay+tFixed+tDigital+tVar+tCajaCloud+tOffice+tInvest;
+    const tMovAgencia=totalMovAgencia||0; /* Movilidad "Agencia" → OH */
+    const tMovMarcas=totalMovMarcas||0; /* Movilidad por marca → costo directo */
+    const overhead=transPay+tFixed+tDigital+tVar+tCajaCloud+tOffice+tMovAgencia;
+    const structExp=totalPay+tFixed+tDigital+tVar+tCajaCloud+tOffice+tInvest+tMovAgencia+tMovMarcas;
     const structProfit=totalFees-structExp;
     const projProfit=totalPR-totalPCost;
     const netProfit=structProfit+projProfit;
@@ -540,21 +582,26 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     const clientProfit=clients.map(c=>{
       const cFee=getFee(c.id,vm);
       const cTeam=team.reduce((s,t)=>s+tDed(t,c.id),0);
+      /* Gastos operativos de caja chica tipo agencia para esta marca */
+      const cGastosOp=cajaChica.filter(g=>(g.tipo||"agencia")==="agencia"&&g.marca===c.name).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      /* Movilidad (gasolina) aprobada asignada a esta marca (excluye "Agencia" que va a OH) */
+      const cMovilidad=movMarcas.filter(v=>v.marca===c.name).reduce((s,v)=>s+parseFloat(v.tarifa||0),0);
       const cOH=totalFees>0?(cFee/totalFees)*overhead:0;
-      const cNet=cFee-cTeam-cOH;
-      const cMargin=cFee>0?(cNet/cFee)*100:0;
+      const cNet=cFee-cTeam-cGastosOp-cMovilidad-cOH;
+      const cMargin=cFee>0?(cNet/cFee)*100:0; /* Margen incluye OH proporcional */
       const cP=mProj.filter(p=>p.clientId===c.id);
       const cPR=cP.reduce((s,p)=>s+p.revenue,0);const cPC=cP.reduce((s,p)=>s+pCost(p),0);
       const cInv=invoices.filter(i=>i.clientId===c.id);
-      return{...c,fee:cFee,teamCost:cTeam,oh:cOH,structNet:cNet,margin:cMargin,projRev:cPR,projCost:cPC,projProfit:cPR-cPC,
-        totalNet:cNet+(cPR-cPC),teamMembers:team.filter(t=>t.assignments.some(a=>a.clientId===c.id)),projects:cP,
+      return{...c,fee:cFee,teamCost:cTeam,gastosOp:cGastosOp,movilidad:cMovilidad,oh:cOH,structNet:cNet,margin:cMargin,projRev:cPR,projCost:cPC,projProfit:cPR-cPC,
+        utilFee:cNet,utilProy:cPR-cPC,totalNet:cNet+(cPR-cPC),
+        teamMembers:team.filter(t=>t.assignments.some(a=>a.clientId===c.id)),projects:cP,
         cobrado:cInv.filter(i=>i.status==="Cobrada").reduce((s,i)=>s+i.amount,0),
         porCobrar:cInv.filter(i=>i.status==="Por cobrar").reduce((s,i)=>s+i.amount,0)};
     });
     return{totalFees,totalCob,totalPC,totalEm,allCob,allPC,allEm,mInv,mCob,mPC,mEm,totalPR,totalPCost,dedPay,transPay,totalPay,
-      tFixed,tDigital,tVar,tCajaCloud,tOffice,tInvest,overhead,structExp,structProfit,projProfit,netProfit,totalIncome,totalExpenses,clientProfit,
+      tFixed,tDigital,tVar,tCajaCloud,tMovAgencia,tMovMarcas,tOffice,tInvest,overhead,structExp,structProfit,projProfit,netProfit,totalIncome,totalExpenses,clientProfit,
       totalPaidPC,totalPaidCob,paidPC,paidCob};
-  },[clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,vm,clientFees,totalCajaCloud]);
+  },[clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,vm,clientFees,totalCajaCloud,totalMovAgencia,totalMovMarcas,cajaChica,movMarcas]);
 
   const history=useMemo(()=>{
     return MONTHS.map(({value:m,label})=>{
@@ -569,11 +616,12 @@ function App({userEmail="local",onLogout,cloudMode=false}){
       const vr=variableExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
       const of_=snap?snap.officeExp.reduce((s,e)=>s+e.amount,0):officeExp.reduce((s,e)=>s+e.amount,0);
       const iv=investExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
-      const sExp=pay+fx+dg+vr+of_+iv;
-      const hasData=invoices.some(i=>i.month===m)||projects.some(p=>p.month===m)||vr>0||iv>0||fees>0;
+      const mv=movAprobadaAll.filter(v=>v.mes===m).reduce((s,v)=>s+parseFloat(v.tarifa||0),0); /* total movilidad for structExp */
+      const sExp=pay+fx+dg+vr+of_+iv+mv;
+      const hasData=invoices.some(i=>i.month===m)||projects.some(p=>p.month===m)||vr>0||iv>0||fees>0||mv>0;
       return{month:label.split(" ")[0],m:m,fees,sExp,sProfit:fees-sExp,pProfit:pR-pC,total:(fees-sExp)+(pR-pC),income:fees+pR,pCost:pC,hasData,snapped:!!snap};
     });
-  },[clients,team,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,invoices,clientFees,monthSnapshots,vm]);
+  },[clients,team,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,invoices,clientFees,monthSnapshots,vm,movilidadAll]);
 
   const filtInv=useMemo(()=>{
     let list=invoices.filter(i=>i.month===vm&&i.type===facturaTab);
@@ -826,11 +874,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             <div className="card"><div className="kpi-label">AFP</div><div className="kpi-value ta">{fmt(team.reduce((s,t)=>s+t.afp,0))}</div></div>
             <div className="card" style={{borderColor:"#fecaca"}}><div className="kpi-label">Costo Total</div><div className="kpi-value tr">{fmt(calc.totalPay)}</div><div className="kpi-sub">Marcas {fmt(calc.dedPay)} · Trans {fmt(calc.transPay)}</div></div>
           </div>
-          <div className="info-box"><strong>Planilla:</strong> Neto + EsSalud + AFP = Bruto. <strong>RH:</strong> Solo monto. Clic en una persona para ver desglose y editar asignaciones.</div>
-          <div style={{textAlign:"right",marginBottom:12}}>
-            <button className="btn btn-blue" onClick={()=>setShowForm("team")}><Ic d={ic.plus} size={14} color="#fff"/> Agregar Persona</button>
-          </div>
-          {showForm==="team"&&<TeamForm clients={clients} staff={staff} preClient={preClient} onAdd={t=>{setTeam(prev=>[...prev,{...t,id:Date.now()}]);setShowForm(null);setPreClient(null);}} onClose={()=>{setShowForm(null);setPreClient(null);}}/>}}
+          <div className="info-box"><strong>Planilla:</strong> Se ingresa Bruto, se calcula Neto/AFP/EsSalud auto. <strong>RH:</strong> Solo monto. Distribución = Bruto entre marcas. Clic en persona para editar.</div>
+          {showForm==="team"&&<TeamForm clients={clients} staff={staff} roles={roles} preClient={preClient} onAdd={t=>{setTeam(prev=>[...prev,{...t,id:Date.now()}]);setShowForm(null);setPreClient(null);}} onClose={()=>{setShowForm(null);setPreClient(null);}}/>}
 
           {/* ── Equipos por marca ── */}
           <div className="sl">Equipos por Marca</div>
@@ -839,7 +884,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             const PersonCard=({m,ctxLabel,ctxAmount})=>{
               const isExp=editPerson===m.id;
               const totalAssigned=m.assignments.reduce((s,a)=>s+a.amount,0);
-              const diff=(m.inversion||m.bruto)-totalAssigned;
+              const diff=m.bruto-totalAssigned;
               const otherAssigns=m.assignments.length>1;
               return(<div style={{padding:"8px 12px",background:isExp?"#fff":"#fafafa",borderRadius:8,marginBottom:4,border:isExp?"1px solid #e4e4e7":"1px solid transparent"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setEditPerson(isExp?null:m.id)}>
@@ -851,41 +896,44 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                     {otherAssigns&&<span className="badge" style={{fontSize:9,background:"#f4f4f5",color:"#52525b"}}>{m.assignments.length} asign.</span>}
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    {ctxAmount!=null&&<span style={{fontWeight:700,fontSize:13}} className="tr">{fmt(ctxAmount)}</span>}
-                    {otherAssigns&&<span style={{fontSize:10,color:"#a1a1aa"}}>inv. {fmt(m.inversion||m.bruto)}</span>}
+                    {ctxAmount!=null&&ctxAmount!==(m.inversion||m.bruto)&&<span style={{fontSize:11,color:"#a1a1aa"}}>{fmt(ctxAmount)} en marca</span>}
+                    <span style={{fontWeight:700,fontSize:13}} className="tr">{fmt(m.inversion||m.bruto)}</span>
+                    <button className="del-btn" style={{fontSize:13}} onClick={e=>{e.stopPropagation();setTeam(prev=>prev.filter(t=>t.id!==m.id));}}>✕</button>
                   </div>
                 </div>
                 {isExp&&(<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #f4f4f5"}}>
                   <div style={{background:"#f4f4f5",borderRadius:8,padding:10,marginBottom:10}}>
-                    <div style={{fontSize:11,fontWeight:600,color:"#71717a",marginBottom:6}}>Sueldo</div>
                     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                      <span style={{fontSize:12,minWidth:50}}>Neto</span>
-                      <input type="number" value={m.neto} onChange={e=>{
-                        const newNeto=parseInt(e.target.value)||0;
-                        if(m.regimen==="planilla"){const es=Math.round(newNeto*0.09);const afp=Math.round(newNeto*0.115);
-                          setTeam(team.map(t=>t.id===m.id?{...t,neto:newNeto,essalud:es,afp,bruto:newNeto+afp,inversion:newNeto+afp+es}:t));
-                        }else{setTeam(team.map(t=>t.id===m.id?{...t,neto:newNeto,bruto:newNeto,inversion:newNeto}:t));}
+                      <span style={{fontSize:12,fontWeight:600,minWidth:50}}>Bruto</span>
+                      <input type="number" value={m.bruto} onChange={e=>{
+                        const newBruto=parseInt(e.target.value)||0;
+                        if(m.regimen==="planilla"){const newNeto=Math.round(newBruto/1.115);const afp=Math.round(newNeto*0.115);const es=Math.round(newNeto*0.09);
+                          setTeam(prev=>prev.map(t=>t.id===m.id?{...t,bruto:newBruto,neto:newNeto,essalud:es,afp,inversion:newBruto+es}:t));
+                        }else{setTeam(prev=>prev.map(t=>t.id===m.id?{...t,bruto:newBruto,neto:newBruto,inversion:newBruto}:t));}
                       }} style={{width:120,textAlign:"right",fontWeight:600,fontSize:13,padding:"4px 8px"}}/>
+                      <span className={`badge ${m.regimen==="planilla"?"bb":"bpp"}`} style={{fontSize:9}}>{m.regimen==="planilla"?"Planilla":"RH"}</span>
                     </div>
                     {m.regimen==="planilla"&&<>
-                      <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#a1a1aa",paddingLeft:10}}><span>+ AFP (11.5%)</span><span>{fmt(m.afp)}</span></div>
-                      <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#18181b",fontWeight:500,paddingLeft:10,marginBottom:4}}><span>= Sueldo Bruto</span><span style={{fontWeight:600}}>{fmt(m.bruto)}</span></div>
-                      <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#a1a1aa",paddingLeft:10}}><span>+ EsSalud (9%)</span><span>{fmt(m.essalud)}</span></div>
+                      <div style={{fontSize:11,color:"#71717a",paddingLeft:10,lineHeight:1.8}}>
+                        Neto: {fmt(m.neto)} · AFP: {fmt(m.afp)} · EsSalud: {fmt(m.essalud)}
+                      </div>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:700,borderTop:"1px solid #e4e4e7",marginTop:4,paddingTop:4}}>
+                        <span>Inversión Total</span><span className="tr">{fmt(m.inversion||m.bruto)}</span>
+                      </div>
                     </>}
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:13,fontWeight:700,borderTop:"1px solid #e4e4e7",paddingTop:4}}><span>Inversión Total Empresa</span><span className="tr">{fmt(m.inversion||m.bruto)}</span></div>
                   </div>
                   <div style={{fontSize:11,fontWeight:600,color:"#71717a",marginBottom:6}}>Distribución del costo</div>
                   {m.assignments.map(a=><AssignRow key={a.id} a={a} clients={clients} canDel={m.assignments.length>1}
-                    onChange={up=>setTeam(team.map(t=>t.id===m.id?{...t,assignments:t.assignments.map(x=>x.id===a.id?{...x,...up}:x)}:t))}
-                    onDel={()=>{if(m.assignments.length<=1){if(confirm("¿Eliminar a "+m.name+"?"))setTeam(team.filter(t=>t.id!==m.id));}
-                      else setTeam(team.map(t=>t.id===m.id?{...t,assignments:t.assignments.filter(x=>x.id!==a.id)}:t));}}/>)}
-                  <button className="btn btn-sm btn-gray" style={{marginTop:4,fontSize:11}} onClick={()=>setTeam(team.map(t=>t.id===m.id?{...t,assignments:[...t.assignments,{id:Date.now(),clientId:null,role:"",amount:0}]}:t))}>+ Bono / otra marca</button>
+                    onChange={up=>setTeam(prev=>prev.map(t=>t.id===m.id?{...t,assignments:t.assignments.map(x=>x.id===a.id?{...x,...up}:x)}:t))}
+                    onDel={()=>{if(m.assignments.length<=1){setTeam(prev=>prev.filter(t=>t.id!==m.id));}
+                      else setTeam(prev=>prev.map(t=>t.id===m.id?{...t,assignments:t.assignments.filter(x=>x.id!==a.id)}:t));}}/>)}
+                  <button className="btn btn-sm btn-gray" style={{marginTop:4,fontSize:11}} onClick={()=>setTeam(prev=>prev.map(t=>t.id===m.id?{...t,assignments:[...t.assignments,{id:Date.now(),clientId:null,role:"",amount:0}]}:t))}>+ Bono / otra marca</button>
                   {diff!==0&&<div style={{fontSize:11,padding:"4px 8px",borderRadius:6,marginTop:6,
                     background:diff>0?"#fafafa":"#fff1f2",color:diff>0?"#3f3f46":"#e11d48",fontWeight:600}}>
-                    {diff>0?"⚠ Sin asignar: "+fmt(diff):"⚠ Excede inversión: "+fmt(Math.abs(diff))}
+                    {diff>0?"⚠ Sin asignar: "+fmt(diff):"⚠ Excede el bruto: "+fmt(Math.abs(diff))}
                   </div>}
                   <div style={{display:"flex",justifyContent:"flex-end",marginTop:8,paddingTop:6,borderTop:"1px solid #f4f4f5"}}>
-                    <button className="btn btn-sm btn-red" style={{opacity:.7,fontSize:11}} onClick={()=>{if(confirm("¿Eliminar a "+m.name+"?"))setTeam(team.filter(t=>t.id!==m.id));}}>Eliminar</button>
+                    <button className="btn btn-sm btn-red" style={{opacity:.7,fontSize:11}} onClick={()=>setTeam(prev=>prev.filter(t=>t.id!==m.id))}>Eliminar</button>
                   </div>
                 </div>)}
               </div>);};
@@ -894,7 +942,6 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             return(<>
               {clients.map(c=>{
                 const cMembers=team.filter(t=>t.assignments.some(a=>a.clientId===c.id));
-                if(!cMembers.length)return null;
                 const cCost=team.reduce((s,t)=>s+tDed(t,c.id),0);
                 return(<div className="card" key={c.id} style={{marginBottom:8}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -951,10 +998,10 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             <div className="card"><div className="kpi-label">Gastos Oficina</div><div className="kpi-value tr">{fmt(calc.tOffice)}</div></div>
             <div className="card"><div className="kpi-label">Digitales</div><div className="kpi-value tb">{fmt(calc.tDigital)}</div></div>
             <div className="card"><div className="kpi-label">Costos Variables</div><div className="kpi-value ta">{fmt(calc.tVar)}</div></div>
-            <div className="card"><div className="kpi-label">Caja Chica App</div><div className="kpi-value ta">{fmt(calc.tCajaCloud)}</div></div>
+            <div className="card"><div className="kpi-label">Caja Chica (Agencia)</div><div className="kpi-value ta">{fmt(calc.tCajaCloud)}</div></div>
           </div>
           <div className="tabs">
-            {[["fijos","Servicios"],["oficina","Gastos Oficina"],["digital","Digitales"],["costovar","Costos Variables"],["variable","Caja Chica"],["inversion","Inversión"]].map(([k,l])=>(
+            {[["fijos","Servicios"],["oficina","Gastos Oficina"],["digital","Digitales"],["costovar","Costos Variables"],["variable","Caja Chica"],["movilidad","Movilidad"],["prestamos","Préstamos"],["inversion","Inversión"]].map(([k,l])=>(
               <button key={k} className={`tab ${gastoTab===k?"active":""}`} onClick={()=>{setGastoTab(k);if(k==="variable"&&cloudMode)loadCajaChica(vm);}}>{l}</button>
             ))}
           </div>
@@ -1016,35 +1063,239 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               {loadingCaja?<div style={{textAlign:"center",padding:12,color:"#a1a1aa"}}>Cargando...</div>:
               cajaChica.length===0?<div style={{textAlign:"center",padding:12,color:"#a1a1aa",fontSize:12}}>Sin gastos de app móvil este mes</div>:(
                 <div className="card" style={{padding:0,overflow:"hidden",marginBottom:12}}>
-                  <table><thead><tr><th>Fecha</th><th>Persona</th><th>Concepto</th><th>Categoría</th><th>Marca</th><th className="text-right">Monto</th><th>Foto</th></tr></thead>
+                  <table><thead><tr><th>Fecha</th><th>Persona</th><th>Concepto</th><th>Categoría</th><th>Marca</th><th>Tipo</th><th>Vía</th><th className="text-right">Monto</th><th>Estado</th><th>Foto</th></tr></thead>
                   <tbody>{cajaChica.map(g=>(
-                    <tr key={g.id}>
+                    <tr key={g.id} style={g.tipo==="cliente"?{background:"#fffbeb"}:{}}>
                       <td style={{fontSize:12}}>{new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}</td>
                       <td style={{fontSize:12}}>{g.user_name||nameFromEmail(g.user_email)}</td>
                       <td>{g.concepto}</td>
                       <td><span className="badge">{g.categoria}</span></td>
                       <td><span className="badge" style={g.marca&&g.marca!=="Agencia"?{background:"#2563eb",color:"#fff"}:{}}>{g.marca||"Agencia"}</span></td>
-                      <td className="text-right font-bold tr">{fmt(g.monto)}</td>
+                      <td><span className="badge" style={g.tipo==="cliente"?{background:"#f59e0b",color:"#fff"}:{background:"#18181b",color:"#fff"}}>{g.tipo==="cliente"?"Cliente":"Agencia"}</span></td>
+                      <td style={{fontSize:11}}>{(g.via_pago||"caja_chica")==="caja_chica"?"Caja":"Transf."}</td>
+                      <td className="text-right font-bold tr">{fmt(g.monto)}{g.tipo==="cliente"&&<div style={{fontSize:10,color:"#a1a1aa",fontWeight:400}}>Fact: {fmt(g.monto*1.18)}</div>}</td>
+                      <td>{g.tipo==="cliente"?<select value={g.estado_cobro||"pendiente"} onChange={async(e)=>{const sb=getSB();if(!sb)return;await sb.from("caja_chica").update({estado_cobro:e.target.value}).eq("id",g.id);loadCajaChica(vm);}} style={{fontSize:10,padding:"3px 6px",borderRadius:6,minWidth:75}}><option value="pendiente">Pendiente</option><option value="facturado">Facturado</option><option value="cobrado">Cobrado</option></select>:"—"}</td>
                       <td className="text-center">{g.foto_url?<a href={g.foto_url} target="_blank" rel="noopener" style={{fontSize:16}}>📎</a>:"—"}</td>
                     </tr>
                   ))}</tbody></table>
                   <div style={{padding:"10px 12px",borderTop:"1px solid #e4e4e7",display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:13}}>
-                    <span>Total App Móvil ({vm})</span><span className="tp">{fmt(totalCajaCloud)}</span>
+                    <span>Gasto Agencia ({vm})</span><span className="tp">{fmt(totalCajaCloud)}</span>
                   </div>
+                  {totalCajaCliente>0&&<div style={{padding:"6px 12px",borderTop:"1px solid #f4f4f5",display:"flex",justifyContent:"space-between",fontSize:12,color:"#f59e0b"}}>
+                    <span>Gasto Cliente por facturar ({vm})</span><span style={{fontWeight:700}}>{fmt(totalCajaCliente)} → Factura: {fmt(totalCajaCliente*1.18)}</span>
+                  </div>}
                 </div>
               )}
               <div style={{marginBottom:12,textAlign:"right"}}>
                 <button className="btn btn-sm btn-gray" onClick={()=>loadCajaChica(vm)}>↻ Actualizar</button>
                 {cajaChica.length>0&&<button className="btn btn-sm btn-gray" style={{marginLeft:8}} onClick={()=>{
                   exportCSV("caja-chica-"+vm+".csv",
-                    ["Fecha","Persona","Email","Concepto","Categoría","Marca","Monto","Foto URL"],
-                    cajaChica.map(g=>[g.fecha,g.user_name,g.user_email,g.concepto,g.categoria,g.marca||"Agencia",g.monto,g.foto_url||""])
+                    ["Fecha","Persona","Email","Concepto","Categoría","Marca","Tipo","Vía Pago","Monto","Monto Factura","Estado Cobro","Foto URL"],
+                    cajaChica.map(g=>[g.fecha,g.user_name,g.user_email,g.concepto,g.categoria,g.marca||"Agencia",g.tipo||"agencia",g.via_pago||"caja_chica",g.monto,g.tipo==="cliente"?(g.monto*1.18).toFixed(2):"",g.tipo==="cliente"?(g.estado_cobro||"pendiente"):"",g.foto_url||""])
                   );
                 }}>Exportar CSV</button>}
               </div>
             </div>}
             {!cloudMode&&<div className="info-box">Conecta Supabase para ver los gastos de la app móvil de caja chica.</div>}
           </div>)}
+          {gastoTab==="movilidad"&&(<div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+              <div><span style={{fontWeight:700,fontSize:14}}>Movilidad — Gasolina</span><span style={{fontSize:12,color:"#a1a1aa",marginLeft:8}}>({vm})</span></div>
+              <span style={{fontWeight:800,fontSize:16}}>{fmt(totalMovilidad)}</span>
+            </div>
+            {totalMovilidad>0&&<div style={{display:"flex",gap:12,marginBottom:12,fontSize:12,color:"#71717a"}}>
+              <span>Por marca (costo directo): <strong style={{color:"#18181b"}}>{fmt(totalMovMarcas)}</strong></span>
+              <span>Agencia (→ OH): <strong style={{color:"#18181b"}}>{fmt(totalMovAgencia)}</strong></span>
+            </div>}
+            {totalMovPendiente>0&&<div className="alert alert-amber" style={{marginBottom:12}}>
+              <span style={{fontSize:18}}>⏳</span>
+              <div><strong>{movPendiente.length} viajes pendientes</strong> de validación por el coordinador ({fmt(totalMovPendiente)}). Solo los aprobados se reflejan en costos y rentabilidad.</div>
+            </div>}
+            {cloudMode&&movilidad.length>0?(<>
+              {/* Summary by marca (solo aprobados) */}
+              {(()=>{
+                const byMarca={};
+                movAprobada.forEach(v=>{
+                  if(!byMarca[v.marca])byMarca[v.marca]={marca:v.marca,count:0,total:0};
+                  byMarca[v.marca].count++;
+                  byMarca[v.marca].total+=parseFloat(v.tarifa||0);
+                });
+                const marcas=Object.values(byMarca).sort((a,b)=>b.total-a.total);
+                return(<div className="grid g3" style={{marginBottom:16}}>
+                  {marcas.map(m=>(
+                    <div key={m.marca} className="card" style={{padding:14,textAlign:"center"}}>
+                      <div style={{fontWeight:700,fontSize:13}}>{m.marca}</div>
+                      <div style={{fontSize:20,fontWeight:800,marginTop:4}}>{fmt(m.total)}</div>
+                      <div style={{fontSize:11,color:"#a1a1aa"}}>{m.count} viajes</div>
+                    </div>
+                  ))}
+                </div>);
+              })()}
+              {/* Detailed table */}
+              <div className="card" style={{padding:0,overflow:"hidden"}}>
+                <table>
+                  <thead><tr><th>Fecha</th><th>Persona</th><th>Ubicación</th><th>Marca</th><th>Hora</th><th>Estado</th><th className="text-right">Tarifa</th></tr></thead>
+                  <tbody>{movilidad.map(v=>{
+                    const est=v.estado||"pendiente";
+                    return(
+                    <tr key={v.id} style={{opacity:est==="rechazado"?.4:1}}>
+                      <td style={{fontSize:12}}>{v.fecha}</td>
+                      <td style={{fontWeight:600,fontSize:12}}>{v.user_name||v.user_email?.split("@")[0]}</td>
+                      <td>{v.locacion}</td>
+                      <td><span className="badge">{v.marca}</span></td>
+                      <td style={{fontSize:12,color:"#a1a1aa"}}>{v.hora}</td>
+                      <td><span className={`badge ${est==="aprobado"?"bg":est==="rechazado"?"br":"bb"}`}>{est}</span></td>
+                      <td className="text-right font-bold">{fmt(v.tarifa)}</td>
+                    </tr>);
+                  })}</tbody>
+                  <tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e4e4e7"}}>
+                    <td colSpan={6}>Total Aprobado ({vm})</td>
+                    <td className="text-right">{fmt(totalMovilidad)}</td>
+                  </tr></tfoot>
+                </table>
+              </div>
+              {/* Summary by person (solo aprobados) */}
+              {(()=>{
+                const byPerson={};
+                movAprobada.forEach(v=>{
+                  const k=v.user_email;
+                  if(!byPerson[k])byPerson[k]={name:v.user_name||v.user_email?.split("@")[0],count:0,total:0};
+                  byPerson[k].count++;
+                  byPerson[k].total+=parseFloat(v.tarifa||0);
+                });
+                const people=Object.values(byPerson).sort((a,b)=>b.total-a.total);
+                return(<div className="card" style={{marginTop:14}}>
+                  <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>Por persona</div>
+                  {people.map(p=>(
+                    <div key={p.name} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid #f4f4f5",fontSize:13}}>
+                      <span>{p.name} <span style={{color:"#a1a1aa"}}>({p.count})</span></span>
+                      <span style={{fontWeight:700}}>{fmt(p.total)}</span>
+                    </div>
+                  ))}
+                </div>);
+              })()}
+              {/* Export */}
+              <div style={{marginTop:12}}>
+                <button className="btn btn-sm btn-gray" onClick={()=>{
+                  const rows=movilidad.map(v=>[v.fecha,v.hora,v.user_name||v.user_email,v.locacion,v.marca,v.tarifa,v.nota||""]);
+                  const hdr=["Fecha","Hora","Persona","Ubicación","Marca","Tarifa","Nota"];
+                  const csv=[hdr,...rows].map(r=>r.join(",")).join("\n");
+                  const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,\uFEFF"+encodeURIComponent(csv);a.download="movilidad_"+vm+".csv";a.click();
+                }}>Exportar CSV</button>
+              </div>
+            </>):(
+              <div>{cloudMode?<div className="info-box">Sin registros de movilidad aprobados este mes. Los viajes se registran desde el panel de Movilidad y deben ser aprobados por el coordinador.</div>
+              :<div className="info-box">Conecta Supabase para ver los registros de movilidad del equipo de campo.</div>}</div>
+            )}
+            {/* Tarifario management */}
+            {cloudMode&&(<div className="card" style={{marginTop:14}}>
+              <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>Tarifario de ubicaciones</div>
+              {tarifario.map(t=>(
+                <div key={t.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #f4f4f5",fontSize:13}}>
+                  <div><span style={{fontWeight:600}}>{t.nombre}</span>{t.descripcion&&<span style={{color:"#a1a1aa",marginLeft:6,fontSize:11}}>{t.descripcion}</span>}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontWeight:700}}>{fmt(t.tarifa)}</span>
+                    <button className="del-btn" onClick={async()=>{if(!confirm("¿Desactivar "+t.nombre+"?"))return;const sb=getSB();if(!sb)return;await sb.from("tarifario_movilidad").update({activo:false}).eq("id",t.id);loadMovilidad(vm);}}>✕</button>
+                  </div>
+                </div>
+              ))}
+              <form onSubmit={async(e)=>{e.preventDefault();const f=new FormData(e.target);const nombre=f.get("nombre")?.trim();const tarifa=parseFloat(f.get("tarifa"));if(!nombre||!tarifa){alert("Completa nombre y tarifa");return;}const sb=getSB();if(!sb)return;await sb.from("tarifario_movilidad").insert({nombre,tarifa,descripcion:f.get("desc")?.trim()||""});e.target.reset();loadMovilidad(vm);}} style={{display:"flex",gap:6,marginTop:8}}>
+                <input name="nombre" placeholder="Nueva ubicación" required style={{flex:1,fontSize:12,padding:"5px 8px"}}/>
+                <input name="tarifa" type="number" placeholder="Tarifa S/" required min="1" style={{width:90,fontSize:12,padding:"5px 8px"}}/>
+                <input name="desc" placeholder="Descripción" style={{flex:1,fontSize:12,padding:"5px 8px"}}/>
+                <button type="submit" className="btn btn-sm btn-green">+</button>
+              </form>
+            </div>)}
+          </div>)}
+          {gastoTab==="prestamos"&&(()=>{
+            const clienteGastos=cajaChicaAll.filter(g=>g.tipo==="cliente");
+            const pendientes=clienteGastos.filter(g=>g.estado_cobro!=="cobrado");
+            const cobrados=clienteGastos.filter(g=>g.estado_cobro==="cobrado");
+            const totalPend=pendientes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+            const totalCob=cobrados.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+            const byMarca={};
+            pendientes.forEach(g=>{const m=g.marca||"Agencia";if(!byMarca[m])byMarca[m]={gastos:[],total:0,factTotal:0};byMarca[m].gastos.push(g);byMarca[m].total+=parseFloat(g.monto||0);byMarca[m].factTotal+=parseFloat(g.monto||0)*1.18;});
+            const handleEstado=async(id,val)=>{const sb=getSB();if(!sb)return;await sb.from("caja_chica").update({estado_cobro:val}).eq("id",id);loadCajaChica(vm);};
+            return(<div>
+              <div className="info-box">Gastos realizados por cuenta de clientes (préstamos). Se deben facturar al cliente con 18% IGV. Registrar transferencias/RH desde aquí.</div>
+              <div className="grid g3" style={{marginBottom:16}}>
+                <div className="card" style={{borderLeft:"4px solid #f59e0b"}}><div className="kpi-label">Pendiente de cobro</div><div className="kpi-value" style={{color:"#f59e0b"}}>{fmt(totalPend)}</div><div className="kpi-sub">A facturar: {fmt(totalPend*1.18)}</div></div>
+                <div className="card" style={{borderLeft:"4px solid #22c55e"}}><div className="kpi-label">Cobrado</div><div className="kpi-value" style={{color:"#22c55e"}}>{fmt(totalCob)}</div><div className="kpi-sub">{fmt(totalCob*1.18)} facturado</div></div>
+                <div className="card"><div className="kpi-label">Total préstamos</div><div className="kpi-value">{fmt(totalPend+totalCob)}</div><div className="kpi-sub">{clienteGastos.length} registros</div></div>
+              </div>
+              {/* Registrar gasto cliente / transferencia desde web */}
+              {cloudMode&&<div style={{marginBottom:12}}>
+                <button className="btn btn-sm btn-green" onClick={()=>setShowForm(showForm==="prestamo"?null:"prestamo")}>{showForm==="prestamo"?"Cancelar":"+ Registrar préstamo / transferencia"}</button>
+                {showForm==="prestamo"&&(
+                  <div className="form-card" style={{marginTop:8}}>
+                    <h4>Registrar gasto de cliente</h4>
+                    <form onSubmit={async(e)=>{e.preventDefault();const fd=new FormData(e.target);
+                      const m=parseFloat(fd.get("monto"));if(!m||m<=0){alert("Monto inválido");return;}
+                      const sb=getSB();if(!sb){alert("Sin conexión");return;}
+                      const{error}=await sb.from("caja_chica").insert({
+                        user_email:userEmail,user_name:nameFromEmail(userEmail),
+                        fecha:fd.get("fecha")||new Date().toISOString().slice(0,10),
+                        monto:m,concepto:fd.get("concepto")||"",categoria:fd.get("categoria")||"Servicio",
+                        marca:fd.get("marca")||"Agencia",tipo:"cliente",
+                        via_pago:fd.get("via")||"transferencia",estado_cobro:"pendiente"
+                      });
+                      if(error)alert("Error: "+error.message);
+                      else{setShowForm(null);loadCajaChica(vm);setSaveMsg("Préstamo registrado");setTimeout(()=>setSaveMsg(""),3000);}
+                    }}>
+                      <div className="form-row">
+                        <input name="fecha" type="date" defaultValue={new Date().toISOString().slice(0,10)} style={{minWidth:130}}/>
+                        <input name="monto" type="number" step="0.01" min="0.01" placeholder="Monto S/" required/>
+                        <select name="marca">{clients.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}<option value="Agencia">Agencia</option></select>
+                      </div>
+                      <div className="form-row">
+                        <input name="concepto" placeholder="Concepto (ej: Actor para spot, compra materiales)" required style={{flex:2}}/>
+                        <input name="categoria" placeholder="Categoría" defaultValue="Servicio"/>
+                        <select name="via"><option value="transferencia">Transferencia / RH</option><option value="caja_chica">Caja Chica</option></select>
+                      </div>
+                      <div style={{display:"flex",gap:8,marginTop:8}}>
+                        <button type="submit" className="btn btn-sm btn-green">Registrar</button>
+                        <button type="button" className="btn btn-sm btn-gray" onClick={()=>setShowForm(null)}>Cancelar</button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+              </div>}
+              {Object.keys(byMarca).length===0&&pendientes.length===0?<div style={{textAlign:"center",padding:30,color:"#a1a1aa",fontSize:13}}>No hay préstamos pendientes.</div>:(
+                Object.entries(byMarca).sort((a,b)=>b[1].total-a[1].total).map(([marca,data])=>(
+                  <div key={marca} className="card" style={{marginBottom:12,borderLeft:"4px solid #f59e0b"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                      <div><span className="badge" style={{background:"#2563eb",color:"#fff",fontSize:12,padding:"4px 12px"}}>{marca}</span> <span style={{fontSize:12,color:"#a1a1aa"}}>{data.gastos.length} gasto{data.gastos.length>1?"s":""}</span></div>
+                      <div style={{textAlign:"right"}}><div style={{fontWeight:700,color:"#f59e0b"}}>{fmt(data.total)}</div><div style={{fontSize:11,color:"#a1a1aa"}}>Factura: {fmt(data.factTotal)}</div></div>
+                    </div>
+                    <table><thead><tr><th>Fecha</th><th>Persona</th><th>Concepto</th><th>Vía</th><th className="text-right">Monto</th><th className="text-right">+ IGV</th><th>Estado</th></tr></thead>
+                    <tbody>{data.gastos.map(g=>(
+                      <tr key={g.id}>
+                        <td style={{fontSize:12}}>{new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}</td>
+                        <td style={{fontSize:12}}>{g.user_name||nameFromEmail(g.user_email)}</td>
+                        <td>{g.concepto}</td>
+                        <td style={{fontSize:11}}>{(g.via_pago||"caja_chica")==="caja_chica"?"Caja":"Transf."}</td>
+                        <td className="text-right font-bold">{fmt(g.monto)}</td>
+                        <td className="text-right" style={{color:"#f59e0b",fontWeight:600}}>{fmt(g.monto*1.18)}</td>
+                        <td><select value={g.estado_cobro||"pendiente"} onChange={e=>handleEstado(g.id,e.target.value)} style={{fontSize:11,padding:"3px 8px",borderRadius:6,minWidth:75,background:g.estado_cobro==="facturado"?"#fef3c7":g.estado_cobro==="cobrado"?"#dcfce7":"#fff"}}><option value="pendiente">Pendiente</option><option value="facturado">Facturado</option><option value="cobrado">Cobrado</option></select></td>
+                      </tr>
+                    ))}</tbody></table>
+                  </div>
+                ))
+              )}
+              {cobrados.length>0&&<><div className="sl">COBRADOS</div>
+                <div className="card" style={{padding:0,overflow:"hidden",borderLeft:"4px solid #22c55e"}}>
+                  <table><thead><tr><th>Fecha</th><th>Marca</th><th>Concepto</th><th className="text-right">Monto</th><th className="text-right">Facturado</th></tr></thead>
+                  <tbody>{cobrados.slice(0,20).map(g=>(
+                    <tr key={g.id}><td style={{fontSize:12}}>{new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}</td>
+                      <td><span className="badge" style={{background:"#2563eb",color:"#fff"}}>{g.marca}</span></td>
+                      <td>{g.concepto}</td><td className="text-right">{fmt(g.monto)}</td>
+                      <td className="text-right" style={{color:"#22c55e",fontWeight:600}}>{fmt(g.monto*1.18)}</td></tr>
+                  ))}</tbody></table>
+                </div>
+              </>}
+              {!cloudMode&&<div className="info-box" style={{marginTop:12}}>Conecta Supabase para ver préstamos.</div>}
+            </div>);
+          })()}
           {gastoTab==="oficina"&&<ExpBlock title="Gastos de Oficina" items={officeExp} total={calc.tOffice} color="" onAdd={e=>setOfficeExp(p=>[...p,{...e,id:Date.now()}])} onDel={id=>setOfficeExp(officeExp.filter(e=>e.id!==id))}/>}
           {gastoTab==="inversion"&&<ExpBlock title={`Inversión (${vm})`} items={investExp.filter(e=>e.month===vm)} total={calc.tInvest} color="tb" onAdd={e=>setInvestExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setInvestExp(investExp.filter(e=>e.id!==id))}/>}
           {/* Project costs moved to Proyectos page — they don't affect general flow */}
@@ -1377,6 +1628,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           </div>
         </>);})()}
 
+
+
         {/* ═══ REPORTES > ALERTAS ═══ */}
         {page==="alertas"&&(()=>{
           /* Generar alertas dinámicas */
@@ -1461,23 +1714,31 @@ function App({userEmail="local",onLogout,cloudMode=false}){
         {page==="rentabilidad"&&(<>
           {selClient?<ClientDetail c={calc.clientProfit.find(c=>c.id===selClient)} totalFees={calc.totalFees} overhead={calc.overhead}
             invoices={invoices.filter(i=>i.clientId===selClient)} onBack={()=>setSelClient(null)}/>:(<>
-            <div className="info-box">Fee − Equipo dedicado (costo bruto) − Overhead proporcional (fee ÷ total fees × overhead).</div>
+            <div className="info-box">Utilidad Fee = Fee − Equipo − Gastos Op. − Movilidad − OH proporcional. Margen = Utilidad Fee ÷ Fee. OH = % participación del fee en ingresos totales × overhead general. Utilidad Proyectos se suma aparte.</div>
             <div className="card" style={{padding:0,overflow:"hidden"}}>
               <table>
-                <thead><tr><th>Cliente</th><th className="text-right">Fee</th><th className="text-right">Equipo</th><th className="text-right">% OH</th><th className="text-right">Overhead</th><th className="text-right">Utilidad</th><th className="text-center">Margen</th><th className="text-right">Proy.</th><th></th></tr></thead>
-                <tbody>{calc.clientProfit.sort((a,b)=>b.structNet-a.structNet).map(c=>(
+                <thead><tr><th>Cliente</th><th className="text-right">Fee</th><th className="text-right">Equipo</th><th className="text-right">G. Op.</th><th className="text-right">Mov.</th><th className="text-right">OH</th><th className="text-center">Margen</th><th className="text-right">Util. Fee</th><th className="text-right">Util. Proy.</th><th className="text-right font-bold">Total</th><th></th></tr></thead>
+                <tbody>{calc.clientProfit.sort((a,b)=>b.totalNet-a.totalNet).map(c=>{
+                  return(
                   <tr key={c.id}><td style={{fontWeight:600}}>{c.name}</td><td className="text-right tg">{fmt(c.fee)}</td><td className="text-right tr">{fmt(c.teamCost)}</td>
-                    <td className="text-right">{pct(c.fee,calc.totalFees)}%</td><td className="text-right ta">{fmt(c.oh)}</td>
-                    <td className={`text-right font-bold ${c.structNet>=0?"tg":"tr"}`}>{fmt(c.structNet)}</td>
+                    <td className="text-right ta">{c.gastosOp>0?fmt(c.gastosOp):"—"}</td>
+                    <td className="text-right ta">{c.movilidad>0?fmt(c.movilidad):"—"}</td>
+                    <td className="text-right" style={{fontSize:11,color:"#a1a1aa"}}>{fmt(c.oh)}</td>
                     <td className="text-center"><span className={`badge ${c.margin>=30?"bg":c.margin>=15?"ba":"br"}`}>{c.margin.toFixed(1)}%</span></td>
-                    <td className={`text-right ${c.projProfit?"tb":""}`} style={{fontSize:12}}>{c.projProfit?fmt(c.projProfit):"—"}</td>
+                    <td className={`text-right font-bold ${c.structNet>=0?"tg":"tr"}`}>{fmt(c.structNet)}</td>
+                    <td className={`text-right ${c.utilProy?"tb":""}`} style={{fontSize:12}}>{c.utilProy?fmt(c.utilProy):"—"}</td>
+                    <td className={`text-right font-bold ${c.totalNet>=0?"tg":"tr"}`}>{fmt(c.totalNet)}</td>
                     <td className="text-center"><button className="btn btn-sm btn-gray" onClick={()=>setSelClient(c.id)}><Ic d={ic.eye} size={13} color="#71717a"/></button></td></tr>
-                ))}</tbody>
+                );})}</tbody>
                 <tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e4e4e7"}}>
                   <td>TOTAL</td><td className="text-right tg">{fmt(calc.totalFees)}</td><td className="text-right tr">{fmt(calc.dedPay)}</td>
-                  <td className="text-right">100%</td><td className="text-right ta">{fmt(calc.overhead)}</td>
+                  <td className="text-right ta">{fmt(calc.clientProfit.reduce((s,c)=>s+c.gastosOp,0))}</td>
+                  <td className="text-right ta">{fmt(calc.clientProfit.reduce((s,c)=>s+(c.movilidad||0),0))}</td>
+                  <td className="text-right" style={{color:"#a1a1aa"}}>{fmt(calc.overhead)}</td>
+                  <td className="text-center">{calc.totalFees>0?(calc.clientProfit.reduce((s,c)=>s+(c.utilFee||0),0)/calc.totalFees*100).toFixed(1):"0.0"}%</td>
                   <td className={`text-right ${calc.structProfit>=0?"tg":"tr"}`}>{fmt(calc.structProfit)}</td>
-                  <td className="text-center">{pct(calc.structProfit,calc.totalFees)}%</td><td className="text-right tb">{fmt(calc.projProfit)}</td><td></td>
+                  <td className="text-right tb">{fmt(calc.projProfit)}</td>
+                  <td className="text-right font-bold">{fmt(calc.clientProfit.reduce((s,c)=>s+c.totalNet,0))}</td><td></td>
                 </tr></tfoot>
               </table>
             </div>
@@ -1553,8 +1814,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             {/* Export */}
             <div style={{marginTop:12,display:"flex",gap:8}}>
               <button className="btn btn-gray" onClick={()=>{
-                const rows=calc.clientProfit.sort((a,b)=>b.structNet-a.structNet).map(c=>[c.name,c.fee,c.teamCost,pct(c.fee,calc.totalFees)+"%",Math.round(c.oh),Math.round(c.structNet),c.margin.toFixed(1)+"%",c.projProfit||0]);
-                exportCSV("rentabilidad_"+vm+".csv",["Cliente","Fee","Equipo","% OH","Overhead","Utilidad","Margen","Proy. Util."],rows);
+                const rows=calc.clientProfit.sort((a,b)=>b.totalNet-a.totalNet).map(c=>[c.name,c.fee,c.teamCost,Math.round(c.gastosOp),Math.round(c.movilidad||0),c.margin.toFixed(1)+"%",Math.round(c.oh),Math.round(c.structNet),c.utilProy||0,Math.round(c.totalNet)]);
+                exportCSV("rentabilidad_"+vm+".csv",["Cliente","Fee","Equipo","Gastos Op.","Movilidad","Margen","Overhead","Util. Fee","Util. Proy.","Total"],rows);
               }}>Exportar CSV</button>
             </div>
           </>)}
@@ -1574,12 +1835,13 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             const vr=variableExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
             const of_=snap?snap.officeExp.reduce((s,e)=>s+e.amount,0):officeExp.reduce((s,e)=>s+e.amount,0);
             const iv=investExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
-            const costFijo=pay+fx+dg+vr+of_+iv;
+            const mv=movAprobadaAll.filter(v=>v.mes===m).reduce((s,v)=>s+parseFloat(v.tarifa||0),0); /* total movilidad for structExp */
+            const costFijo=pay+fx+dg+vr+of_+iv+mv;
             const totalIn=fees+pR;
             const utilFijo=fees-costFijo;
             const utilProy=pR-pC;
             const utilTotal=utilFijo+utilProy;
-            const hasData=fees>0||pR>0||vr>0||iv>0;
+            const hasData=fees>0||pR>0||vr>0||iv>0||mv>0;
             return{month:label.split(" ")[0],m,fees,pR,pC,totalIn,costFijo,utilFijo,utilProy,utilTotal,hasData};
           });
           const act=cfData.filter(h=>h.hasData);
@@ -1603,17 +1865,26 @@ function App({userEmail="local",onLogout,cloudMode=false}){
 
           {/* ── KPIs del mes seleccionado ── */}
           <div className="info-box" style={{marginBottom:12}}>Resumen del mes seleccionado: <strong>{ML[parseInt(vm.split("-")[1])-1]} {selYear}</strong></div>
-          <div className="grid g4" style={{marginBottom:8}}>
+          {/* Ingresos */}
+          <div className="sl">INGRESOS</div>
+          <div className="grid g3" style={{marginBottom:12}}>
             <div className="card" style={{borderLeft:"3px solid #2563eb"}}><div className="kpi-label">Ingresos Fijos (Fees)</div><div className="kpi-value tg">{fmt(cur.fees)}</div></div>
             <div className="card" style={{borderLeft:"3px solid #2563eb"}}><div className="kpi-label">Ingresos Proyectos</div><div className="kpi-value" style={{color:"#2563eb"}}>{fmt(cur.pR)}</div></div>
-            <div className="card" style={{borderLeft:"3px solid #18181b"}}><div className="kpi-label">Total Ingreso</div><div className="kpi-value">{fmt(cur.totalIn)}</div></div>
-            <div className="card" style={{borderLeft:"3px solid #dc2626"}}><div className="kpi-label">Costos Estructura</div><div className="kpi-value tr">{fmt(cur.costFijo)}</div></div>
+            <div className="card" style={{borderLeft:"3px solid #18181b",background:"#fafafa"}}><div className="kpi-label">Total Ingresos</div><div className="kpi-value" style={{fontWeight:800}}>{fmt(cur.totalIn)}</div></div>
           </div>
-          <div className="grid g4" style={{marginBottom:20}}>
-            <div className="card" style={{borderLeft:"3px solid #dc2626"}}><div className="kpi-label">Costos Proyecto</div><div className="kpi-value tr">{fmt(cur.pC)}</div></div>
-            <div className="card"><div className="kpi-label">Utilidad Fijos</div><div className={`kpi-value ${cur.utilFijo>=0?"tg":"tr"}`}>{fmt(cur.utilFijo)}</div></div>
-            <div className="card"><div className="kpi-label">Utilidad Proyectos</div><div className={`kpi-value ${cur.utilProy>=0?"tg":"tr"}`}>{fmt(cur.utilProy)}</div></div>
-            <div className="card" style={{background:"#18181b",borderColor:"#18181b"}}><div className="kpi-label" style={{color:"#a1a1aa"}}>Utilidad Total del Mes</div><div className="kpi-value" style={{color:cur.utilTotal>=0?"#60a5fa":"#fca5a5"}}>{fmt(cur.utilTotal)}</div></div>
+          {/* Costos */}
+          <div className="sl">COSTOS</div>
+          <div className="grid g3" style={{marginBottom:12}}>
+            <div className="card" style={{borderLeft:"3px solid #dc2626"}}><div className="kpi-label">Costos Estructura</div><div className="kpi-value tr">{fmt(cur.costFijo)}</div></div>
+            <div className="card" style={{borderLeft:"3px solid #dc2626"}}><div className="kpi-label">Costos Proyectos</div><div className="kpi-value tr">{fmt(cur.pC)}</div></div>
+            <div className="card" style={{borderLeft:"3px solid #71717a",background:"#fafafa"}}><div className="kpi-label">Total Costos</div><div className="kpi-value" style={{fontWeight:800,color:"#dc2626"}}>{fmt(cur.costFijo+cur.pC)}</div></div>
+          </div>
+          {/* Utilidades */}
+          <div className="sl">UTILIDADES</div>
+          <div className="grid g3" style={{marginBottom:20}}>
+            <div className="card"><div className="kpi-label">Utilidad Fijos</div><div className={`kpi-value ${cur.utilFijo>=0?"tg":"tr"}`}>{fmt(cur.utilFijo)}</div><div className="kpi-sub">{cur.fees>0?(cur.utilFijo/cur.fees*100).toFixed(1):"0.0"}% margen</div></div>
+            <div className="card"><div className="kpi-label">Utilidad Proyectos</div><div className={`kpi-value ${cur.utilProy>=0?"tg":"tr"}`}>{fmt(cur.utilProy)}</div><div className="kpi-sub">{cur.pR>0?(cur.utilProy/cur.pR*100).toFixed(1):"0.0"}% margen</div></div>
+            <div className="card" style={{background:"#18181b",borderColor:"#18181b"}}><div className="kpi-label" style={{color:"#a1a1aa"}}>Utilidad Total</div><div className="kpi-value" style={{color:cur.utilTotal>=0?"#60a5fa":"#fca5a5"}}>{fmt(cur.utilTotal)}</div><div className="kpi-sub" style={{color:"#71717a"}}>{cur.totalIn>0?(cur.utilTotal/cur.totalIn*100).toFixed(1):"0.0"}% margen total</div></div>
           </div>
 
           {/* ── Chart: Ingresos vs Egresos mes a mes ── */}
@@ -1791,26 +2062,29 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             </table>
           </div>
 
+          <div className="sl" style={{marginTop:24}}>Puestos / Roles</div>
+          <div className="card">
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
+              {roles.map((r,i)=>(
+                <span key={i} style={{display:"inline-flex",alignItems:"center",gap:4,padding:"4px 12px",background:"#f4f4f5",borderRadius:20,fontSize:12,fontWeight:500}}>
+                  {r}
+                  <button className="del-btn" style={{fontSize:12,marginLeft:2}} onClick={()=>{if(confirm("¿Eliminar puesto '"+r+"'?"))setRoles(roles.filter((_,j)=>j!==i));}}>✕</button>
+                </span>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:6}}>
+              <input id="newRoleInput" placeholder="Nuevo puesto..." style={{flex:1,fontSize:13,padding:"8px 12px"}}/>
+              <button className="btn btn-sm btn-green" onClick={()=>{const inp=document.getElementById("newRoleInput");const v=inp.value.trim();if(v&&!roles.includes(v)){setRoles(p=>[...p,v]);inp.value="";}}}>Agregar</button>
+            </div>
+          </div>
+
           <div className="sl" style={{marginTop:24}}>Base de Datos — Personal</div>
           <div style={{textAlign:"right",marginBottom:12}}>
             <button className="btn btn-green" onClick={()=>setShowForm("staff")}><Ic d={ic.plus} size={14} color="#fff"/> Nueva Persona</button>
           </div>
           {showForm==="staff"&&(
             <div className="form-card"><h4 style={{color:"#18181b"}}>Nueva Persona en Base de Datos</h4>
-              <form onSubmit={e=>{e.preventDefault();const f=new FormData(e.target);const nm=f.get("n");const reg=f.get("r");const br=parseInt(f.get("b"));const role=f.get("role");
-                if(nm&&reg&&br&&role){const nid=Date.now();setStaff(p=>[...p,{id:nid,name:nm,regimen:reg,bruto:br,role}]);
-                  setShowForm(null);}
-              }}>
-                <div className="form-row">
-                  <input name="n" placeholder="Nombre completo" required/>
-                  <select name="r" required><option value="">Régimen</option><option value="planilla">Planilla</option><option value="rh">RH</option></select>
-                </div>
-                <div className="form-row">
-                  <input name="b" type="number" placeholder="Sueldo Bruto (S/)" required/>
-                  <input name="role" placeholder="Rol/Puesto" required/>
-                </div>
-                <div style={{display:"flex",gap:6}}><button type="submit" className="btn btn-green">Guardar</button><button type="button" className="btn btn-gray" onClick={()=>setShowForm(null)}>Cancelar</button></div>
-              </form>
+              <StaffForm roles={roles} onSave={s=>{setStaff(p=>[...p,s]);setShowForm(null);}} onClose={()=>setShowForm(null)}/>
             </div>
           )}
           <div className="card" style={{padding:0,overflow:"hidden"}}>
@@ -1830,8 +2104,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                   <td className="text-right">{isEdit?<input type="number" defaultValue={s.bruto} data-staff-bruto={s.id} style={{fontSize:12,padding:"4px 6px",width:80,textAlign:"right"}}/>:fmt(s.bruto)}</td>
                   <td className="text-right" style={{color:"#71717a"}}>{fmt(neto)}</td>
                   <td className="text-right tr font-bold">{fmt(inversion)}</td>
-                  <td style={{fontSize:12,color:"#71717a"}}>{isEdit?<input type="text" defaultValue={s.role} data-staff-role={s.id} style={{fontSize:12,padding:"4px 6px",width:"100%"}}/>:s.role}</td>
-                  <td><button className="btn btn-sm btn-gray" onClick={()=>{if(isEdit){const nm=document.querySelector(`input[data-staff-name="${s.id}"]`)?.value;const br=parseInt(document.querySelector(`input[data-staff-bruto="${s.id}"]`)?.value);const role=document.querySelector(`input[data-staff-role="${s.id}"]`)?.value;setStaff(staff.map(st=>st.id===s.id?{...st,name:nm,bruto:br,role}:st));setEditStaffId(null);}else setEditStaffId(s.id);}}>
+                  <td style={{fontSize:12,color:"#71717a"}}>{isEdit?<select data-staff-role={s.id} defaultValue={s.role} style={{fontSize:12,padding:"4px 6px"}}>{roles.map(r=><option key={r} value={r}>{r}</option>)}</select>:s.role}</td>
+                  <td><button className="btn btn-sm btn-gray" onClick={()=>{if(isEdit){const nm=document.querySelector(`input[data-staff-name="${s.id}"]`)?.value;const br=parseInt(document.querySelector(`input[data-staff-bruto="${s.id}"]`)?.value);const role=document.querySelector(`select[data-staff-role="${s.id}"]`)?.value;setStaff(staff.map(st=>st.id===s.id?{...st,name:nm,bruto:br,role}:st));setEditStaffId(null);}else setEditStaffId(s.id);}}>
                     {isEdit?"✓":"Editar"}
                   </button></td>
                   <td><button className="del-btn" onClick={()=>{if(confirm("¿Eliminar a "+s.name+" de la base de datos?")){setStaff(staff.filter(x=>x.id!==s.id));setEditStaffId(null);}}}> ✕</button></td>
@@ -1857,7 +2131,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             <div style={{fontSize:12,color:"#71717a",marginBottom:12}}>Los datos se guardan automáticamente en tu navegador (localStorage). Si cambias de navegador o borras datos, se perderán.</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button className="btn btn-gray" onClick={()=>{
-                const data={clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff};
+                const data={clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles};
                 const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
                 const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="finanzas_backup_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(url);
               }}>Exportar Backup (JSON)</button>
@@ -1869,6 +2143,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                       setFixedExp(d.fixedExp||[]);setDigitalExp(d.digitalExp||[]);setVariableExp(d.variableExp||[]);setOfficeExp(d.officeExp||[]);setInvestExp(d.investExp||[]);
                       setClientFees(d.clientFees||initFees());setMonthSnapshots(d.monthSnapshots||{});
                       if(d.staff)setStaff(d.staff);
+                      if(d.roles)setRoles(d.roles);
                       setSaveMsg("Backup restaurado");setTimeout(()=>setSaveMsg(""),3000);
                     }else alert("Archivo inválido");}catch(err){alert("Error al leer: "+err.message);}};r.readAsText(f);};inp.click();
               }}>Importar Backup</button>
@@ -1891,17 +2166,31 @@ function App({userEmail="local",onLogout,cloudMode=false}){
 function ClientDetail({c,totalFees,overhead,invoices,onBack}){
   if(!c)return null;
   const cob=invoices.filter(i=>i.status==="Cobrada");const pc=invoices.filter(i=>i.status==="Por cobrar");const em=invoices.filter(i=>i.status==="Emitida");
+  const utilTotal=(c.utilFee||0)+(c.utilProy||0);
   return(<>
     <button className="back-link" onClick={onBack}>← Volver</button>
     <h2 style={{fontSize:20,fontWeight:700,margin:"12px 0"}}>{c.name}</h2>
     <div className="card" style={{marginBottom:12}}>
-      <div style={{fontWeight:700,fontSize:14,marginBottom:12,color:"#18181b",letterSpacing:"-.2px"}}>Rentabilidad del Fee</div>
+      <div style={{fontWeight:700,fontSize:14,marginBottom:12,color:"#18181b",letterSpacing:"-.2px"}}>Utilidad por Fee</div>
       <div className="detail-row"><span>Fee Mensual</span><span className="tg font-bold">{fmt(c.fee)}</span></div>
       <div className="detail-row"><span>(−) Equipo Dedicado ({c.teamMembers.length})</span><span className="tr">{fmt(c.teamCost)}</span></div>
-      <div className="detail-row"><span>(−) Overhead ({pct(c.fee,totalFees)}% de {fmt(overhead)})</span><span className="ta">{fmt(c.oh)}</span></div>
+      {c.gastosOp>0&&<div className="detail-row"><span>(−) Gastos Operativos (caja chica agencia)</span><span className="ta">{fmt(c.gastosOp)}</span></div>}
+      {(c.movilidad||0)>0&&<div className="detail-row"><span>(−) Movilidad (gasolina)</span><span className="ta">{fmt(c.movilidad)}</span></div>}
+      <div className="detail-row"><span>(−) Overhead proporcional ({pct(c.fee,totalFees)}% de {fmt(overhead)})</span><span className="ta">{fmt(c.oh)}</span></div>
       <div className="detail-row" style={{fontWeight:700,fontSize:16,borderTop:"2px solid #e4e4e7",paddingTop:12}}>
-        <span>Utilidad</span><span className={c.structNet>=0?"tg":"tr"}>{fmt(c.structNet)}</span></div>
+        <span>Utilidad Fee</span><span className={(c.utilFee||0)>=0?"tg":"tr"}>{fmt(c.utilFee||0)}</span></div>
       <div className="detail-row"><span>Margen</span><span className={`badge ${c.margin>=30?"bg":c.margin>=15?"ba":"br"}`}>{c.margin.toFixed(1)}%</span></div>
+    </div>
+    {(c.utilProy||0)!==0&&<div className="card" style={{marginBottom:12}}>
+      <div style={{fontWeight:700,fontSize:14,marginBottom:12,color:"#52525b"}}>Utilidad por Proyectos</div>
+      <div className="detail-row"><span>Ingresos Proyectos</span><span className="tg">{fmt(c.projRev||0)}</span></div>
+      <div className="detail-row"><span>(−) Costos Proyectos</span><span className="tr">{fmt(c.projCost||0)}</span></div>
+      <div className="detail-row" style={{fontWeight:700,borderTop:"2px solid #e4e4e7",paddingTop:12}}>
+        <span>Utilidad Proyectos</span><span className={(c.utilProy||0)>=0?"tg":"tr"}>{fmt(c.utilProy||0)}</span></div>
+    </div>}
+    <div className="total-bar" style={{marginBottom:12}}>
+      <span style={{fontSize:14}}>Utilidad Total</span>
+      <span style={{fontSize:22,fontWeight:800}}>{fmt(utilTotal)}</span>
     </div>
     {c.teamMembers.length>0&&<div className="card" style={{marginBottom:12}}>
       <div style={{fontWeight:600,fontSize:13,marginBottom:8}}>Equipo asignado a esta marca</div>
@@ -2001,6 +2290,34 @@ function InvoiceForm({clients,month,type,onAdd,onClose}){
   </div>);
 }
 
+function StaffForm({roles,onSave,onClose}){
+  const[sn,setSn]=useState("");const[sr,setSr]=useState("planilla");const[sb2,setSb2]=useState("");const[srl,setSrl]=useState("");
+  const doSave=()=>{
+    if(!sn.trim()){alert("Ingresa el nombre");return;}
+    if(!sb2||parseInt(sb2)<=0){alert("Ingresa el sueldo bruto");return;}
+    if(!srl){alert("Selecciona un puesto");return;}
+    onSave({id:Date.now(),name:sn.trim(),regimen:sr,bruto:parseInt(sb2),role:srl});
+  };
+  return(<div>
+    <div className="form-row">
+      <input value={sn} onChange={e=>setSn(e.target.value)} placeholder="Nombre completo"/>
+      <select value={sr} onChange={e=>setSr(e.target.value)}>
+        <option value="planilla">Planilla</option><option value="rh">RH</option>
+      </select>
+    </div>
+    <div className="form-row">
+      <input type="number" value={sb2} onChange={e=>setSb2(e.target.value)} placeholder="Sueldo Bruto (S/)"/>
+      <select value={srl} onChange={e=>setSrl(e.target.value)}>
+        <option value="">Puesto...</option>{roles.map(r=><option key={r} value={r}>{r}</option>)}
+      </select>
+    </div>
+    <div style={{display:"flex",gap:6}}>
+      <button type="button" className="btn btn-green" onClick={doSave}>Guardar</button>
+      <button type="button" className="btn btn-gray" onClick={onClose}>Cancelar</button>
+    </div>
+  </div>);
+}
+
 function AssignRow({a,clients,onChange,onDel,canDel}){
   const isDed=a.clientId!==null&&a.clientId!==undefined&&a.clientId!=="__trans__";
   const selVal=isDed?String(a.clientId):"__trans__";
@@ -2015,9 +2332,9 @@ function AssignRow({a,clients,onChange,onDel,canDel}){
   </div>);
 }
 
-function TeamForm({clients,staff,onAdd,onClose,preClient}){
-  const[fd,setFd]=useState({name:"",regimen:"planilla",bruto:""});
-  const[assigns,setAssigns]=useState([{id:Date.now(),clientId:preClient||null,role:"",amount:0}]);
+function TeamForm({clients,staff,roles,onAdd,onClose,preClient}){
+  const[fd,setFd]=useState({name:"",regimen:"planilla",bruto:"",role:""});
+  const[assigns,setAssigns]=useState([{id:Date.now(),clientId:preClient||null,role:"",amount:0,isPrimary:true}]);
   const[suggestions,setSuggestions]=useState([]);
   const[showSug,setShowSug]=useState(false);
   const isRH=fd.regimen==="rh";
@@ -2025,58 +2342,121 @@ function TeamForm({clients,staff,onAdd,onClose,preClient}){
   const neto=isRH?bruto:Math.round(bruto/1.115);
   const essalud=isRH?0:Math.round(neto*0.09);
   const afp=isRH?0:Math.round(neto*0.115);
-  const inversion=isRH?bruto:bruto+essalud; /* inversión total empresa = bruto + essalud for planilla */
-  const totalAssigned=assigns.reduce((s,a)=>s+(a.amount||0),0);
-  const submit=e=>{e.preventDefault();
+  const inversion=isRH?bruto:bruto+essalud;
+
+  /* Auto-adjust primary assignment when bonos change — distribute BRUTO */
+  const bonoTotal=assigns.filter(a=>!a.isPrimary).reduce((s,a)=>s+(parseInt(a.amount)||0),0);
+  const primaryAmount=Math.max(bruto-bonoTotal,0);
+
+  /* Keep primary synced */
+  React.useEffect(()=>{
+    setAssigns(prev=>prev.map(a=>a.isPrimary?{...a,amount:primaryAmount}:a));
+  },[primaryAmount]);
+
+  const totalAssigned=assigns.reduce((s,a)=>s+(parseInt(a.amount)||0),0);
+
+  const submit=()=>{
     if(!fd.name.trim()){alert("Ingresa el nombre de la persona.");return;}
     if(!bruto||bruto<=0){alert("El sueldo debe ser mayor a S/ 0.");return;}
-    if(bruto>50000){alert("Verifica el sueldo: S/ "+bruto.toLocaleString()+" parece muy alto.");return;}
-    const valid=assigns.filter(a=>a.role&&a.amount>0);
-    if(valid.length===0){alert("Agrega al menos una asignación con rol y monto.");return;}
+    if(!assigns.find(a=>a.isPrimary)?.clientId){alert("Selecciona la marca principal.");return;}
+    /* Auto-set role on primary if missing */
+    const finalAssigns=assigns.map(a=>a.isPrimary&&!a.role?{...a,role:fd.role||"Equipo"}:a);
+    const valid=finalAssigns.filter(a=>a.amount>0);
+    if(valid.length===0){alert("El bruto debe ser mayor a 0.");return;}
     onAdd({name:fd.name,regimen:fd.regimen,neto,essalud,afp,bruto,inversion,
-      assignments:valid.map(a=>({...a,id:Date.now()+Math.random()}))});};
+      assignments:valid.map(a=>({id:Date.now()+Math.random(),clientId:a.clientId,role:a.role||fd.role||"Equipo",amount:parseInt(a.amount)||0}))});
+  };
+
   const handleNameChange=e=>{
     const val=e.target.value;setFd({...fd,name:val});setShowSug(true);
     if(val.trim().length<2){setSuggestions([]);setShowSug(false);return;}
     const lower=val.toLowerCase();
     const filtered=(staff||[]).filter(s=>s.name.toLowerCase().includes(lower)).slice(0,5);
-    setSuggestions(filtered);};
-  const selectSuggestion=s=>{setFd({...fd,name:s.name,regimen:s.regimen,bruto:String(s.bruto)});setSuggestions([]);setShowSug(false);};
+    setSuggestions(filtered);
+  };
+
+  const selectSuggestion=s=>{
+    setFd({name:s.name,regimen:s.regimen,bruto:String(s.bruto),role:s.role});
+    /* Set primary assignment with full bruto, role from staff */
+    setAssigns(prev=>[{...prev[0],role:s.role,amount:s.bruto,isPrimary:true},...prev.slice(1)]);
+    setSuggestions([]);setShowSug(false);
+  };
+
+  const addBono=()=>{
+    setAssigns(p=>[...p,{id:Date.now(),clientId:null,role:"",amount:0,isPrimary:false}]);
+  };
+
   return(<div className="form-card" style={{background:"#f4f4f5",borderColor:"#f0f0f0"}}>
     <h4 style={{color:"#18181b"}}>Nueva Persona</h4>
-    <form onSubmit={submit}>
+    <div>
       <div className="form-row">
         <div style={{position:"relative",flex:1}}>
-          <input value={fd.name} onChange={handleNameChange} onBlur={()=>setTimeout(()=>setShowSug(false),200)} placeholder="Nombre completo" required/>
-          {showSug&&suggestions.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e4e4e7",borderRadius:8,marginTop:4,maxHeight:200,overflowY:"auto",zIndex:50,boxShadow:"0 4px 6px rgba(0,0,0,0.1)"}}>
-            {suggestions.map(s=><div key={s.id} onClick={()=>selectSuggestion(s)} style={{padding:"10px 14px",cursor:"pointer",borderBottom:"1px solid #f4f4f5",fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center"}} onMouseEnter={e=>e.target.parentElement.style.background="#f4f4f5"} onMouseLeave={e=>e.target.parentElement.style.background="#fff"}>
-              <span>{s.name}</span><span style={{fontSize:10,color:"#a1a1aa"}}>{s.regimen==="planilla"?"Planilla":"RH"}</span>
+          <input value={fd.name} onChange={handleNameChange} onBlur={()=>setTimeout(()=>setShowSug(false),200)} placeholder="Nombre completo" autoComplete="off"/>
+          {showSug&&suggestions.length>0&&<div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e4e4e7",borderRadius:8,marginTop:4,maxHeight:200,overflowY:"auto",zIndex:50,boxShadow:"0 4px 12px rgba(0,0,0,0.12)"}}>
+            {suggestions.map(s=><div key={s.id} onClick={()=>selectSuggestion(s)} style={{padding:"10px 14px",cursor:"pointer",borderBottom:"1px solid #f4f4f5",fontSize:13,display:"flex",justifyContent:"space-between",alignItems:"center"}}
+              onMouseEnter={e=>e.currentTarget.style.background="#f4f4f5"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>
+              <div><div style={{fontWeight:600}}>{s.name}</div><div style={{fontSize:10,color:"#a1a1aa"}}>{s.role} · {fmt(s.bruto)}</div></div>
+              <span className={`badge ${s.regimen==="planilla"?"bb":"bpp"}`} style={{fontSize:10}}>{s.regimen==="planilla"?"Planilla":"RH"}</span>
             </div>)}
           </div>}
         </div>
         <select value={fd.regimen} onChange={e=>setFd({...fd,regimen:e.target.value})}>
-          <option value="planilla">Planilla (con EsSalud/AFP)</option><option value="rh">RH - Recibo por Honorarios</option>
+          <option value="planilla">Planilla</option><option value="rh">RH</option>
         </select>
       </div>
       <div className="form-row" style={{alignItems:"center"}}>
-        <input type="number" value={fd.bruto} onChange={e=>setFd({...fd,bruto:e.target.value})} placeholder={isRH?"Monto RH (S/)":"Sueldo Bruto (S/)"} required/>
-        {!isRH&&bruto>0&&<div style={{fontSize:11,color:"#71717a",lineHeight:1.6}}>
-          <div>Bruto: <strong>{fmt(bruto)}</strong> → Neto: <strong>{fmt(neto)}</strong></div>
-          <div>AFP (11.5%): <strong>{fmt(afp)}</strong> · EsSalud (9%): <strong>{fmt(essalud)}</strong> → <span className="tr" style={{fontWeight:700}}>Inversión: {fmt(inversion)}</span></div>
-        </div>}
-        {isRH&&bruto>0&&<div style={{fontSize:12,fontWeight:600}}><span style={{color:"#a1a1aa"}}>Total:</span> <span className="tr">{fmt(bruto)}</span></div>}
+        <input type="number" value={fd.bruto} onChange={e=>setFd({...fd,bruto:e.target.value})} placeholder={isRH?"Monto RH (S/)":"Sueldo Bruto (S/)"}/>
+        <select value={fd.role} onChange={e=>setFd({...fd,role:e.target.value})} style={{minWidth:140}}>
+          <option value="">Puesto...</option>
+          {(roles||[]).map(r=><option key={r} value={r}>{r}</option>)}
+        </select>
       </div>
-      <div style={{fontSize:12,fontWeight:600,color:"#71717a",margin:"8px 0 6px"}}>Distribución del costo ({assigns.length} asignación{assigns.length>1?"es":""})</div>
-      {assigns.map(a=><AssignRow key={a.id} a={a} clients={clients} canDel={assigns.length>1}
-        onChange={up=>setAssigns(p=>p.map(x=>x.id===a.id?up:x))} onDel={()=>setAssigns(p=>p.filter(x=>x.id!==a.id))}/>)}
-      <button type="button" className="btn btn-sm btn-gray" onClick={()=>setAssigns(p=>[...p,{id:Date.now(),clientId:null,role:"",amount:0}])} style={{marginBottom:8}}>+ Otra asignación (bono / otra marca)</button>
-      {inversion>0&&<div style={{fontSize:11,padding:"6px 10px",borderRadius:6,marginBottom:6,
-        background:totalAssigned===inversion?"#f4f4f5":totalAssigned>inversion?"#fff1f2":"#fafafa",
-        color:totalAssigned===inversion?"#18181b":totalAssigned>inversion?"#e11d48":"#3f3f46"}}>
-        Asignado: {fmt(totalAssigned)} / {fmt(inversion)} {totalAssigned===inversion?" — OK ✓":totalAssigned>inversion?" — Excede la inversión":" — Falta asignar "+fmt(inversion-totalAssigned)}
+      {!isRH&&bruto>0&&<div style={{fontSize:11,color:"#71717a",lineHeight:1.6,marginBottom:8,padding:"6px 10px",background:"#fff",borderRadius:8}}>
+        Bruto: <strong>{fmt(bruto)}</strong> · Neto: {fmt(neto)} · AFP: {fmt(afp)} · EsSalud: {fmt(essalud)}
       </div>}
-      <div style={{display:"flex",gap:6}}><button type="submit" className="btn btn-blue">Agregar</button><button type="button" className="btn btn-gray" onClick={onClose}>Cancelar</button></div>
-    </form>
+      {isRH&&bruto>0&&<div style={{fontSize:12,fontWeight:600,marginBottom:8,padding:"6px 10px",background:"#fff",borderRadius:8}}><span style={{color:"#a1a1aa"}}>Total RH:</span> <span>{fmt(bruto)}</span></div>}
+
+      {/* Primary assignment - marca principal */}
+      <div style={{fontSize:12,fontWeight:700,color:"#18181b",margin:"8px 0 6px"}}>Marca Principal</div>
+      <div style={{display:"flex",gap:4,marginBottom:4,alignItems:"center",background:"#fff",padding:"8px",borderRadius:8,border:"1px solid #e4e4e7"}}>
+        <select value={assigns[0]?.clientId!==null&&assigns[0]?.clientId!==undefined?String(assigns[0].clientId):""} onChange={e=>{const v=e.target.value;setAssigns(prev=>[{...prev[0],clientId:v?parseInt(v):null},...prev.slice(1)]);}} style={{width:160,fontSize:12,padding:"5px 6px"}}>
+          <option value="">Seleccionar marca...</option>
+          {clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <select value={assigns[0]?.role||fd.role} onChange={e=>setAssigns(prev=>[{...prev[0],role:e.target.value},...prev.slice(1)])} style={{flex:1,fontSize:12,padding:"5px 6px"}}>
+          <option value="">Puesto...</option>
+          {(roles||[]).map(r=><option key={r} value={r}>{r}</option>)}
+        </select>
+        <div style={{width:100,fontSize:13,fontWeight:700,textAlign:"right",padding:"5px 6px",color:"#2563eb"}}>{fmt(primaryAmount)}</div>
+      </div>
+
+      {/* Bono assignments */}
+      {assigns.filter(a=>!a.isPrimary).length>0&&<div style={{fontSize:12,fontWeight:700,color:"#71717a",margin:"12px 0 6px"}}>Bonos / Otras marcas</div>}
+      {assigns.filter(a=>!a.isPrimary).map(a=>(
+        <div key={a.id} style={{display:"flex",gap:4,marginBottom:4,alignItems:"center"}}>
+          <select value={a.clientId!==null&&a.clientId!==undefined&&a.clientId!=="__trans__"?String(a.clientId):"__trans__"} onChange={e=>{const v=e.target.value;setAssigns(prev=>prev.map(x=>x.id===a.id?{...x,clientId:v==="__trans__"?null:parseInt(v)}:x));}} style={{width:160,fontSize:12,padding:"5px 6px"}}>
+            <option value="__trans__">Transversal</option>
+            {clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <select value={a.role} onChange={e=>setAssigns(prev=>prev.map(x=>x.id===a.id?{...x,role:e.target.value}:x))} style={{flex:1,fontSize:12,padding:"5px 6px"}}>
+            <option value="">Puesto/Concepto...</option>
+            {(roles||[]).map(r=><option key={r} value={r}>{r}</option>)}
+            <option value="Bono">Bono</option>
+            <option value="Coordinación">Coordinación</option>
+          </select>
+          <input type="number" value={a.amount||""} onChange={e=>setAssigns(prev=>prev.map(x=>x.id===a.id?{...x,amount:parseInt(e.target.value)||0}:x))} placeholder="Monto" style={{width:100,fontSize:12,padding:"5px 6px",textAlign:"right"}}/>
+          <button type="button" className="del-btn" onClick={()=>setAssigns(prev=>prev.filter(x=>x.id!==a.id))}>✕</button>
+        </div>
+      ))}
+      <button type="button" className="btn btn-sm btn-gray" onClick={addBono} style={{marginBottom:8}}>+ Agregar bono / otra marca</button>
+
+      {bruto>0&&<div style={{fontSize:11,padding:"6px 10px",borderRadius:6,marginBottom:6,
+        background:totalAssigned===bruto?"#eff6ff":totalAssigned>bruto?"#fff1f2":"#fafafa",
+        color:totalAssigned===bruto?"#2563eb":totalAssigned>bruto?"#e11d48":"#3f3f46",fontWeight:600}}>
+        Distribución: {fmt(totalAssigned)} / {fmt(bruto)} {totalAssigned===bruto?" — OK ✓":totalAssigned>bruto?" — Excede el bruto":" — Falta "+fmt(bruto-totalAssigned)}
+      </div>}
+      <div style={{display:"flex",gap:6}}><button type="button" className="btn btn-blue" onClick={submit}>Agregar</button><button type="button" className="btn btn-gray" onClick={onClose}>Cancelar</button></div>
+    </div>
   </div>);
 }
 
