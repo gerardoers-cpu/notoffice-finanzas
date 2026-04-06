@@ -11,7 +11,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#fafafa">
+<meta name="theme-color" content="#18181b">
+<link rel="manifest" href="/manifest-caja-chica.json">
+<link rel="apple-touch-icon" href="/icon-caja-192.png">
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('/sw-caja-chica.js')
+      .then(r=>console.log('SW registered',r.scope))
+      .catch(e=>console.log('SW failed',e));
+  });
+}
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#fafafa;color:#18181b;-webkit-text-size-adjust:100%;overflow-x:hidden}
@@ -158,6 +169,8 @@ function CajaChicaApp({user,onLogout}){
   const[concepto,setConcepto]=useState("");
   const[categoria,setCategoria]=useState("");
   const[marca,setMarca]=useState("Agencia");
+  const[tipo,setTipo]=useState("agencia");
+  const[viaPago,setViaPago]=useState("caja_chica");
   const[foto,setFoto]=useState(null);
   const[fotoPreview,setFotoPreview]=useState(null);
   const[saving,setSaving]=useState(false);
@@ -193,7 +206,7 @@ function CajaChicaApp({user,onLogout}){
     const b={};
     PERSONAS_EMAILS.forEach(p=>{
       const totalAsignado=asignaciones.filter(a=>a.persona_email===p).reduce((s,a)=>s+parseFloat(a.monto||0),0);
-      const totalGastado=gastos.filter(g=>g.user_email===p).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      const totalGastado=gastos.filter(g=>g.user_email===p&&(g.via_pago||"caja_chica")==="caja_chica").reduce((s,g)=>s+parseFloat(g.monto||0),0);
       b[p]={asignado:totalAsignado,gastado:totalGastado,saldo:totalAsignado-totalGastado};
     });
     return b;
@@ -228,7 +241,7 @@ function CajaChicaApp({user,onLogout}){
     const montoNum=parseFloat(monto);
     if(!montoNum||montoNum<=0){setMsg({type:"err",text:"Ingresa un monto valido"});return;}
     if(!concepto.trim()){setMsg({type:"err",text:"Describe el gasto"});return;}
-    if(montoNum>myBalance.saldo){setMsg({type:"err",text:`Tu saldo es ${fmt(myBalance.saldo)}`});return;}
+    if(viaPago==="caja_chica"&&montoNum>myBalance.saldo){setMsg({type:"err",text:`Tu saldo es ${fmt(myBalance.saldo)}`});return;}
     setSaving(true);setMsg(null);
     try{
       const sb=getSB();if(!sb){setMsg({type:"err",text:"Sin conexion"});setSaving(false);return;}
@@ -236,12 +249,14 @@ function CajaChicaApp({user,onLogout}){
       const{error}=await sb.from("caja_chica").insert({
         user_email:user.email,user_name:nameFromEmail(user.email),fecha,
         monto:montoNum,concepto:concepto.trim(),categoria:categoria.trim()||"Sin categoria",
-        marca:marca||"Agencia",foto_url:fotoUrl
+        marca:marca||"Agencia",tipo:tipo||"agencia",via_pago:"caja_chica",
+        estado_cobro:tipo==="cliente"?"pendiente":"pendiente",
+        foto_url:fotoUrl
       });
       if(error)setMsg({type:"err",text:"Error: "+error.message});
       else{
         setMsg({type:"ok",text:"Gasto registrado"});
-        setMonto("");setConcepto("");setCategoria("");setMarca("Agencia");setFoto(null);setFotoPreview(null);
+        setMonto("");setConcepto("");setCategoria("");setMarca("Agencia");setTipo("agencia");setViaPago("caja_chica");setFoto(null);setFotoPreview(null);
         if(fileRef.current)fileRef.current.value="";
         loadData();setTimeout(()=>setMsg(null),3000);
       }
@@ -285,11 +300,12 @@ function CajaChicaApp({user,onLogout}){
 
         {/* ═══ TAB: Nuevo Gasto ═══ */}
         {tab==="gasto"&&(
-          myBalance.saldo<=0?(
+          myBalance.saldo<=0&&tipo!=="cliente"?(
             <div className="empty">
               <div className="empty-icon">$</div>
               <div className="empty-title" style={{color:"#dc2626"}}>Sin saldo</div>
               <div className="empty-text">Pide que te asignen caja chica para registrar gastos.</div>
+              <button type="button" onClick={()=>setTipo("cliente")} style={{marginTop:12,padding:"10px 20px",background:"#2563eb",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Registrar gasto de cliente</button>
             </div>
           ):(
             <form onSubmit={handleSave}>
@@ -323,6 +339,18 @@ function CajaChicaApp({user,onLogout}){
                     <option value="Agencia">Agencia (gasto general)</option>
                     {MARCAS.map(m=>(<option key={m} value={m}>{m}</option>))}
                   </select>
+                </div>
+                <div className="field">
+                  <label>Tipo de gasto</label>
+                  <div style={{display:"flex",gap:8}}>
+                    <button type="button" onClick={()=>{setTipo("agencia");setViaPago("caja_chica");}} style={{flex:1,padding:"12px 8px",border:tipo==="agencia"?"2px solid #18181b":"1.5px solid #e4e4e7",borderRadius:14,background:tipo==="agencia"?"#18181b":"#fff",color:tipo==="agencia"?"#fff":"#18181b",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+                      Gasto Agencia
+                    </button>
+                    <button type="button" onClick={()=>setTipo("cliente")} style={{flex:1,padding:"12px 8px",border:tipo==="cliente"?"2px solid #2563eb":"1.5px solid #e4e4e7",borderRadius:14,background:tipo==="cliente"?"#2563eb":"#fff",color:tipo==="cliente"?"#fff":"#18181b",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+                      Gasto Cliente
+                    </button>
+                  </div>
+                  <div style={{fontSize:11,color:"#a1a1aa",marginTop:4}}>{tipo==="agencia"?"La agencia absorbe este gasto":"Se facturará al cliente (+18% IGV)"}</div>
                 </div>
                 <div className="field">
                   <label>Comprobante</label>
@@ -361,6 +389,8 @@ function CajaChicaApp({user,onLogout}){
                         {new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short",year:"numeric"})}
                         {g.categoria&&<> &middot; <span className="badge">{g.categoria}</span></>}
                         {g.marca&&<> &middot; <span className="badge" style={{background:g.marca==="Agencia"?"#18181b":"#2563eb",color:"#fff"}}>{g.marca}</span></>}
+                        {g.tipo==="cliente"&&<> &middot; <span className="badge" style={{background:"#f59e0b",color:"#fff"}}>Cliente{g.estado_cobro==="cobrado"?" ✓":g.estado_cobro==="facturado"?" (Fact.)":""}</span></>}
+                        {g.via_pago==="transferencia"&&<> &middot; <span className="badge" style={{background:"#6366f1",color:"#fff"}}>Transf.</span></>}
                       </div>
                     </div>
                     <div className="expense-amount">{fmt(g.monto)}</div>
