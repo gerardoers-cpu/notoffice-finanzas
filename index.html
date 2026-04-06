@@ -158,11 +158,8 @@ const ic={
   gear:"M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z",
 };
 
-/* ══════════ DEMO DATA ══════════ */
-const INIT_CLIENTS=[
-  {id:1,name:"Marca Alpha",fee:8500},{id:2,name:"Marca Beta",fee:12000},{id:3,name:"Marca Gamma",fee:6500},
-  {id:4,name:"Marca Delta",fee:15000},{id:5,name:"Marca Épsilon",fee:9500},{id:6,name:"Marca Zeta",fee:11000},
-];
+/* ══════════ INITIAL DATA (empty) ══════════ */
+const INIT_CLIENTS=[];
 
 /* regimen: "planilla" → neto input, EsSalud=9%, AFP=11.37% auto
    Sueldo Bruto = neto + AFP | Inversión Total = neto + AFP + EsSalud
@@ -176,91 +173,20 @@ const tDed=(t,cId)=>t.assignments.filter(a=>a.clientId===cId).reduce((s,a)=>s+a.
 const tTrans=(t)=>t.assignments.filter(a=>a.clientId===null).reduce((s,a)=>s+a.amount,0);
 const tAllDed=(t)=>t.assignments.filter(a=>a.clientId!==null).reduce((s,a)=>s+a.amount,0);
 
-const INIT_TEAM=[
-  mkP(1,"Carlos Mendoza",1400,[{id:1001,clientId:1,role:"Community Manager",amount:1561}]),
-  mkP(2,"Ana López",1800,[{id:1002,clientId:1,role:"Diseñadora",amount:1500},{id:1003,clientId:null,role:"Coord. Diseño (bono)",amount:507}]),
-  mkP(3,"Juan Pérez",2300,[{id:1004,clientId:2,role:"Account Manager",amount:2565}]),
-  mkP(4,"María García",1400,[{id:1005,clientId:2,role:"Community Manager",amount:1561}]),
-  mkP(5,"Luis Torres",2100,[{id:1006,clientId:2,role:"Diseñador",amount:1400},{id:1007,clientId:3,role:"Diseñador",amount:942}]),
-  mkP(6,"Diego Ramírez",1400,[{id:1008,clientId:3,role:"Community Manager",amount:1561}]),
-  mkP(7,"Sofía Hernández",2300,[{id:1009,clientId:4,role:"Account Manager",amount:2565}]),
-  mkP(8,"Roberto Díaz",1400,[{id:1010,clientId:4,role:"Community Manager",amount:1561}]),
-  mkP(9,"Fernanda Ruiz",1800,[{id:1011,clientId:4,role:"Diseñadora",amount:2007}]),
-  mkR(10,"Andrea Vega",1600,[{id:1012,clientId:4,role:"Pauta Digital",amount:1000},{id:1013,clientId:5,role:"Pauta Digital",amount:600}]),
-  mkP(11,"Pablo Morales",1400,[{id:1014,clientId:5,role:"Community Manager",amount:1561}]),
-  mkP(12,"Laura Sánchez",2300,[{id:1015,clientId:6,role:"Account Manager",amount:2565}]),
-  mkR(13,"Daniela Flores",1400,[{id:1016,clientId:6,role:"Community Manager",amount:1400}]),
-  mkP(14,"Ricardo Ortiz",4200,[{id:1017,clientId:null,role:"Director Creativo",amount:4683}]),
-  mkP(15,"Gabriela Mora",3800,[{id:1018,clientId:null,role:"Directora de Cuentas",amount:4237}]),
-  mkP(16,"Alejandro Cruz",3000,[{id:1019,clientId:null,role:"Estratega Digital",amount:3345}]),
-  mkR(17,"Valeria Reyes",2500,[{id:1020,clientId:null,role:"Diseñadora UI/UX",amount:2500}]),
-  mkP(18,"Miguel Ángel",2800,[{id:1021,clientId:null,role:"Desarrollo Web",amount:3122}]),
-  mkP(19,"Ynes Martínez",1800,[{id:1022,clientId:null,role:"Administración y Pagos",amount:2007}]),
-];
-
-const INIT_STAFF=[
-  {id:1,name:"Carlos Mendoza",regimen:"planilla",bruto:1561,role:"Community Manager"},
-  {id:2,name:"Ana López",regimen:"planilla",bruto:2007,role:"Diseñadora"},
-  {id:3,name:"Juan Pérez",regimen:"planilla",bruto:2565,role:"Account Manager"},
-  {id:4,name:"María García",regimen:"planilla",bruto:1561,role:"Community Manager"},
-  {id:5,name:"Luis Torres",regimen:"planilla",bruto:2342,role:"Diseñador"},
-  {id:6,name:"Diego Ramírez",regimen:"planilla",bruto:1561,role:"Community Manager"},
-  {id:7,name:"Sofía Hernández",regimen:"planilla",bruto:2565,role:"Account Manager"},
-  {id:8,name:"Roberto Díaz",regimen:"planilla",bruto:1561,role:"Community Manager"},
-  {id:9,name:"Fernanda Ruiz",regimen:"planilla",bruto:2241,role:"Diseñadora"},
-  {id:10,name:"Andrea Vega",regimen:"rh",bruto:1600,role:"Pauta Digital"},
-  {id:11,name:"Pablo Morales",regimen:"planilla",bruto:1561,role:"Community Manager"},
-  {id:12,name:"Laura Sánchez",regimen:"planilla",bruto:2565,role:"Account Manager"},
-  {id:13,name:"Daniela Flores",regimen:"rh",bruto:1400,role:"Community Manager"},
-  {id:14,name:"Ricardo Ortiz",regimen:"planilla",bruto:4683,role:"Director Creativo"},
-  {id:15,name:"Gabriela Mora",regimen:"planilla",bruto:4726,role:"Directora de Cuentas"},
-  {id:16,name:"Alejandro Cruz",regimen:"planilla",bruto:3731,role:"Estratega Digital"},
-  {id:17,name:"Valeria Reyes",regimen:"rh",bruto:2500,role:"Diseñadora UI/UX"},
-  {id:18,name:"Miguel Ángel",regimen:"planilla",bruto:3483,role:"Desarrollo Web"},
-  {id:19,name:"Ynes Martínez",regimen:"planilla",bruto:2241,role:"Administración y Pagos"},
-];
+const INIT_TEAM=[];
+const INIT_STAFF=[];
 
 const INIT_ROLES=["Community Manager","Diseñador/a","Account Manager","Director/a Creativo/a","Director/a de Cuentas","Estratega Digital","Diseñador/a UI/UX","Desarrollo Web","Administración","Pauta Digital","Ejecutivo/a de Cuentas","Planner","Coordinador/a","Productor/a","Copywriter","Editor/a","Fotógrafo/a"];
 
-const genInvoices=()=>{
-  const inv=[];let id=1;
-  /* Recurrentes (fees mensuales) */
-  ["01","02","03","04"].forEach(m=>{
-    INIT_CLIENTS.forEach(c=>{
-      const st=m==="04"?(c.id===2||c.id===5?"Emitida":"Por cobrar"):"Cobrada";
-      inv.push({id:id++,clientId:c.id,number:`FAC-${String(id).padStart(3,"0")}`,concept:`Fee ${ML[parseInt(m)-1]}`,amount:c.fee,date:`2026-${m}-05`,status:st,month:`2026-${m}`,type:"recurrente"});
-    });
-  });
-  /* No Recurrentes (proyectos, one-time) */
-  inv.push({id:id++,clientId:1,number:"FAC-NR-001",concept:"Campaña Navidad",amount:18000,date:"2026-01-15",status:"Cobrada",month:"2026-01",type:"no_recurrente"});
-  inv.push({id:id++,clientId:2,number:"FAC-NR-002",concept:"Lanzamiento App",amount:25000,date:"2026-02-20",status:"Cobrada",month:"2026-02",type:"no_recurrente"});
-  inv.push({id:id++,clientId:4,number:"FAC-NR-003",concept:"Campaña 5G",amount:32000,date:"2026-02-22",status:"Por cobrar",month:"2026-02",type:"no_recurrente"});
-  inv.push({id:id++,clientId:5,number:"FAC-NR-004",concept:"Activación Verano",amount:15000,date:"2026-03-10",status:"Emitida",month:"2026-03",type:"no_recurrente"});
-  inv.push({id:id++,clientId:3,number:"FAC-NR-005",concept:"Promo Semana Santa",amount:9000,date:"2026-04-01",status:"Emitida",month:"2026-04",type:"no_recurrente"});
-  /* Paid Media (pauta digital) */
-  inv.push({id:id++,clientId:1,number:"FAC-PM-001",concept:"Pauta Meta Ads Ene",amount:5000,date:"2026-01-10",status:"Cobrada",month:"2026-01",type:"paid"});
-  inv.push({id:id++,clientId:2,number:"FAC-PM-002",concept:"Pauta Google Ads Ene",amount:3500,date:"2026-01-12",status:"Cobrada",month:"2026-01",type:"paid"});
-  inv.push({id:id++,clientId:1,number:"FAC-PM-003",concept:"Pauta Meta Ads Feb",amount:5000,date:"2026-02-08",status:"Cobrada",month:"2026-02",type:"paid"});
-  inv.push({id:id++,clientId:4,number:"FAC-PM-004",concept:"Pauta Google Ads Mar",amount:8000,date:"2026-03-05",status:"Por cobrar",month:"2026-03",type:"paid"});
-  inv.push({id:id++,clientId:5,number:"FAC-PM-005",concept:"Pauta TikTok Ads Abr",amount:4500,date:"2026-04-02",status:"Emitida",month:"2026-04",type:"paid"});
-  inv.push({id:id++,clientId:3,number:"FAC-PM-006",concept:"Pauta Meta Ads Abr",amount:3000,date:"2026-04-03",status:"Por cobrar",month:"2026-04",type:"paid"});
-  return inv;
-};
+const genInvoices=()=>[];
 
-const INIT_PROJECTS=[
-  {id:1,clientId:1,name:"Campaña Navidad",revenue:18000,month:"2026-01",status:"Completado",expenses:[{id:101,name:"Producción gráfica",amount:2500},{id:102,name:"Pauta pagada",amount:3000},{id:103,name:"Influencer",amount:1000}]},
-  {id:2,clientId:2,name:"Lanzamiento App",revenue:25000,month:"2026-02",status:"Completado",expenses:[{id:201,name:"Desarrollo landing",amount:4000},{id:202,name:"Pauta digital",amount:3500},{id:203,name:"Producción video",amount:2000}]},
-  {id:3,clientId:4,name:"Campaña 5G",revenue:32000,month:"2026-02",status:"Completado",expenses:[{id:301,name:"Producción TVC",amount:8000},{id:302,name:"Pauta medios",amount:4000},{id:303,name:"Activación BTL",amount:2000}]},
-  {id:4,clientId:5,name:"Activación Verano",revenue:15000,month:"2026-03",status:"En curso",expenses:[{id:401,name:"Montaje evento",amount:3000},{id:402,name:"Producción material",amount:1500},{id:403,name:"Logística",amount:1000}]},
-  {id:5,clientId:6,name:"Rediseño Web",revenue:20000,month:"2026-03",status:"En curso",expenses:[{id:501,name:"Diseño UX/UI",amount:3500},{id:502,name:"Desarrollo front",amount:3000},{id:503,name:"Hosting/dominio",amount:1500}]},
-  {id:6,clientId:3,name:"Promo Semana Santa",revenue:9000,month:"2026-04",status:"Pendiente",expenses:[{id:601,name:"Arte gráfico",amount:1500},{id:602,name:"Pauta redes",amount:1500}]},
-];
+const INIT_PROJECTS=[];
 const pCost=p=>(p.expenses||[]).reduce((s,e)=>s+e.amount,0);
-const INIT_FIXED=[{id:1,name:"Renta Oficina",amount:3500},{id:2,name:"Luz",amount:450},{id:3,name:"Internet Fibra",amount:250},{id:4,name:"Seguros",amount:800},{id:5,name:"Contabilidad Externa",amount:1200}];
-const INIT_DIGITAL=[{id:1,name:"Google Workspace",amount:850},{id:2,name:"Adobe Creative Cloud",amount:1500},{id:3,name:"Freepik Premium",amount:320},{id:4,name:"Hootsuite",amount:650},{id:5,name:"Slack Business",amount:420},{id:6,name:"Canva Pro",amount:280},{id:7,name:"Notion Team",amount:300}];
-const INIT_VAR=[{id:1,name:"Caja chica Enero",amount:910,month:"2026-01"},{id:2,name:"Caja chica Febrero",amount:720,month:"2026-02"},{id:3,name:"Caja chica Marzo",amount:850,month:"2026-03"},{id:4,name:"Caja chica Abril",amount:680,month:"2026-04"}];
-const INIT_OFFICE=[{id:1,name:"Insumos de oficina",amount:350},{id:2,name:"Mantenimiento",amount:500},{id:3,name:"Limpieza",amount:600}];
-const INIT_INV=[{id:1,name:"Equipo cómputo",amount:4500,month:"2026-01"},{id:2,name:"Mobiliario",amount:2800,month:"2026-03"}];
+const INIT_FIXED=[];
+const INIT_DIGITAL=[];
+const INIT_VAR=[];
+const INIT_OFFICE=[];
+const INIT_INV=[];
 
 /* ═══ SUPABASE CONFIG ═══ */
 const SB_CONFIG_KEY="finanzas_sb_config";
@@ -294,17 +220,8 @@ const saveStateCloud=async(state,email)=>{
 
 const initFees=()=>{
   const f={};
-  const demoSvc={
-    1:[{id:1,name:"Pauta Digital",amount:2500},{id:2,name:"Community extra",amount:800}],
-    2:[{id:3,name:"Pauta Digital",amount:4000}],
-    4:[{id:4,name:"Pauta Digital",amount:5000},{id:5,name:"Producción Video",amount:3000}],
-    5:[{id:6,name:"SEO mensual",amount:1500}],
-  };
-  ALL_MONTHS.forEach(({value:m})=>{f[m]={};INIT_CLIENTS.forEach(c=>{
-    /* Demo services only for first year */
-    const isFirstYear=m.startsWith(String(START_YEAR));
-    f[m][c.id]={base:c.fee,services:isFirstYear?(demoSvc[c.id]||[]).map(s=>({...s,id:s.id+Math.random()})):[]};
-  });});return f;
+  ALL_MONTHS.forEach(({value:m})=>{f[m]={};});
+  return f;
 };
 
 /* ═══ CSV Export helper ═══ */
@@ -2166,10 +2083,10 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                     }else alert("Archivo inválido");}catch(err){alert("Error al leer: "+err.message);}};r.readAsText(f);};inp.click();
               }}>Importar Backup</button>
               <button className="btn btn-red" style={{opacity:.7}} onClick={()=>{
-                if(confirm("¿Restaurar todos los datos a los valores de demostración? Se perderá todo lo ingresado.")){
+                if(confirm("¿Limpiar todos los datos? Se perderá todo lo ingresado.")){
                   localStorage.removeItem(STORAGE_KEY);location.reload();
                 }
-              }}>Restaurar Demo</button>
+              }}>Limpiar Todo</button>
             </div>
           </div>
         </>)}
