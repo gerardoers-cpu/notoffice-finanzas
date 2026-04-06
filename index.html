@@ -51,12 +51,12 @@ td{padding:12px 14px;border-bottom:1px solid #f4f4f5}
 tr:hover td{background:#fafafa}
 
 /* ── Color utilities ── */
-.tg{color:#18181b}.tr{color:#dc2626}.tb{color:#52525b}.ta{color:#71717a}.tp{color:#3f3f46}
+.tg{color:#2563eb}.tr{color:#dc2626}.tb{color:#52525b}.ta{color:#71717a}.tp{color:#3f3f46}
 .text-right{text-align:right}.text-center{text-align:center}.font-bold{font-weight:700}
 
 /* ── Badges ── */
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600}
-.bg{background:#f4f4f5;color:#18181b}.ba{background:#fef2f2;color:#dc2626}.br{background:#fef2f2;color:#dc2626}.bb{background:#f4f4f5;color:#3f3f46}.bpp{background:#f4f4f5;color:#52525b}
+.bg{background:#eff6ff;color:#2563eb}.ba{background:#fef2f2;color:#dc2626}.br{background:#fef2f2;color:#dc2626}.bb{background:#f4f4f5;color:#3f3f46}.bpp{background:#f4f4f5;color:#52525b}
 
 /* ── Buttons ── */
 .btn{padding:9px 18px;border:none;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:inherit;transition:all .15s;letter-spacing:-.1px}
@@ -105,7 +105,7 @@ const ML=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic
 const START_YEAR=2026;
 const NOW=new Date();const CUR_YEAR=NOW.getFullYear();const CUR_MONTH=NOW.getMonth()+1;
 /* Generate months from Jan 2026 to Dec of current year (or 2026 if before 2026) */
-const END_YEAR=Math.max(CUR_YEAR,START_YEAR);
+const END_YEAR=Math.max(CUR_YEAR+1,START_YEAR);
 const ALL_MONTHS=(()=>{const arr=[];for(let y=START_YEAR;y<=END_YEAR;y++){for(let m=1;m<=12;m++){const ms=String(m).padStart(2,"0");arr.push({value:`${y}-${ms}`,label:`${ML[m-1]} ${y}`,year:y});}}return arr;})();
 const YEARS=(()=>{const ys=[];for(let y=START_YEAR;y<=END_YEAR;y++)ys.push(y);return ys;})();
 /* MONTHS = filtered by selected year (set dynamically in App) — fallback to all for init */
@@ -341,11 +341,14 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[expandedClient,setExpandedClient]=useState(null);
   const[editPerson,setEditPerson]=useState(null);
   const[editInvoice,setEditInvoice]=useState(null);
+  const[editProject,setEditProject]=useState(null);
+  const[preClient,setPreClient]=useState(null);
   /* Cotizador state */
   const[simName,setSimName]=useState("Nuevo Cliente");
   const[simFee,setSimFee]=useState("");
   const[simTeam,setSimTeam]=useState([{id:1,role:"",amount:0}]);
   const[simTransTeam,setSimTransTeam]=useState([]);
+  const[simBono,setSimBono]=useState([{id:1,name:"",amount:0}]);
   const[simGastos,setSimGastos]=useState([]);
   const[simMarginTarget,setSimMarginTarget]=useState(30);
   const[simMonth,setSimMonth]=useState(vm);
@@ -487,7 +490,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     const projProfit=totalPR-totalPCost;
     const netProfit=structProfit+projProfit;
     const totalIncome=totalFees+totalPR;
-    const totalExpenses=structExp+totalPCost;
+    const totalExpenses=structExp; /* Project costs are isolated — they don't impact general flow */
     const clientProfit=clients.map(c=>{
       const cFee=getFee(c.id,vm);
       const cTeam=team.reduce((s,t)=>s+tDed(t,c.id),0);
@@ -554,11 +557,13 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           <div style={{display:"flex",alignItems:"center",gap:16}}>
             {saveMsg&&<span style={{fontSize:11,color:"#fff",fontWeight:600,background:"#18181b",padding:"5px 14px",borderRadius:20}}>{saveMsg}</span>}
             <button className="btn btn-sm btn-gray" title="Cerrar mes: guarda snapshot de planilla y gastos actuales para este mes" onClick={()=>{takeSnapshot();setSaveMsg("Mes cerrado ✓");setTimeout(()=>setSaveMsg(""),3000);}}>Cerrar {ML[parseInt(vm.split("-")[1])-1]}</button>
-            {YEARS.length>1&&<select className="msel" value={selYear} onChange={e=>{const y=parseInt(e.target.value);setVm(`${y}-${vm.split("-")[1]}`);}}>
-              {YEARS.map(y=><option key={y} value={y}>{y}</option>)}
-            </select>}
+            <div style={{display:"flex",alignItems:"center",gap:4,background:"#f4f4f5",borderRadius:10,padding:3}}>
+              {YEARS.map(y=>(
+                <button key={y} onClick={()=>setVm(`${y}-${vm.split("-")[1]}`)} style={{padding:"5px 14px",borderRadius:8,border:"none",fontSize:12,fontWeight:selYear===y?700:500,cursor:"pointer",fontFamily:"inherit",background:selYear===y?"#18181b":"transparent",color:selYear===y?"#fff":"#71717a",transition:"all .15s"}}>{y}</button>
+              ))}
+            </div>
             <select className="msel" value={vm} onChange={e=>setVm(e.target.value)}>
-              {yearMonths.map(m=><option key={m.value} value={m.value}>{m.label}</option>)}
+              {yearMonths.map(m=><option key={m.value} value={m.value}>{ML[parseInt(m.value.split("-")[1])-1]}</option>)}
             </select>
             <div className="user-bar">
               <span style={{width:7,height:7,borderRadius:"50%",background:cloudMode?"#dc2626":"#d4d4d8",marginRight:2}} title={cloudMode?"Conectado a la nube":"Modo local"}/>
@@ -600,10 +605,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             </div>
           )}
           <div className="info-box">Fee base + servicios por cliente, editables mes a mes. Pre-llena desde el mes anterior y ajusta solo lo que cambió.</div>
-          <div className="grid g3" style={{marginBottom:16}}>
-            <div className="card" style={{borderLeft:"3px solid #18181b"}}><div className="kpi-label">Total Ingresos — {ML[parseInt(vm.split("-")[1])-1]}</div><div className="kpi-value tg">{fmt(calc.totalFees)}</div><div className="kpi-sub">{activos.length} activos · {inactivos.length} inactivos</div></div>
-            <div className="card"><div className="kpi-label">Facturado (mes)</div><div className="kpi-value">{fmt(calc.mInv.filter(i=>i.type==="recurrente").reduce((s,i)=>s+i.amount,0))}</div><div className="kpi-sub">{calc.mInv.filter(i=>i.type==="recurrente").length} facturas emitidas</div></div>
-            <div className="card" style={{borderColor:"#d4d4d8"}}><div className="kpi-label">Proyección Anual</div><div className="kpi-value tp">{fmt(MONTHS.reduce((s,{value:m})=>s+clients.reduce((ss,c)=>ss+getFee(c.id,m),0),0))}</div></div>
+          <div style={{marginBottom:16}}>
+            <div className="card" style={{borderLeft:"3px solid #2563eb",maxWidth:500}}><div className="kpi-label">Total Ingresos — {ML[parseInt(vm.split("-")[1])-1]} {selYear}</div><div className="kpi-value tg">{fmt(calc.totalFees)}</div><div className="kpi-sub">{activos.length} activos · {inactivos.length} inactivos</div></div>
           </div>
           {/* Agregar cliente inline */}
           <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
@@ -633,14 +636,12 @@ function App({userEmail="local",onLogout,cloudMode=false}){
 
           {activos.map(c=>{
             const entry=getEntry(c.id,vm);const cFee=getFee(c.id,vm);const isExp=expandedClient===c.id;
-            const mFac=invoices.find(i=>i.clientId===c.id&&i.month===vm&&i.type==="recurrente");
-            return(<div key={c.id} className="card" style={{marginBottom:8,borderLeft:"3px solid #18181b"}}>
+            return(<div key={c.id} className="card" style={{marginBottom:8,borderLeft:"3px solid #2563eb"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setExpandedClient(isExp?null:c.id)}>
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
                   <span style={{fontSize:16,color:"#a1a1aa"}}>{isExp?"▾":"▸"}</span>
                   <span style={{fontWeight:600}}>{c.name}</span>
                   {entry.services.length>0&&<span className="badge bb" style={{fontSize:10}}>{entry.services.length} servicio{entry.services.length>1?"s":""}</span>}
-                  {mFac&&<span className={`badge ${mFac.status==="Cobrada"?"bg":mFac.status==="Por cobrar"?"ba":"bb"}`} style={{fontSize:10}}>{mFac.status}</span>}
                 </div>
                 <div style={{display:"flex",alignItems:"center",gap:16}}>
                   <span style={{fontSize:12,color:"#a1a1aa"}}>{pct(cFee,calc.totalFees)}%</span>
@@ -704,35 +705,69 @@ function App({userEmail="local",onLogout,cloudMode=false}){
         {/* ═══ INGRESOS > PROYECTOS ═══ */}
         {page==="proyectos"&&(<>
           <div className="info-box">Proyectos independientes con ingreso y costo directo. <strong>NO</strong> entran en la estructura mensual ni overhead.</div>
-          <div className="grid g4" style={{marginBottom:16}}>
+          <div className="grid g3" style={{marginBottom:16}}>
             <div className="card"><div className="kpi-label">Ingreso (mes)</div><div className="kpi-value tg">{fmt(calc.totalPR)}</div></div>
             <div className="card"><div className="kpi-label">Costo (mes)</div><div className="kpi-value tr">{fmt(calc.totalPCost)}</div></div>
             <div className="card"><div className="kpi-label">Utilidad (mes)</div><div className={`kpi-value ${calc.projProfit>=0?"tg":"tr"}`}>{fmt(calc.projProfit)}</div></div>
-            <div className="card"><div className="kpi-label">Utilidad Anual</div><div className="kpi-value tp">{fmt(projects.reduce((s,p)=>s+(p.revenue-pCost(p)),0))}</div></div>
           </div>
           <div style={{textAlign:"right",marginBottom:12}}>
             <button className="btn btn-blue" onClick={()=>setShowForm("project")}><Ic d={ic.plus} size={14} color="#fff"/> Nuevo Proyecto</button>
           </div>
           {showForm==="project"&&<ProjectForm clients={clients} month={vm} onAdd={p=>{setProjects(prev=>[...prev,{...p,id:Date.now()}]);setShowForm(null);}} onClose={()=>setShowForm(null)}/>}
-          <div className="card" style={{padding:0,overflow:"hidden"}}>
-            <table>
-              <thead><tr><th>Proyecto</th><th>Cliente</th><th>Mes</th><th className="text-right">Ingreso</th><th className="text-right">Costo</th><th className="text-right">Utilidad</th><th className="text-center">Margen</th><th className="text-center">Estado</th></tr></thead>
-              <tbody>
-                {projects.sort((a,b)=>b.month.localeCompare(a.month)).map(p=>{const ut=p.revenue-pCost(p);const mg=p.revenue>0?(ut/p.revenue)*100:0;return(
-                  <tr key={p.id}><td style={{fontWeight:600}}>{p.name}</td><td>{clients.find(c=>c.id===p.clientId)?.name||"—"}</td>
-                    <td style={{color:"#a1a1aa",fontSize:12}}>{p.month}</td>
-                    <td className="text-right tg">{fmt(p.revenue)}</td><td className="text-right tr">{fmt(pCost(p))}</td>
-                    <td className={`text-right font-bold ${ut>=0?"tg":"tr"}`}>{fmt(ut)}</td>
-                    <td className="text-center"><span className={`badge ${mg>=30?"bg":mg>=15?"ba":"br"}`}>{mg.toFixed(1)}%</span></td>
-                    <td className="text-center"><span className={`badge ${p.status==="Completado"?"bg":p.status==="En curso"?"bb":"ba"}`}>{p.status}</span></td>
-                  </tr>);})}
-              </tbody>
-              <tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e4e4e7"}}>
-                <td colSpan={3}>TOTAL</td><td className="text-right tg">{fmt(projects.reduce((s,p)=>s+p.revenue,0))}</td>
-                <td className="text-right tr">{fmt(projects.reduce((s,p)=>s+pCost(p),0))}</td>
-                <td className="text-right">{fmt(projects.reduce((s,p)=>s+(p.revenue-pCost(p)),0))}</td><td colSpan={2}></td>
-              </tr></tfoot>
-            </table>
+          {editProject&&<div className="form-card" style={{background:"#f4f4f5",borderColor:"#f0f0f0",marginBottom:12}}>
+            <h4 style={{color:"#18181b"}}>Editar Proyecto</h4>
+            <form onSubmit={e=>{e.preventDefault();setProjects(prev=>prev.map(p=>p.id===editProject.id?editProject:p));setEditProject(null);}}>
+              <div className="form-row"><select value={editProject.clientId} onChange={e=>setEditProject({...editProject,clientId:parseInt(e.target.value)})}>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select>
+                <input value={editProject.name} onChange={e=>setEditProject({...editProject,name:e.target.value})} placeholder="Nombre" required/></div>
+              <div className="form-row"><input type="number" value={editProject.revenue} onChange={e=>setEditProject({...editProject,revenue:parseInt(e.target.value)||0})} placeholder="Ingreso (S/)"/>
+                <select value={editProject.status} onChange={e=>setEditProject({...editProject,status:e.target.value})}><option>Pendiente</option><option>En curso</option><option>Completado</option></select>
+                <select value={editProject.month} onChange={e=>setEditProject({...editProject,month:e.target.value})}>{ALL_MONTHS.map(m=><option key={m.value} value={m.value}>{m.label}</option>)}</select></div>
+              <div style={{display:"flex",gap:6}}><button type="submit" className="btn btn-blue">Guardar</button><button type="button" className="btn btn-gray" onClick={()=>setEditProject(null)}>Cancelar</button></div>
+            </form>
+          </div>}
+          {projects.sort((a,b)=>b.month.localeCompare(a.month)).map(p=>{const pc=pCost(p);const ut=p.revenue-pc;const mg=p.revenue>0?(ut/p.revenue)*100:0;const isExp=expandedClient===("proj-"+p.id);
+            return(<div key={p.id} className="card" style={{marginBottom:8,borderLeft:`4px solid ${p.status==="Completado"?"#2563eb":p.status==="En curso"?"#52525b":"#71717a"}`}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setExpandedClient(isExp?null:"proj-"+p.id)}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:14,color:"#a1a1aa"}}>{isExp?"▾":"▸"}</span>
+                  <span style={{fontWeight:600}}>{p.name}</span>
+                  <span style={{fontSize:11,color:"#a1a1aa"}}>{clients.find(c=>c.id===p.clientId)?.name}</span>
+                  <span className={`badge ${p.status==="Completado"?"bg":p.status==="En curso"?"bb":"ba"}`} style={{fontSize:10}}>{p.status}</span>
+                  <span style={{fontSize:11,color:"#a1a1aa"}}>{p.month}</span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:12}}>
+                  <span className="tg" style={{fontWeight:700}}>{fmt(p.revenue)}</span>
+                  <span className="tr" style={{fontSize:12}}>{fmt(pc)}</span>
+                  <span className={`badge ${mg>=30?"bg":mg>=15?"ba":"br"}`} style={{fontSize:10}}>{mg.toFixed(0)}%</span>
+                  <button className="btn btn-gray btn-sm" onClick={e=>{e.stopPropagation();setEditProject({...p});}}>✎</button>
+                  <button className="del-btn" onClick={e=>{e.stopPropagation();if(confirm(`¿Eliminar proyecto "${p.name}"?`))setProjects(prev=>prev.filter(x=>x.id!==p.id));}}>✕</button>
+                </div>
+              </div>
+              {isExp&&(<div style={{marginTop:12,borderTop:"1px solid #f4f4f5",paddingTop:12}}>
+                <div className="grid g3" style={{marginBottom:10}}>
+                  <div style={{textAlign:"center"}}><div className="kpi-sub">Ingreso</div><div style={{fontWeight:700}} className="tg">{fmt(p.revenue)}</div></div>
+                  <div style={{textAlign:"center"}}><div className="kpi-sub">Costo total</div><div style={{fontWeight:700}} className="tr">{fmt(pc)}</div></div>
+                  <div style={{textAlign:"center"}}><div className="kpi-sub">Utilidad</div><div style={{fontWeight:700}} className={ut>=0?"tg":"tr"}>{fmt(ut)}</div></div>
+                </div>
+                <div style={{fontSize:12,fontWeight:600,color:"#71717a",marginBottom:6}}>Gastos del proyecto</div>
+                {(p.expenses||[]).map(ex=>(<div key={ex.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,padding:"5px 10px",background:"#fff1f2",borderRadius:6,fontSize:12}}>
+                  <span style={{flex:1}}>{ex.name}</span>
+                  <span style={{fontWeight:600,color:"#e11d48"}}>{fmt(ex.amount)}</span>
+                  <button className="del-btn" onClick={()=>{setProjects(projects.map(pp=>pp.id===p.id?{...pp,expenses:pp.expenses.filter(e=>e.id!==ex.id)}:pp));}}>✕</button>
+                </div>))}
+                <ProjExpForm onAdd={(n,a)=>{setProjects(projects.map(pp=>pp.id===p.id?{...pp,expenses:[...(pp.expenses||[]),{id:Date.now(),name:n,amount:a}]}:pp));}}/>
+              </div>)}
+            </div>);
+          })}
+          {projects.length===0&&<div style={{color:"#a1a1aa",fontSize:12,textAlign:"center",padding:16}}>No hay proyectos.</div>}
+          <div className="total-bar" style={{marginTop:12}}>
+            <div><div style={{fontSize:11,color:"#71717a",textTransform:"uppercase"}}>Total Proyectos</div>
+              <div style={{display:"flex",gap:20,fontSize:14,fontWeight:700,marginTop:4}}>
+                <span className="tg">Ingreso: {fmt(projects.reduce((s,p)=>s+p.revenue,0))}</span>
+                <span className="tr">Costo: {fmt(projects.reduce((s,p)=>s+pCost(p),0))}</span>
+                <span style={{color:"#fff"}}>Utilidad: {fmt(projects.reduce((s,p)=>s+(p.revenue-pCost(p)),0))}</span>
+              </div>
+            </div>
           </div>
         </>)}
 
@@ -749,7 +784,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           <div style={{textAlign:"right",marginBottom:12}}>
             <button className="btn btn-blue" onClick={()=>setShowForm("team")}><Ic d={ic.plus} size={14} color="#fff"/> Agregar Persona</button>
           </div>
-          {showForm==="team"&&<TeamForm clients={clients} onAdd={t=>{setTeam(prev=>[...prev,{...t,id:Date.now()}]);setShowForm(null);}} onClose={()=>setShowForm(null)}/>}
+          {showForm==="team"&&<TeamForm clients={clients} preClient={preClient} onAdd={t=>{setTeam(prev=>[...prev,{...t,id:Date.now()}]);setShowForm(null);setPreClient(null);}} onClose={()=>{setShowForm(null);setPreClient(null);}}/>}}
 
           {/* ── Equipos por marca ── */}
           <div className="sl">Equipos por Marca</div>
@@ -829,6 +864,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                     const myRoles=myAssigns.map(a=>a.role).join(", ");
                     return <PersonCard key={m.id} m={m} ctxLabel={myRoles} ctxAmount={myAmount}/>;
                   })}
+                  <button className="btn btn-sm btn-gray" style={{marginTop:4}} onClick={()=>{setPreClient(c.id);setShowForm("team");}}>+ Agregar persona a {c.name}</button>
                 </div>);
               })}
 
@@ -846,6 +882,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                   const myRoles=m.assignments.map(a=>a.role).join(", ");
                   return <PersonCard key={m.id} m={m} ctxLabel={myRoles} ctxAmount={m.inversion||m.bruto}/>;
                 })}
+                <button className="btn btn-sm btn-gray" style={{marginTop:4}} onClick={()=>{setPreClient(null);setShowForm("team");}}>+ Agregar persona transversal</button>
                 {/* Bonos transversales de gente que también tiene marca */}
                 {(()=>{const bonos=[];team.forEach(t=>{if(t.assignments.every(a=>a.clientId===null))return;
                   t.assignments.filter(a=>a.clientId===null).forEach(a=>bonos.push({person:t,assign:a}));});
@@ -863,25 +900,30 @@ function App({userEmail="local",onLogout,cloudMode=false}){
 
         {/* ═══ EGRESOS > GASTOS ═══ */}
         {page==="gastos"&&(<>
-          <div className="grid g4" style={{marginBottom:16}}>
-            <div className="card"><div className="kpi-label">Fijos</div><div className="kpi-value tr">{fmt(calc.tFixed)}</div></div>
+          <div className="grid g5" style={{marginBottom:16}}>
+            <div className="card"><div className="kpi-label">Servicios</div><div className="kpi-value tr">{fmt(calc.tFixed)}</div></div>
+            <div className="card"><div className="kpi-label">Gastos Oficina</div><div className="kpi-value tr">{fmt(calc.tOffice)}</div></div>
             <div className="card"><div className="kpi-label">Digitales</div><div className="kpi-value tb">{fmt(calc.tDigital)}</div></div>
-            <div className="card"><div className="kpi-label">Caja Chica</div><div className="kpi-value ta">{fmt(calc.tVar+calc.tCajaCloud)}</div><div className="kpi-sub">Manual: {fmt(calc.tVar)} + App: {fmt(calc.tCajaCloud)}</div></div>
-            <div className="card"><div className="kpi-label">Costos Proy.</div><div className="kpi-value tr">{fmt(calc.totalPCost)}</div></div>
+            <div className="card"><div className="kpi-label">Costos Variables</div><div className="kpi-value ta">{fmt(calc.tVar)}</div></div>
+            <div className="card"><div className="kpi-label">Caja Chica App</div><div className="kpi-value ta">{fmt(calc.tCajaCloud)}</div></div>
           </div>
           <div className="tabs">
-            {[["fijos","Fijos"],["digital","Digitales"],["variable","Caja Chica"],["oficina","Oficina"],["inversion","Inversión"],["proyectos","Costos Proyecto"]].map(([k,l])=>(
+            {[["fijos","Servicios"],["oficina","Gastos Oficina"],["digital","Digitales"],["costovar","Costos Variables"],["variable","Caja Chica"],["inversion","Inversión"]].map(([k,l])=>(
               <button key={k} className={`tab ${gastoTab===k?"active":""}`} onClick={()=>{setGastoTab(k);if(k==="variable"&&cloudMode)loadCajaChica(vm);}}>{l}</button>
             ))}
           </div>
-          {gastoTab==="fijos"&&<ExpBlock title="Gastos Fijos (mensuales)" items={fixedExp} total={calc.tFixed} color="tr" onAdd={e=>setFixedExp(p=>[...p,{...e,id:Date.now()}])} onDel={id=>setFixedExp(fixedExp.filter(e=>e.id!==id))}/>}
+          {gastoTab==="fijos"&&<ExpBlock title="Servicios (mensuales)" items={fixedExp} total={calc.tFixed} color="tr" onAdd={e=>setFixedExp(p=>[...p,{...e,id:Date.now()}])} onDel={id=>setFixedExp(fixedExp.filter(e=>e.id!==id))}/>}
           {gastoTab==="digital"&&<ExpBlock title="Servicios Digitales" items={digitalExp} total={calc.tDigital} color="tb" onAdd={e=>setDigitalExp(p=>[...p,{...e,id:Date.now()}])} onDel={id=>setDigitalExp(digitalExp.filter(e=>e.id!==id))}/>}
+          {gastoTab==="costovar"&&(<div>
+            <div className="info-box" style={{marginBottom:12}}>Costos variables mensuales que no son fijos ni digitales. Se registran por mes.</div>
+            <ExpBlock title={`Costos Variables — ${ML[parseInt(vm.split("-")[1])-1]} ${selYear}`} items={variableExp.filter(e=>e.month===vm)} total={calc.tVar} color="ta" onAdd={e=>setVariableExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setVariableExp(variableExp.filter(e=>e.id!==id))}/>
+          </div>)}
           {gastoTab==="variable"&&(<div>
             {/* Balance cards per person */}
             {cloudMode&&<div>
               <div className="sl">SALDOS DE CAJA CHICA POR PERSONA</div>
               <div className="grid g3" style={{marginBottom:12}}>
-                {CAJA_PERSONAS.map(p=>{const b=cajaBalances[p]||{asignado:0,gastado:0,saldo:0};const color=b.saldo<=0?"#e11d48":b.saldo<100?"#71717a":"#18181b";
+                {CAJA_PERSONAS.map(p=>{const b=cajaBalances[p]||{asignado:0,gastado:0,saldo:0};const color=b.saldo<=0?"#e11d48":b.saldo<100?"#71717a":"#2563eb";
                   return(<div key={p} className="card" style={{borderLeft:`4px solid ${color}`}}>
                     <div style={{fontSize:12,fontWeight:600}}>{nameFromEmail(p)}</div>
                     <div style={{fontSize:20,fontWeight:700,color,margin:"4px 0"}}>{fmt(b.saldo)}</div>
@@ -937,51 +979,11 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                 }}>Exportar CSV</button>}
               </div>
             </div>}
-            <div className="sl">GASTOS VARIABLES MANUALES</div>
-            <ExpBlock title={`Gastos Variables / Otros (${vm})`} items={variableExp.filter(e=>e.month===vm)} total={calc.tVar} color="ta" onAdd={e=>setVariableExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setVariableExp(variableExp.filter(e=>e.id!==id))}/>
+            {!cloudMode&&<div className="info-box">Conecta Supabase para ver los gastos de la app móvil de caja chica.</div>}
           </div>)}
           {gastoTab==="oficina"&&<ExpBlock title="Gastos de Oficina" items={officeExp} total={calc.tOffice} color="" onAdd={e=>setOfficeExp(p=>[...p,{...e,id:Date.now()}])} onDel={id=>setOfficeExp(officeExp.filter(e=>e.id!==id))}/>}
           {gastoTab==="inversion"&&<ExpBlock title={`Inversión (${vm})`} items={investExp.filter(e=>e.month===vm)} total={calc.tInvest} color="tb" onAdd={e=>setInvestExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setInvestExp(investExp.filter(e=>e.id!==id))}/>}
-          {gastoTab==="proyectos"&&(()=>{
-            const mProjs=projects.filter(p=>p.month===vm);const allProjs=projects.filter(p=>p.status!=="Completado"||p.month===vm);
-            const shown=mProjs.length>0?mProjs:allProjs.length>0?allProjs:projects.slice(-3);
-            return(<div>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:12}}><span style={{fontWeight:600,fontSize:13}}>Costos por Proyecto</span><span className="font-bold tp">{fmt(calc.totalPCost)}</span></div>
-            <div className="info-box">Cada proyecto tiene sus propios gastos. Agrega costos conforme se van generando. El total de gastos es lo que aparece en reportes.</div>
-            {shown.map(p=>{const pc=pCost(p);const ut=p.revenue-pc;const mg=p.revenue>0?(ut/p.revenue)*100:0;const isExp=expandedClient===("proj-"+p.id);
-              return(<div key={p.id} className="card" style={{marginBottom:8,borderLeft:`4px solid ${p.status==="Completado"?"#18181b":p.status==="En curso"?"#52525b":"#71717a"}`}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setExpandedClient(isExp?null:"proj-"+p.id)}>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    <span style={{fontSize:14,color:"#a1a1aa"}}>{isExp?"▾":"▸"}</span>
-                    <span style={{fontWeight:600}}>{p.name}</span>
-                    <span style={{fontSize:11,color:"#a1a1aa"}}>{clients.find(c=>c.id===p.clientId)?.name}</span>
-                    <span className={`badge ${p.status==="Completado"?"bg":p.status==="En curso"?"bb":"ba"}`} style={{fontSize:10}}>{p.status}</span>
-                    <span className="badge" style={{fontSize:10,background:"#f4f4f5",color:"#71717a"}}>{(p.expenses||[]).length} gastos</span>
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:16}}>
-                    <span style={{fontSize:12,color:"#a1a1aa"}}>{fmt(p.revenue)}</span>
-                    <span style={{fontWeight:700,fontSize:14}} className="tr">{fmt(pc)}</span>
-                    <span className={`badge ${mg>=30?"bg":mg>=15?"ba":"br"}`} style={{fontSize:10}}>{mg.toFixed(0)}%</span>
-                  </div>
-                </div>
-                {isExp&&(<div style={{marginTop:12,borderTop:"1px solid #f4f4f5",paddingTop:12}}>
-                  <div className="grid g3" style={{marginBottom:10}}>
-                    <div style={{textAlign:"center"}}><div className="kpi-sub">Ingreso</div><div style={{fontWeight:700}} className="tg">{fmt(p.revenue)}</div></div>
-                    <div style={{textAlign:"center"}}><div className="kpi-sub">Costo total</div><div style={{fontWeight:700}} className="tr">{fmt(pc)}</div></div>
-                    <div style={{textAlign:"center"}}><div className="kpi-sub">Utilidad</div><div style={{fontWeight:700}} className={ut>=0?"tg":"tr"}>{fmt(ut)}</div></div>
-                  </div>
-                  <div style={{fontSize:12,fontWeight:600,color:"#71717a",marginBottom:6}}>Gastos del proyecto</div>
-                  {(p.expenses||[]).map(ex=>(<div key={ex.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,padding:"5px 10px",background:"#fff1f2",borderRadius:6,fontSize:12}}>
-                    <span style={{flex:1}}>{ex.name}</span>
-                    <span style={{fontWeight:600,color:"#e11d48"}}>{fmt(ex.amount)}</span>
-                    <button className="del-btn" onClick={()=>{setProjects(projects.map(pp=>pp.id===p.id?{...pp,expenses:pp.expenses.filter(e=>e.id!==ex.id)}:pp));}}>✕</button>
-                  </div>))}
-                  <ProjExpForm onAdd={(n,a)=>{setProjects(projects.map(pp=>pp.id===p.id?{...pp,expenses:[...(pp.expenses||[]),{id:Date.now(),name:n,amount:a}]}:pp));}}/>
-                </div>)}
-              </div>);
-            })}
-            {shown.length===0&&<div style={{color:"#a1a1aa",fontSize:12,textAlign:"center",padding:16}}>No hay proyectos.</div>}
-          </div>);})()}
+          {/* Project costs moved to Proyectos page — they don't affect general flow */}
         </>)}
 
         {/* ═══ CONTROL > FACTURAS ═══ */}
@@ -1048,11 +1050,9 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                   <td style={{fontWeight:600}}>{inv.number}</td><td style={{color:"#a1a1aa",fontSize:12}}>{inv.date}</td>
                   <td>{clients.find(c=>c.id===inv.clientId)?.name||"—"}</td><td>{inv.concept}</td>
                   <td className="text-right font-bold tg">{fmt(inv.amount)}</td>
-                  <td className="text-center"><span className={`badge ${stColor}`}>{inv.status}</span></td>
+                  <td className="text-center"><select value={inv.status} onChange={e=>setInvoices(invoices.map(i=>i.id===inv.id?{...i,status:e.target.value}:i))} style={{fontSize:11,padding:"4px 6px",borderRadius:6}}><option>Emitida</option><option>Por cobrar</option><option>Cobrada</option></select></td>
                   <td className="text-center" style={{whiteSpace:"nowrap"}}>
-                    {inv.status==="Emitida"&&<button className="btn btn-sm" style={{background:"#71717a",color:"#fff",fontSize:11,padding:"3px 8px",borderRadius:6}} onClick={()=>setInvoices(invoices.map(i=>i.id===inv.id?{...i,status:"Por cobrar"}:i))}>→ Por Cobrar</button>}
-                    {inv.status==="Por cobrar"&&<button className="btn btn-green btn-sm" onClick={()=>setInvoices(invoices.map(i=>i.id===inv.id?{...i,status:"Cobrada"}:i))}>Cobrar</button>}
-                    <button className="btn btn-sm btn-gray" style={{marginLeft:4,fontSize:10,padding:"3px 6px"}} onClick={()=>setEditInvoice(inv.id)} title="Editar factura">✎</button>
+                    <button className="btn btn-sm btn-gray" style={{fontSize:10,padding:"3px 6px"}} onClick={()=>setEditInvoice(inv.id)} title="Editar factura">✎</button>
                   </td>
                 </tr>);})}
                 {filtInv.length===0&&<tr><td colSpan={7} className="text-center" style={{color:"#a1a1aa",padding:24}}>No hay facturas en esta categoría.</td></tr>}
@@ -1076,9 +1076,10 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           /* Sim calculations */
           const simDedCost=simTeam.reduce((s,t)=>s+(t.amount||0),0);
           const simTransCost=simTransTeam.reduce((s,t)=>s+(t.amount||0),0);
+          const simBonoCost=simBono.reduce((s,b)=>s+b.amount,0);
           const simDirectGastos=simGastos.filter(g=>g.tipo==="directo").reduce((s,g)=>s+(g.amount||0),0);
           const simOHGastos=simGastos.filter(g=>g.tipo==="overhead").reduce((s,g)=>s+(g.amount||0),0);
-          const simDirectTotal=simDedCost+simDirectGastos; /* costos que se cargan directo al cliente */
+          const simDirectTotal=simDedCost+simBonoCost+simDirectGastos; /* costos que se cargan directo al cliente */
           const simFeeVal=parseInt(simFee)||0;
 
           /* New totals WITH new client — transversal + gastos OH suben overhead; gastos fijos/oficina no cambian */
@@ -1150,6 +1151,13 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               <button type="button" className="del-btn" onClick={()=>setSimTransTeam(simTransTeam.filter((_,j)=>j!==i))}>✕</button>
             </div>))}
             <button className="btn btn-sm btn-gray" style={{marginTop:4}} onClick={()=>setSimTransTeam([...simTransTeam,{id:Date.now(),role:"",amount:0}])}>+ Agregar transversal</button>
+            <div style={{fontWeight:600,fontSize:12,marginBottom:4,marginTop:12}}>Bonos <span style={{fontWeight:400,color:"#a1a1aa"}}>(bonos por persona, se suman como costo directo)</span></div>
+            {simBono.map((b,i)=>(<div key={b.id} style={{display:"flex",gap:6,marginBottom:4,alignItems:"center"}}>
+              <input value={b.name} onChange={e=>{const nb=[...simBono];nb[i]={...b,name:e.target.value};setSimBono(nb);}} placeholder="Persona / concepto" style={{flex:1,fontSize:12,padding:"5px 8px"}}/>
+              <input type="number" value={b.amount||""} onChange={e=>{const nb=[...simBono];nb[i]={...b,amount:parseInt(e.target.value)||0};setSimBono(nb);}} placeholder="Monto (S/)" style={{width:110,fontSize:12,padding:"5px 8px",textAlign:"right"}}/>
+              <button type="button" className="del-btn" onClick={()=>setSimBono(simBono.filter((_,j)=>j!==i))}>✕</button>
+            </div>))}
+            <button className="btn btn-sm btn-gray" style={{marginTop:4}} onClick={()=>setSimBono([...simBono,{id:Date.now(),name:"",amount:0}])}>+ Agregar bono</button>
             <div style={{fontWeight:600,fontSize:12,marginBottom:4,marginTop:12}}>Otros Gastos <span style={{fontWeight:400,color:"#a1a1aa"}}>(gasolina, correo, viáticos, herramientas, etc.)</span></div>
             {simGastos.map((g,i)=>(<div key={g.id} style={{display:"flex",gap:6,marginBottom:4,alignItems:"center"}}>
               <input value={g.name} onChange={e=>{const ng=[...simGastos];ng[i]={...g,name:e.target.value};setSimGastos(ng);}} placeholder="Concepto (ej: Gasolina)" style={{flex:1,fontSize:12,padding:"5px 8px"}}/>
@@ -1163,17 +1171,18 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           </div>
 
           {/* Results */}
-          <div className="card" style={{marginBottom:16,borderLeft:"3px solid #18181b"}}>
+          <div className="card" style={{marginBottom:16,borderLeft:"3px solid #2563eb"}}>
             <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>Resultado: {simName}</div>
             <div className="grid g3" style={{marginBottom:16}}>
               <div className="card" style={{background:"#f4f4f5"}}><div className="kpi-label">Fee Mínimo (margen 0%)</div><div className="kpi-value tg">{fmt(feeMinimo)}</div><div className="kpi-sub">Punto de equilibrio</div></div>
               <div className="card" style={{background:"#f4f4f5"}}><div className="kpi-label">Fee Sugerido ({simMarginTarget}%)</div><div className="kpi-value tb">{fmt(feeSugerido)}</div><div className="kpi-sub">Margen objetivo</div></div>
-              <div className="card" style={{background:newClientMargin>=simMarginTarget?"#f4f4f5":newClientMargin>=0?"#fafafa":"#fff1f2"}}><div className="kpi-label">Fee Ingresado</div><div className="kpi-value" style={{color:newClientMargin>=simMarginTarget?"#18181b":newClientMargin>=0?"#71717a":"#e11d48"}}>{simFeeVal>0?fmt(simFeeVal):"—"}</div><div className="kpi-sub">{simFeeVal>0?`Margen: ${newClientMargin.toFixed(1)}%`:"Ingresa un fee"}</div></div>
+              <div className="card" style={{background:newClientMargin>=simMarginTarget?"#eff6ff":newClientMargin>=0?"#fafafa":"#fff1f2"}}><div className="kpi-label">Fee Ingresado</div><div className="kpi-value" style={{color:newClientMargin>=simMarginTarget?"#2563eb":newClientMargin>=0?"#71717a":"#e11d48"}}>{simFeeVal>0?fmt(simFeeVal):"—"}</div><div className="kpi-sub">{simFeeVal>0?`Margen: ${newClientMargin.toFixed(1)}%`:"Ingresa un fee"}</div></div>
             </div>
             {simFeeVal>0&&<>
               <div style={{fontWeight:600,fontSize:12,marginBottom:8}}>Desglose con fee de {fmt(simFeeVal)}</div>
               <div className="detail-row"><span>Fee</span><span className="tg font-bold">{fmt(simFeeVal)}</span></div>
               <div className="detail-row"><span>(−) Equipo Dedicado ({simTeam.filter(t=>t.amount>0).length} persona{simTeam.filter(t=>t.amount>0).length!==1?"s":""})</span><span className="tr">{fmt(simDedCost)}</span></div>
+              {simBonoCost>0&&<div className="detail-row"><span>(−) Bonos ({simBono.filter(b=>b.amount>0).length} bono{simBono.filter(b=>b.amount>0).length!==1?"s":""})</span><span className="tr">{fmt(simBonoCost)}</span></div>}
               {simDirectGastos>0&&<div className="detail-row"><span>(−) Gastos Directos ({simGastos.filter(g=>g.tipo==="directo"&&g.amount>0).length} concepto{simGastos.filter(g=>g.tipo==="directo"&&g.amount>0).length!==1?"s":""})</span><span className="tr">{fmt(simDirectGastos)}</span></div>}
               {simTransCost>0&&<div className="detail-row" style={{paddingLeft:16,fontSize:12,color:"#52525b"}}><span>↳ Transversal nuevo ({simTransTeam.filter(t=>t.amount>0).length}): {fmt(simTransCost)} → overhead</span></div>}
               {simOHGastos>0&&<div className="detail-row" style={{paddingLeft:16,fontSize:12,color:"#52525b"}}><span>↳ Gastos overhead ({simGastos.filter(g=>g.tipo==="overhead"&&g.amount>0).length}): {fmt(simOHGastos)} → overhead</span></div>}
@@ -1235,60 +1244,40 @@ function App({userEmail="local",onLogout,cloudMode=false}){
         {/* ═══ REPORTES > COMERCIAL ═══ */}
         {page==="comercial"&&(()=>{
           const hData=history.map(h=>({...h,ventas:h.income,utilidad:h.total}));
+          const curH=hData.find(h=>h.m===vm)||hData[0];
           const maxV=Math.max(...hData.map(h=>h.ventas),1);
-          const maxU=Math.max(...hData.map(h=>Math.abs(h.utilidad)),1);
-          const chartH=260;
-          const barH=chartH-40;
+          const chartH=260;const barH=chartH-40;
           const accVentas=hData.reduce((s,h)=>s+h.ventas,0);
           const accUtil=hData.reduce((s,h)=>s+h.utilidad,0);
-          const accMg=accVentas>0?(accUtil/accVentas*100):0;
-          const mVentas=hData.filter(h=>h.ventas>0);
-          const avgVentas=mVentas.length>0?accVentas/mVentas.length:0;
-          const bestMonth=hData.reduce((b,h)=>h.ventas>b.ventas?h:b,hData[0]);
-          const bestUtilM=hData.reduce((b,h)=>h.utilidad>b.utilidad?h:b,hData[0]);
           return(<>
-          <div className="sl">Reporte Comercial — 2026</div>
-          {/* KPIs anuales */}
-          <div className="grid g4" style={{marginBottom:20}}>
-            <div className="card" style={{borderLeft:"3px solid #18181b"}}><div className="kpi-label">Ventas Acumuladas</div><div className="kpi-value tg">{fmt(accVentas)}</div><div className="kpi-sub">{mVentas.length} meses con ventas</div></div>
-            <div className="card" style={{borderLeft:`4px solid ${accUtil>=0?"#52525b":"#e11d48"}`}}><div className="kpi-label">Utilidad Acumulada</div><div className={`kpi-value ${accUtil>=0?"tb":"tr"}`}>{fmt(accUtil)}</div><div className="kpi-sub">Margen: {accMg.toFixed(1)}%</div></div>
-            <div className="card" style={{borderLeft:"4px solid #52525b"}}><div className="kpi-label">Promedio Mensual</div><div className="kpi-value" style={{color:"#52525b"}}>{fmt(Math.round(avgVentas))}</div><div className="kpi-sub">ventas / mes</div></div>
-            <div className="card" style={{borderLeft:"4px solid #71717a"}}><div className="kpi-label">Mejor Mes (Ventas)</div><div className="kpi-value ta">{bestMonth.month}</div><div className="kpi-sub">{fmt(bestMonth.ventas)}</div></div>
+          <div className="sl">Reporte Comercial — {selYear}</div>
+          <div className="grid g2" style={{marginBottom:20}}>
+            <div className="card" style={{borderLeft:"3px solid #2563eb"}}><div className="kpi-label">Ventas del Mes — {ML[parseInt(vm.split("-")[1])-1]}</div><div className="kpi-value tg">{fmt(curH.ventas)}</div><div className="kpi-sub">Fees: {fmt(curH.fees)} + Proyectos: {fmt(curH.income-curH.fees)}</div></div>
+            <div className="card" style={{borderLeft:`3px solid ${curH.utilidad>=0?"#2563eb":"#dc2626"}`}}><div className="kpi-label">Utilidad del Mes — {ML[parseInt(vm.split("-")[1])-1]}</div><div className={`kpi-value ${curH.utilidad>=0?"tg":"tr"}`}>{fmt(curH.utilidad)}</div><div className="kpi-sub">Estructura: {fmt(curH.sProfit)} + Proyectos: {fmt(curH.pProfit)}</div></div>
           </div>
-          {/* Gráfico: Barras (ventas) + Línea (utilidad) */}
+          {/* Chart: Ventas bars + Utilidad line */}
           <div className="card" style={{marginBottom:20}}>
             <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Ventas vs Utilidad — Mes a Mes</div>
-            <div style={{fontSize:11,color:"#a1a1aa",marginBottom:16}}>Barras = Ventas (Fees + Proyectos) · Línea = Utilidad Neta</div>
+            <div style={{fontSize:11,color:"#a1a1aa",marginBottom:16}}>Barras = Ventas · Línea = Utilidad</div>
             <div style={{position:"relative",height:chartH,display:"flex",alignItems:"flex-end",gap:0,padding:"0 4px"}}>
-              {/* Grid lines */}
               {[0,25,50,75,100].map(p=><div key={p} style={{position:"absolute",left:0,right:0,bottom:40+barH*(p/100),height:1,background:"#f4f4f5",zIndex:0}}/>)}
-              {/* Y-axis labels */}
-              {[0,50,100].map(p=><div key={p} style={{position:"absolute",left:-4,bottom:36+barH*(p/100),fontSize:9,color:"#d4d4d8"}}>{fmt(Math.round(maxV*(p/100)))}</div>)}
-              {/* Bars */}
               {hData.map((h,i)=>{
                 const bH=Math.max((h.ventas/maxV)*barH,2);
                 return(<div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:chartH,position:"relative",zIndex:1}}>
-                  <div style={{fontSize:9,color:"#18181b",fontWeight:700,marginBottom:2}}>{h.ventas>0?fmt(h.ventas):""}</div>
-                  <div style={{width:"60%",maxWidth:48,height:bH,background:"linear-gradient(180deg,#18181b,#3f3f46)",borderRadius:"6px 6px 0 0",position:"relative"}}/>
+                  <div style={{fontSize:9,color:"#2563eb",fontWeight:700,marginBottom:2}}>{h.ventas>0?fmt(h.ventas):""}</div>
+                  <div style={{width:"60%",maxWidth:48,height:bH,background:"linear-gradient(180deg,#2563eb,#3b82f6)",borderRadius:"6px 6px 0 0"}}/>
                   <div style={{fontSize:10,color:"#71717a",fontWeight:600,marginTop:6,height:20}}>{h.month}</div>
                 </div>);
               })}
-              {/* Line overlay (utilidad) */}
               <svg style={{position:"absolute",left:0,top:0,width:"100%",height:chartH,pointerEvents:"none",zIndex:2}}>
                 {hData.map((h,i)=>{
-                  if(i===0)return null;
-                  const prev=hData[i-1];
-                  const w=100/hData.length;
-                  const x1=(i-1)*w+w/2;
-                  const x2=i*w+w/2;
+                  if(i===0)return null;const prev=hData[i-1];const w=100/hData.length;
+                  const x1=(i-1)*w+w/2;const x2=i*w+w/2;
                   const scaleU=v=>chartH-40-((v/maxV)*barH);
-                  const y1=scaleU(prev.utilidad);
-                  const y2=scaleU(h.utilidad);
-                  return(<line key={i} x1={`${x1}%`} y1={y1} x2={`${x2}%`} y2={y2} stroke="#52525b" strokeWidth="2.5" strokeLinecap="round"/>);
+                  return(<line key={i} x1={`${x1}%`} y1={scaleU(prev.utilidad)} x2={`${x2}%`} y2={scaleU(h.utilidad)} stroke="#52525b" strokeWidth="2.5" strokeLinecap="round"/>);
                 })}
                 {hData.map((h,i)=>{
-                  const w=100/hData.length;
-                  const cx=i*w+w/2;
+                  const w=100/hData.length;const cx=i*w+w/2;
                   const cy=chartH-40-((h.utilidad/maxV)*barH);
                   return(<g key={i}>
                     <circle cx={`${cx}%`} cy={cy} r="5" fill="#fff" stroke="#52525b" strokeWidth="2.5"/>
@@ -1297,40 +1286,30 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                 })}
               </svg>
             </div>
-            <Leg items={[["Ventas","#18181b"],["Utilidad","#52525b"]]}/>
+            <Leg items={[["Ventas","#2563eb"],["Utilidad","#52525b"]]}/>
           </div>
-          {/* Tabla detalle */}
-          <div className="card" style={{padding:0,overflow:"hidden"}}>
-            <table style={{fontSize:12}}>
-              <thead><tr><th>Mes</th><th className="text-right">Fees</th><th className="text-right">Proyectos</th><th className="text-right" style={{color:"#18181b",fontWeight:700}}>Ventas Total</th><th className="text-right">Egresos</th><th className="text-right" style={{color:"#52525b"}}>Utilidad</th><th className="text-center">Margen</th></tr></thead>
-              <tbody>
-                {hData.map((h,i)=>{const mg=h.ventas>0?(h.utilidad/h.ventas*100):0;return(
-                  <tr key={i} style={{background:h.month===MONTHS.find(m=>m.value===vm)?.label.split(" ")[0]?"#f4f4f5":"transparent"}}>
-                    <td style={{fontWeight:600}}>{h.month}</td>
-                    <td className="text-right">{fmt(h.fees)}</td>
-                    <td className="text-right">{fmt(h.income-h.fees)}</td>
-                    <td className="text-right font-bold tg">{fmt(h.ventas)}</td>
-                    <td className="text-right tr">{fmt(h.sExp+h.pCost)}</td>
-                    <td className={`text-right font-bold ${h.utilidad>=0?"tb":"tr"}`}>{fmt(h.utilidad)}</td>
-                    <td className="text-center"><span className={`badge ${mg>=20?"bg":mg>=10?"ba":"br"}`}>{mg.toFixed(1)}%</span></td>
-                  </tr>);})}
-                <tr style={{fontWeight:700,borderTop:"2px solid #e4e4e7",background:"#fafafa"}}>
-                  <td>TOTAL</td>
-                  <td className="text-right">{fmt(hData.reduce((s,h)=>s+h.fees,0))}</td>
-                  <td className="text-right">{fmt(hData.reduce((s,h)=>s+(h.income-h.fees),0))}</td>
-                  <td className="text-right tg">{fmt(accVentas)}</td>
-                  <td className="text-right tr">{fmt(hData.reduce((s,h)=>s+h.sExp+h.pCost,0))}</td>
-                  <td className={`text-right ${accUtil>=0?"tb":"tr"}`}>{fmt(accUtil)}</td>
-                  <td className="text-center"><span className={`badge ${accMg>=20?"bg":accMg>=10?"ba":"br"}`}>{accMg.toFixed(1)}%</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div style={{marginTop:12,display:"flex",gap:8}}>
-            <button className="btn btn-gray" onClick={()=>{
-              const rows=hData.map(h=>{const mg=h.ventas>0?(h.utilidad/h.ventas*100):0;return[h.month,h.fees,h.income-h.fees,h.ventas,h.sExp+h.pCost,h.utilidad,mg.toFixed(1)+"%"];});
-              exportCSV("comercial_2026.csv",["Mes","Fees","Proyectos","Ventas Total","Egresos","Utilidad","Margen"],rows);
-            }}>Exportar CSV</button>
+          {/* Proyectos resumen */}
+          <div className="card" style={{background:"#fafaf9",marginBottom:16}}>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>Proyectos</div>
+            <div className="grid g3" style={{marginBottom:12}}>
+              <div><div className="kpi-sub">Ventas Proyectos (mes)</div><div style={{fontWeight:800,fontSize:20,color:"#2563eb"}}>{fmt(curH.income-curH.fees)}</div></div>
+              <div><div className="kpi-sub">Utilidad Proyectos (mes)</div><div style={{fontWeight:800,fontSize:20}} className={curH.pProfit>=0?"tg":"tr"}>{fmt(curH.pProfit)}</div></div>
+              <div><div className="kpi-sub">Acumulado año</div><div style={{fontWeight:800,fontSize:20,color:"#2563eb"}}>{fmt(hData.reduce((s,h)=>s+(h.income-h.fees),0))}</div><div style={{fontSize:11,color:"#a1a1aa",marginTop:2}}>Utilidad: {fmt(hData.reduce((s,h)=>s+h.pProfit,0))}</div></div>
+            </div>
+            {(()=>{const pData=hData.filter(h=>(h.income-h.fees)>0||h.pProfit!==0);
+              if(!pData.length)return <div style={{color:"#a1a1aa",fontSize:12,textAlign:"center",padding:8}}>Sin proyectos con datos</div>;
+              const maxP=Math.max(...pData.map(h=>h.income-h.fees),1);
+              return(<div style={{display:"flex",alignItems:"flex-end",gap:8,height:140,padding:"8px 0"}}>
+                {pData.map((h,i)=>{const pV=h.income-h.fees;const bH=Math.max((pV/maxP)*100,2);
+                  return(<div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:140}}>
+                    <div style={{fontSize:8,color:"#2563eb",fontWeight:700,marginBottom:2}}>{fmt(pV)}</div>
+                    <div style={{width:"60%",maxWidth:36,height:bH,background:"#2563eb",borderRadius:"4px 4px 0 0",opacity:.8}}/>
+                    <div style={{fontSize:9,color:"#a1a1aa",fontWeight:600,marginTop:4}}>{h.month}</div>
+                    <div style={{fontSize:8,color:h.pProfit>=0?"#2563eb":"#dc2626",fontWeight:600}}>{fmt(h.pProfit)}</div>
+                  </div>);
+                })}
+              </div>);
+            })()}
           </div>
         </>);})()}
 
@@ -1407,10 +1386,10 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           {/* Mini gráficos resumen */}
           <div className="grid g2" style={{marginTop:16}}>
             <div className="card"><div style={{fontWeight:600,fontSize:13,marginBottom:12}}>Fees vs Gastos Estructura</div>
-              <SimpleBar data={history.filter(h=>h.hasData)} keys={["fees","sExp"]} colors={["#18181b","#dc2626"]}/>
-              <Leg items={[["Fees","#18181b"],["Gastos","#dc2626"]]}/></div>
+              <SimpleBar data={history.filter(h=>h.hasData)} keys={["fees","sExp"]} colors={["#2563eb","#dc2626"]}/>
+              <Leg items={[["Fees","#2563eb"],["Gastos","#dc2626"]]}/></div>
             <div className="card"><div style={{fontWeight:600,fontSize:13,marginBottom:12}}>Utilidad por Cliente (Fee)</div>
-              <SimpleBar data={calc.clientProfit.map(c=>({name:c.name,util:Math.round(c.structNet)}))} keys={["util"]} colors={["#18181b"]}/></div>
+              <SimpleBar data={calc.clientProfit.map(c=>({name:c.name,util:Math.round(c.structNet)}))} keys={["util"]} colors={["#2563eb"]}/></div>
           </div>
         </>);})()}
 
@@ -1519,10 +1498,11 @@ function App({userEmail="local",onLogout,cloudMode=false}){
 
         {/* ═══ REPORTES > CASHFLOW ═══ */}
         {page==="cashflow"&&(()=>{
-          /* Calcular cashflow real mes a mes: cobrado vs egresos (SIN paid media) — usa snapshots */
+          /* Build monthly data */
           const cfData=MONTHS.map(({value:m,label})=>{
-            const cobrado=invoices.filter(i=>i.month===m&&i.status==="Cobrada"&&i.type!=="paid").reduce((s,i)=>s+i.amount,0);
-            const paidIn=invoices.filter(i=>i.month===m&&i.status==="Cobrada"&&i.type==="paid").reduce((s,i)=>s+i.amount,0);
+            const fees=clients.reduce((s,c)=>s+getFee(c.id,m),0);
+            const pR=projects.filter(p=>p.month===m).reduce((s,p)=>s+p.revenue,0);
+            const pC=projects.filter(p=>p.month===m).reduce((s,p)=>s+pCost(p),0);
             const snap=monthSnapshots[m];
             const pay=snap?snap.team.reduce((s,t)=>s+(t.inversion||t.bruto||0),0):team.reduce((s,t)=>s+(t.inversion||t.bruto),0);
             const fx=snap?snap.fixedExp.reduce((s,e)=>s+e.amount,0):fixedExp.reduce((s,e)=>s+e.amount,0);
@@ -1530,123 +1510,175 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             const vr=variableExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
             const of_=snap?snap.officeExp.reduce((s,e)=>s+e.amount,0):officeExp.reduce((s,e)=>s+e.amount,0);
             const iv=investExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
-            const pC=projects.filter(p=>p.month===m).reduce((s,p)=>s+pCost(p),0);
-            const egresos=pay+fx+dg+vr+of_+iv+pC;
-            const flujo=cobrado-egresos;
-            const hasData=cobrado>0||paidIn>0||vr>0||iv>0||pC>0;
-            return{month:label.split(" ")[0],m,cobrado,paidIn,egresos,flujo,hasData,pay,fx,dg,vr,of_,iv,pC};
+            const costFijo=pay+fx+dg+vr+of_+iv;
+            const totalIn=fees+pR;
+            const utilFijo=fees-costFijo;
+            const utilProy=pR-pC;
+            const utilTotal=utilFijo+utilProy;
+            const hasData=fees>0||pR>0||vr>0||iv>0;
+            return{month:label.split(" ")[0],m,fees,pR,pC,totalIn,costFijo,utilFijo,utilProy,utilTotal,hasData};
           });
-          const cfActive=cfData.filter(h=>h.hasData);
-          const accCob=cfActive.reduce((s,h)=>s+h.cobrado,0);
-          const accEgr=cfActive.reduce((s,h)=>s+h.egresos,0);
-          const accFlujo=accCob-accEgr;
-          const accPaid=cfActive.reduce((s,h)=>s+h.paidIn,0);
-          /* Saldo acumulado */
-          let saldoAcum=0;
-          const cfWithSaldo=cfData.map(h=>{saldoAcum+=h.flujo;return{...h,saldo:saldoAcum};});
-          const maxCF=Math.max(...cfActive.map(h=>Math.max(h.cobrado,h.egresos)),1);
-          const chartH=240;const barH=chartH-40;
-          /* Pendiente de cobro (sin paid) */
-          const totalPendiente=invoices.filter(i=>i.status!=="Cobrada"&&i.type!=="paid").reduce((s,i)=>s+i.amount,0);
-          const paidPendiente=invoices.filter(i=>i.status!=="Cobrada"&&i.type==="paid").reduce((s,i)=>s+i.amount,0);
+          const act=cfData.filter(h=>h.hasData);
+          /* Current month */
+          const cur=cfData.find(h=>h.m===vm)||cfData[0];
+          /* Annual accumulators */
+          const yFees=act.reduce((s,h)=>s+h.fees,0);
+          const yPR=act.reduce((s,h)=>s+h.pR,0);
+          const yTotalIn=yFees+yPR;
+          const yCostFijo=act.reduce((s,h)=>s+h.costFijo,0);
+          const yPC=act.reduce((s,h)=>s+h.pC,0);
+          const yUtilFijo=yFees-yCostFijo;
+          const yUtilProy=yPR-yPC;
+          const yUtilTotal=yUtilFijo+yUtilProy;
+          /* Chart helpers */
+          const chartH=220;const barH=chartH-40;
+          const maxIE=Math.max(...act.map(h=>Math.max(h.totalIn,h.costFijo+h.pC)),1);
+          const maxU=Math.max(...act.map(h=>Math.abs(h.utilTotal)),1);
           return(<>
-          <div className="sl">Cashflow — Flujo de Caja Real 2026</div>
-          <div className="info-box">Dinero que realmente entró (facturas cobradas) vs dinero que salió (planilla + gastos + costos proyecto). Paid media no se incluye — es manejo personal aparte.</div>
-          {/* KPIs */}
-          <div className="grid g4" style={{marginBottom:20}}>
-            <div className="card" style={{borderLeft:"3px solid #18181b"}}><div className="kpi-label">Total Cobrado</div><div className="kpi-value tg">{fmt(accCob)}</div><div className="kpi-sub">{cfActive.length} meses</div></div>
-            <div className="card" style={{borderLeft:"4px solid #e11d48"}}><div className="kpi-label">Total Egresos</div><div className="kpi-value tr">{fmt(accEgr)}</div></div>
-            <div className="card" style={{borderLeft:`3px solid ${accFlujo>=0?"#18181b":"#dc2626"}`}}><div className="kpi-label">Flujo Neto</div><div className={`kpi-value ${accFlujo>=0?"tg":"tr"}`}>{fmt(accFlujo)}</div></div>
-            <div className="card" style={{borderLeft:"4px solid #71717a"}}><div className="kpi-label">Pendiente de Cobro</div><div className="kpi-value ta">{fmt(totalPendiente)}</div></div>
+          <div className="sl">Cashflow — {selYear}</div>
+
+          {/* ── KPIs del mes seleccionado ── */}
+          <div className="info-box" style={{marginBottom:12}}>Resumen del mes seleccionado: <strong>{ML[parseInt(vm.split("-")[1])-1]} {selYear}</strong></div>
+          <div className="grid g4" style={{marginBottom:8}}>
+            <div className="card" style={{borderLeft:"3px solid #2563eb"}}><div className="kpi-label">Ingresos Fijos (Fees)</div><div className="kpi-value tg">{fmt(cur.fees)}</div></div>
+            <div className="card" style={{borderLeft:"3px solid #2563eb"}}><div className="kpi-label">Ingresos Proyectos</div><div className="kpi-value" style={{color:"#2563eb"}}>{fmt(cur.pR)}</div></div>
+            <div className="card" style={{borderLeft:"3px solid #18181b"}}><div className="kpi-label">Total Ingreso</div><div className="kpi-value">{fmt(cur.totalIn)}</div></div>
+            <div className="card" style={{borderLeft:"3px solid #dc2626"}}><div className="kpi-label">Costos Estructura</div><div className="kpi-value tr">{fmt(cur.costFijo)}</div></div>
           </div>
-          {/* Gráfico barras dobles: cobrado vs egresos */}
-          <div className="card" style={{marginBottom:20}}>
-            <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Cobrado vs Egresos — Mes a Mes</div>
-            <div style={{fontSize:11,color:"#a1a1aa",marginBottom:16}}>Solo meses con actividad</div>
+          <div className="grid g4" style={{marginBottom:20}}>
+            <div className="card" style={{borderLeft:"3px solid #dc2626"}}><div className="kpi-label">Costos Proyecto</div><div className="kpi-value tr">{fmt(cur.pC)}</div></div>
+            <div className="card"><div className="kpi-label">Utilidad Fijos</div><div className={`kpi-value ${cur.utilFijo>=0?"tg":"tr"}`}>{fmt(cur.utilFijo)}</div></div>
+            <div className="card"><div className="kpi-label">Utilidad Proyectos</div><div className={`kpi-value ${cur.utilProy>=0?"tg":"tr"}`}>{fmt(cur.utilProy)}</div></div>
+            <div className="card" style={{background:"#18181b",borderColor:"#18181b"}}><div className="kpi-label" style={{color:"#a1a1aa"}}>Utilidad Total del Mes</div><div className="kpi-value" style={{color:cur.utilTotal>=0?"#60a5fa":"#fca5a5"}}>{fmt(cur.utilTotal)}</div></div>
+          </div>
+
+          {/* ── Chart: Ingresos vs Egresos mes a mes ── */}
+          <div className="card" style={{marginBottom:16}}>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Ingresos vs Egresos — Mes a Mes</div>
+            <div style={{fontSize:11,color:"#a1a1aa",marginBottom:16}}>Barras azules = ingresos totales · Barras rojas = costos totales</div>
             <div style={{position:"relative",height:chartH,display:"flex",alignItems:"flex-end",gap:0,padding:"0 4px"}}>
               {[0,25,50,75,100].map(p=><div key={p} style={{position:"absolute",left:0,right:0,bottom:40+barH*(p/100),height:1,background:"#f4f4f5",zIndex:0}}/>)}
-              {cfActive.map((h,i)=>{
-                const hCob=Math.max((h.cobrado/maxCF)*barH,2);
-                const hEgr=Math.max((h.egresos/maxCF)*barH,2);
+              {act.map((h,i)=>{
+                const hIn=Math.max((h.totalIn/maxIE)*barH,2);
+                const hEg=Math.max(((h.costFijo+h.pC)/maxIE)*barH,2);
                 return(<div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:chartH,position:"relative",zIndex:1}}>
                   <div style={{display:"flex",alignItems:"flex-end",gap:3,flex:1,justifyContent:"center"}}>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
-                      <div style={{fontSize:8,color:"#18181b",fontWeight:700,marginBottom:2}}>{fmt(h.cobrado)}</div>
-                      <div style={{width:22,height:hCob,background:"#18181b",borderRadius:"4px 4px 0 0"}}/>
+                      <div style={{fontSize:8,color:"#2563eb",fontWeight:700,marginBottom:2}}>{fmt(h.totalIn)}</div>
+                      <div style={{width:22,height:hIn,background:"linear-gradient(180deg,#2563eb,#3b82f6)",borderRadius:"4px 4px 0 0"}}/>
                     </div>
                     <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
-                      <div style={{fontSize:8,color:"#e11d48",fontWeight:600,marginBottom:2}}>{fmt(h.egresos)}</div>
-                      <div style={{width:22,height:hEgr,background:"#e11d48",borderRadius:"4px 4px 0 0"}}/>
+                      <div style={{fontSize:8,color:"#dc2626",fontWeight:600,marginBottom:2}}>{fmt(h.costFijo+h.pC)}</div>
+                      <div style={{width:22,height:hEg,background:"#dc2626",borderRadius:"4px 4px 0 0"}}/>
                     </div>
                   </div>
                   <div style={{fontSize:10,color:"#71717a",fontWeight:600,marginTop:6,height:20}}>{h.month}</div>
                 </div>);
               })}
             </div>
-            <Leg items={[["Cobrado","#18181b"],["Egresos","#dc2626"]]}/>
+            <Leg items={[["Ingresos","#2563eb"],["Egresos","#dc2626"]]}/>
           </div>
-          {/* Saldo acumulado línea */}
-          <div className="card" style={{marginBottom:20}}>
-            <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Saldo Acumulado</div>
-            <div style={{fontSize:11,color:"#a1a1aa",marginBottom:16}}>Evolución del flujo neto acumulado mes a mes</div>
-            {(()=>{
-              const sData=cfWithSaldo.filter(h=>h.hasData);
-              const maxS=Math.max(...sData.map(h=>Math.abs(h.saldo)),1);
-              const lH=160;
-              return(<div style={{position:"relative",height:lH+40}}>
-                <div style={{position:"absolute",left:0,right:0,top:lH/2,height:1,background:"#e4e4e7"}}/>
-                <svg style={{width:"100%",height:lH+40}}>
-                  {sData.map((h,i)=>{
-                    if(i===0)return null;
-                    const prev=sData[i-1];
-                    const w=100/sData.length;
-                    const x1=(i-1)*w+w/2;const x2=i*w+w/2;
-                    const scY=v=>lH/2-((v/maxS)*(lH/2-10));
-                    return(<line key={i} x1={`${x1}%`} y1={scY(prev.saldo)} x2={`${x2}%`} y2={scY(h.saldo)} stroke={h.saldo>=0?"#18181b":"#dc2626"} strokeWidth="2.5" strokeLinecap="round"/>);
-                  })}
-                  {sData.map((h,i)=>{
-                    const w=100/sData.length;const cx=i*w+w/2;
-                    const scY=v=>lH/2-((v/maxS)*(lH/2-10));
-                    const cy=scY(h.saldo);
-                    return(<g key={i}>
-                      <circle cx={`${cx}%`} cy={cy} r="5" fill="#fff" stroke={h.saldo>=0?"#18181b":"#dc2626"} strokeWidth="2.5"/>
-                      <text x={`${cx}%`} y={cy-12} textAnchor="middle" fontSize="9" fontWeight="600" fill={h.saldo>=0?"#18181b":"#dc2626"}>{fmt(h.saldo)}</text>
-                      <text x={`${cx}%`} y={lH+20} textAnchor="middle" fontSize="10" fill="#71717a" fontWeight="600">{h.month}</text>
-                    </g>);
-                  })}
-                </svg>
+
+          {/* ── Chart: Utilidades mes a mes ── */}
+          <div className="card" style={{marginBottom:16}}>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Utilidad Total — Mes a Mes</div>
+            <div style={{fontSize:11,color:"#a1a1aa",marginBottom:16}}>Utilidad fijos + utilidad proyectos</div>
+            <div style={{position:"relative",height:180,display:"flex",alignItems:"flex-end",gap:0,padding:"0 4px"}}>
+              {act.map((h,i)=>{
+                const bH=Math.max((Math.abs(h.utilTotal)/maxU)*140,2);
+                const isPos=h.utilTotal>=0;
+                return(<div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:180,position:"relative"}}>
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",flex:1,justifyContent:"flex-end"}}>
+                    <div style={{fontSize:9,color:isPos?"#2563eb":"#dc2626",fontWeight:700,marginBottom:2}}>{fmt(h.utilTotal)}</div>
+                    <div style={{width:"50%",maxWidth:40,height:bH,background:isPos?"#2563eb":"#dc2626",borderRadius:"6px 6px 0 0"}}/>
+                  </div>
+                  <div style={{fontSize:10,color:"#71717a",fontWeight:600,marginTop:6,height:20}}>{h.month}</div>
+                </div>);
+              })}
+            </div>
+          </div>
+
+          {/* ── Proyectos resumen ── */}
+          <div className="card" style={{background:"#fafaf9",marginBottom:16}}>
+            <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>Ventas y Utilidad de Proyectos</div>
+            <div className="grid g4" style={{marginBottom:12}}>
+              <div><div className="kpi-sub">Ventas Proy. (mes)</div><div style={{fontWeight:800,fontSize:20,color:"#2563eb"}}>{fmt(cur.pR)}</div></div>
+              <div><div className="kpi-sub">Costos Proy. (mes)</div><div style={{fontWeight:800,fontSize:20}} className="tr">{fmt(cur.pC)}</div></div>
+              <div><div className="kpi-sub">Utilidad Proy. (mes)</div><div style={{fontWeight:800,fontSize:20}} className={cur.utilProy>=0?"tg":"tr"}>{fmt(cur.utilProy)}</div></div>
+              <div><div className="kpi-sub">Utilidad Proy. (año)</div><div style={{fontWeight:800,fontSize:20,color:"#2563eb"}}>{fmt(yUtilProy)}</div></div>
+            </div>
+            {(()=>{const pAct=act.filter(h=>h.pR>0||h.pC>0);
+              if(!pAct.length)return <div style={{color:"#a1a1aa",fontSize:12,textAlign:"center",padding:8}}>Sin proyectos con datos</div>;
+              const maxP=Math.max(...pAct.map(h=>h.pR),1);
+              return(<div style={{display:"flex",alignItems:"flex-end",gap:8,height:140,padding:"8px 0"}}>
+                {pAct.map((h,i)=>{const bH=Math.max((h.pR/maxP)*100,2);
+                  return(<div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:140}}>
+                    <div style={{fontSize:8,color:"#2563eb",fontWeight:700,marginBottom:2}}>{fmt(h.pR)}</div>
+                    <div style={{width:"60%",maxWidth:36,height:bH,background:"#2563eb",borderRadius:"4px 4px 0 0",opacity:.8}}/>
+                    <div style={{fontSize:9,color:"#a1a1aa",fontWeight:600,marginTop:4}}>{h.month}</div>
+                    <div style={{fontSize:8,color:h.utilProy>=0?"#2563eb":"#dc2626",fontWeight:600}}>{fmt(h.utilProy)}</div>
+                  </div>);
+                })}
               </div>);
             })()}
           </div>
-          {/* Tabla detalle */}
+
+          {/* ── Big Card: Acumulado Anual ── */}
+          <div className="card" style={{background:"#18181b",borderColor:"#18181b",padding:28,marginBottom:16}}>
+            <div style={{fontSize:11,textTransform:"uppercase",letterSpacing:1.5,color:"#71717a",fontWeight:700,marginBottom:16}}>Acumulado Anual — {selYear}</div>
+            <div className="grid g3" style={{gap:24}}>
+              <div>
+                <div style={{fontSize:11,color:"#a1a1aa",marginBottom:4}}>Ingresos Totales</div>
+                <div style={{fontSize:28,fontWeight:800,color:"#60a5fa",letterSpacing:-.5}}>{fmt(yTotalIn)}</div>
+                <div style={{fontSize:11,color:"#71717a",marginTop:4}}>Fees: {fmt(yFees)} · Proyectos: {fmt(yPR)}</div>
+              </div>
+              <div>
+                <div style={{fontSize:11,color:"#a1a1aa",marginBottom:4}}>Gastos Totales</div>
+                <div style={{fontSize:28,fontWeight:800,color:"#fca5a5",letterSpacing:-.5}}>{fmt(yCostFijo+yPC)}</div>
+                <div style={{fontSize:11,color:"#71717a",marginTop:4}}>Estructura: {fmt(yCostFijo)} · Proyectos: {fmt(yPC)}</div>
+              </div>
+              <div>
+                <div style={{fontSize:11,color:"#a1a1aa",marginBottom:4}}>Utilidad Total</div>
+                <div style={{fontSize:28,fontWeight:800,color:yUtilTotal>=0?"#60a5fa":"#fca5a5",letterSpacing:-.5}}>{fmt(yUtilTotal)}</div>
+                <div style={{fontSize:11,color:"#71717a",marginTop:4}}>Fijos: {fmt(yUtilFijo)} · Proyectos: {fmt(yUtilProy)}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Tabla resumen ── */}
           <div className="card" style={{padding:0,overflow:"hidden"}}>
             <table style={{fontSize:12}}>
-              <thead><tr><th>Mes</th><th className="text-right">Cobrado</th><th className="text-right">Planilla</th><th className="text-right">Gastos Op.</th><th className="text-right">Costos Proy.</th><th className="text-right">Total Egresos</th><th className="text-right">Flujo</th><th className="text-right">Saldo Acum.</th></tr></thead>
+              <thead><tr><th>Mes</th><th className="text-right">Ing. Fijos</th><th className="text-right">Ing. Proy.</th><th className="text-right" style={{fontWeight:700}}>Total Ing.</th><th className="text-right">Costos Est.</th><th className="text-right">Costos Proy.</th><th className="text-right">Util. Fijos</th><th className="text-right">Util. Proy.</th><th className="text-right" style={{fontWeight:700}}>Util. Total</th></tr></thead>
               <tbody>
-                {cfWithSaldo.filter(h=>h.hasData).map((h,i)=>(<tr key={i}>
+                {act.map((h,i)=>(<tr key={i} style={{background:h.m===vm?"#eff6ff":"transparent"}}>
                   <td style={{fontWeight:600}}>{h.month}</td>
-                  <td className="text-right tg">{fmt(h.cobrado)}</td>
-                  <td className="text-right" style={{color:"#71717a"}}>{fmt(h.pay)}</td>
-                  <td className="text-right" style={{color:"#71717a"}}>{fmt(h.fx+h.dg+h.vr+h.of_+h.iv)}</td>
-                  <td className="text-right" style={{color:"#71717a"}}>{fmt(h.pC)}</td>
-                  <td className="text-right tr">{fmt(h.egresos)}</td>
-                  <td className={`text-right font-bold ${h.flujo>=0?"tg":"tr"}`}>{fmt(h.flujo)}</td>
-                  <td className={`text-right font-bold ${h.saldo>=0?"tg":"tr"}`}>{fmt(h.saldo)}</td>
+                  <td className="text-right tg">{fmt(h.fees)}</td>
+                  <td className="text-right" style={{color:"#2563eb"}}>{fmt(h.pR)}</td>
+                  <td className="text-right font-bold">{fmt(h.totalIn)}</td>
+                  <td className="text-right tr">{fmt(h.costFijo)}</td>
+                  <td className="text-right tr">{fmt(h.pC)}</td>
+                  <td className={`text-right ${h.utilFijo>=0?"tg":"tr"}`}>{fmt(h.utilFijo)}</td>
+                  <td className={`text-right ${h.utilProy>=0?"tg":"tr"}`}>{fmt(h.utilProy)}</td>
+                  <td className={`text-right font-bold ${h.utilTotal>=0?"tg":"tr"}`}>{fmt(h.utilTotal)}</td>
                 </tr>))}
                 <tr style={{fontWeight:700,borderTop:"2px solid #e4e4e7",background:"#fafafa"}}>
-                  <td>TOTAL</td><td className="text-right tg">{fmt(accCob)}</td>
-                  <td className="text-right" colSpan={3}></td>
-                  <td className="text-right tr">{fmt(accEgr)}</td>
-                  <td className={`text-right ${accFlujo>=0?"tg":"tr"}`}>{fmt(accFlujo)}</td>
-                  <td className={`text-right ${saldoAcum>=0?"tg":"tr"}`}>{fmt(cfWithSaldo.filter(h=>h.hasData).slice(-1)[0]?.saldo||0)}</td>
+                  <td>TOTAL</td>
+                  <td className="text-right tg">{fmt(yFees)}</td>
+                  <td className="text-right" style={{color:"#2563eb"}}>{fmt(yPR)}</td>
+                  <td className="text-right">{fmt(yTotalIn)}</td>
+                  <td className="text-right tr">{fmt(yCostFijo)}</td>
+                  <td className="text-right tr">{fmt(yPC)}</td>
+                  <td className={`text-right ${yUtilFijo>=0?"tg":"tr"}`}>{fmt(yUtilFijo)}</td>
+                  <td className={`text-right ${yUtilProy>=0?"tg":"tr"}`}>{fmt(yUtilProy)}</td>
+                  <td className={`text-right ${yUtilTotal>=0?"tg":"tr"}`}>{fmt(yUtilTotal)}</td>
                 </tr>
               </tbody>
             </table>
           </div>
           <div style={{marginTop:12,display:"flex",gap:8}}>
             <button className="btn btn-gray" onClick={()=>{
-              const rows=cfWithSaldo.filter(h=>h.hasData).map(h=>[h.month,h.cobrado,h.pay,h.fx+h.dg+h.vr+h.of_+h.iv,h.pC,h.egresos,h.flujo,h.saldo]);
-              exportCSV("cashflow_2026.csv",["Mes","Cobrado","Planilla","Gastos Op.","Costos Proy.","Total Egresos","Flujo","Saldo Acum."],rows);
+              const rows=act.map(h=>[h.month,h.fees,h.pR,h.totalIn,h.costFijo,h.pC,h.utilFijo,h.utilProy,h.utilTotal]);
+              exportCSV("cashflow_"+selYear+".csv",["Mes","Ing.Fijos","Ing.Proy.","Total Ing.","Costos Est.","Costos Proy.","Util.Fijos","Util.Proy.","Util.Total"],rows);
             }}>Exportar CSV</button>
           </div>
         </>);})()}
@@ -1695,13 +1727,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             </table>
           </div>
 
-          <div className="sl" style={{marginTop:24}}>Información General</div>
-          <div className="card" style={{marginBottom:12}}>
-            <div style={{display:"flex",alignItems:"center",gap:12,padding:12,background:"#f4f4f5",borderRadius:8}}>
-              <span style={{width:40,height:40,borderRadius:"50%",background:"#18181b",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:700}}>YM</span>
-              <div><div style={{fontWeight:600}}>Ynes Martínez</div><div style={{fontSize:12,color:"#71717a"}}>Administración y Pagos · Acceso completo</div></div>
-            </div>
-          </div>
+          <div className="sl" style={{marginTop:24}}>Información</div>
           <div className="card">
             <div style={{fontWeight:600,marginBottom:12}}>Cómo se calcula la rentabilidad</div>
             <div style={{fontSize:12,color:"#71717a",lineHeight:1.8}}>
@@ -1875,20 +1901,20 @@ function AssignRow({a,clients,onChange,onDel,canDel}){
   </div>);
 }
 
-function TeamForm({clients,onAdd,onClose}){
-  const[fd,setFd]=useState({name:"",regimen:"planilla",neto:""});
-  const[assigns,setAssigns]=useState([{id:Date.now(),clientId:null,role:"",amount:0}]);
+function TeamForm({clients,onAdd,onClose,preClient}){
+  const[fd,setFd]=useState({name:"",regimen:"planilla",bruto:""});
+  const[assigns,setAssigns]=useState([{id:Date.now(),clientId:preClient||null,role:"",amount:0}]);
   const isRH=fd.regimen==="rh";
-  const neto=parseInt(fd.neto)||0;
+  const bruto=parseInt(fd.bruto)||0;
+  const neto=isRH?bruto:Math.round(bruto/1.115);
   const essalud=isRH?0:Math.round(neto*0.09);
   const afp=isRH?0:Math.round(neto*0.115);
-  const bruto=neto+afp; /* sueldo bruto = neto + AFP */
-  const inversion=neto+afp+essalud; /* inversión total empresa */
+  const inversion=isRH?bruto:bruto+essalud; /* inversión total empresa = bruto + essalud for planilla */
   const totalAssigned=assigns.reduce((s,a)=>s+(a.amount||0),0);
   const submit=e=>{e.preventDefault();
     if(!fd.name.trim()){alert("Ingresa el nombre de la persona.");return;}
-    if(!neto||neto<=0){alert("El sueldo neto debe ser mayor a S/ 0.");return;}
-    if(neto>50000){alert("Verifica el sueldo: S/ "+neto.toLocaleString()+" parece muy alto.");return;}
+    if(!bruto||bruto<=0){alert("El sueldo debe ser mayor a S/ 0.");return;}
+    if(bruto>50000){alert("Verifica el sueldo: S/ "+bruto.toLocaleString()+" parece muy alto.");return;}
     const valid=assigns.filter(a=>a.role&&a.amount>0);
     if(valid.length===0){alert("Agrega al menos una asignación con rol y monto.");return;}
     onAdd({name:fd.name,regimen:fd.regimen,neto,essalud,afp,bruto,inversion,
@@ -1903,12 +1929,12 @@ function TeamForm({clients,onAdd,onClose}){
         </select>
       </div>
       <div className="form-row" style={{alignItems:"center"}}>
-        <input type="number" value={fd.neto} onChange={e=>setFd({...fd,neto:e.target.value})} placeholder={isRH?"Monto RH (S/)":"Sueldo Neto (S/)"} required/>
-        {!isRH&&neto>0&&<div style={{fontSize:11,color:"#71717a",lineHeight:1.6}}>
-          <div>AFP (11.5%): <strong>{fmt(afp)}</strong> → Bruto: <strong>{fmt(bruto)}</strong></div>
-          <div>EsSalud (9%): <strong>{fmt(essalud)}</strong> → <span className="tr" style={{fontWeight:700}}>Inversión: {fmt(inversion)}</span></div>
+        <input type="number" value={fd.bruto} onChange={e=>setFd({...fd,bruto:e.target.value})} placeholder={isRH?"Monto RH (S/)":"Sueldo Bruto (S/)"} required/>
+        {!isRH&&bruto>0&&<div style={{fontSize:11,color:"#71717a",lineHeight:1.6}}>
+          <div>Bruto: <strong>{fmt(bruto)}</strong> → Neto: <strong>{fmt(neto)}</strong></div>
+          <div>AFP (11.5%): <strong>{fmt(afp)}</strong> · EsSalud (9%): <strong>{fmt(essalud)}</strong> → <span className="tr" style={{fontWeight:700}}>Inversión: {fmt(inversion)}</span></div>
         </div>}
-        {isRH&&neto>0&&<div style={{fontSize:12,fontWeight:600}}><span style={{color:"#a1a1aa"}}>Total:</span> <span className="tr">{fmt(neto)}</span></div>}
+        {isRH&&bruto>0&&<div style={{fontSize:12,fontWeight:600}}><span style={{color:"#a1a1aa"}}>Total:</span> <span className="tr">{fmt(bruto)}</span></div>}
       </div>
       <div style={{fontSize:12,fontWeight:600,color:"#71717a",margin:"8px 0 6px"}}>Distribución del costo ({assigns.length} asignación{assigns.length>1?"es":""})</div>
       {assigns.map(a=><AssignRow key={a.id} a={a} clients={clients} canDel={assigns.length>1}
