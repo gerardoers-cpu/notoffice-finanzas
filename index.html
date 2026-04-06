@@ -364,39 +364,60 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     }}));
   };
 
-  /* ── Caja chica from cloud (read-only in main app) ── */
-  const CAJA_PERSONAS=["ynes@notoffice.pe","andrea@notoffice.pe","gerardo@notoffice.pe"];
+  /* ── Caja chica from cloud ── */
   const nameFromEmail=(e)=>e?e.split("@")[0].replace(/\./g," ").replace(/\b\w/g,c=>c.toUpperCase()):"";
+  const[cajaPersonas,setCajaPersonas]=useState([]);
   const[cajaChica,setCajaChica]=useState([]);
   const[cajaChicaAll,setCajaChicaAll]=useState([]);
   const[cajaAsignaciones,setCajaAsignaciones]=useState([]);
   const[loadingCaja,setLoadingCaja]=useState(false);
+  const[newPersonaEmail,setNewPersonaEmail]=useState("");
+  const[newPersonaNombre,setNewPersonaNombre]=useState("");
+  const[showAddPersona,setShowAddPersona]=useState(false);
   const loadCajaChica=async(month)=>{
     const sb=getSB();if(!sb)return;
     setLoadingCaja(true);
     try{
-      const[gRes,gAllRes,aRes]=await Promise.all([
+      const[gRes,gAllRes,aRes,pRes]=await Promise.all([
         sb.from("caja_chica").select("*").eq("mes",month).order("fecha",{ascending:false}),
         sb.from("caja_chica").select("*").order("fecha",{ascending:false}),
-        sb.from("caja_chica_asignaciones").select("*").order("fecha",{ascending:false})
+        sb.from("caja_chica_asignaciones").select("*").order("fecha",{ascending:false}),
+        sb.from("caja_chica_personas").select("*").eq("activo",true).order("nombre")
       ]);
       if(!gRes.error&&gRes.data)setCajaChica(gRes.data);
       if(!gAllRes.error&&gAllRes.data)setCajaChicaAll(gAllRes.data);
       if(!aRes.error&&aRes.data)setCajaAsignaciones(aRes.data);
+      if(!pRes.error&&pRes.data)setCajaPersonas(pRes.data);
     }catch(e){console.warn("Caja chica load:",e);}
     setLoadingCaja(false);
+  };
+  const CAJA_PERSONAS_EMAILS=cajaPersonas.map(p=>p.email);
+  const handleAddPersona=async()=>{
+    if(!newPersonaEmail.trim()){alert("Ingresa un email");return;}
+    const sb=getSB();if(!sb)return;
+    const nombre=newPersonaNombre.trim()||nameFromEmail(newPersonaEmail.trim());
+    const{error}=await sb.from("caja_chica_personas").insert({email:newPersonaEmail.trim().toLowerCase(),nombre,created_by:userEmail});
+    if(error){if(error.code==="23505")alert("Esta persona ya existe");else alert("Error: "+error.message);return;}
+    setNewPersonaEmail("");setNewPersonaNombre("");setShowAddPersona(false);loadCajaChica(vm);setSaveMsg("Persona agregada");setTimeout(()=>setSaveMsg(""),3000);
+  };
+  const handleRemovePersona=async(id,email)=>{
+    if(!confirm(`¿Eliminar a ${nameFromEmail(email)} de caja chica?`))return;
+    const sb=getSB();if(!sb)return;
+    const{error}=await sb.from("caja_chica_personas").update({activo:false}).eq("id",id);
+    if(error){alert("Error: "+error.message);return;}
+    loadCajaChica(vm);setSaveMsg("Persona eliminada");setTimeout(()=>setSaveMsg(""),3000);
   };
   useEffect(()=>{if(cloudMode)loadCajaChica(vm);},[vm,cloudMode]);
   const totalCajaCloud=cajaChica.reduce((s,g)=>s+parseFloat(g.monto||0),0);
   const cajaBalances=useMemo(()=>{
     const b={};
-    CAJA_PERSONAS.forEach(p=>{
+    CAJA_PERSONAS_EMAILS.forEach(p=>{
       const totalAsig=cajaAsignaciones.filter(a=>a.persona_email===p).reduce((s,a)=>s+parseFloat(a.monto||0),0);
       const totalGast=cajaChicaAll.filter(g=>g.user_email===p).reduce((s,g)=>s+parseFloat(g.monto||0),0);
       b[p]={asignado:totalAsig,gastado:totalGast,saldo:totalAsig-totalGast};
     });
     return b;
-  },[cajaChicaAll,cajaAsignaciones]);
+  },[cajaChicaAll,cajaAsignaciones,CAJA_PERSONAS_EMAILS]);
 
   /* ── Load from cloud on first mount ── */
   useEffect(()=>{
@@ -921,11 +942,28 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           {gastoTab==="variable"&&(<div>
             {/* Balance cards per person */}
             {cloudMode&&<div>
-              <div className="sl">SALDOS DE CAJA CHICA POR PERSONA</div>
+              {/* ── Personas management ── */}
+              <div className="sl" style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span>EQUIPO CAJA CHICA</span>
+                <button className="btn btn-sm btn-green" onClick={()=>setShowAddPersona(!showAddPersona)}>{showAddPersona?"Cancelar":"+ Agregar persona"}</button>
+              </div>
+              {showAddPersona&&(
+                <div className="form-card" style={{marginBottom:12}}>
+                  <h4>Agregar persona a caja chica</h4>
+                  <div className="form-row">
+                    <input value={newPersonaEmail} onChange={e=>setNewPersonaEmail(e.target.value)} placeholder="Email (ej: juan@notoffice.pe)" style={{minWidth:200}}/>
+                    <input value={newPersonaNombre} onChange={e=>setNewPersonaNombre(e.target.value)} placeholder="Nombre (opcional)"/>
+                    <button className="btn btn-sm btn-green" onClick={handleAddPersona}>Agregar</button>
+                  </div>
+                </div>
+              )}
               <div className="grid g3" style={{marginBottom:12}}>
-                {CAJA_PERSONAS.map(p=>{const b=cajaBalances[p]||{asignado:0,gastado:0,saldo:0};const color=b.saldo<=0?"#e11d48":b.saldo<100?"#71717a":"#2563eb";
-                  return(<div key={p} className="card" style={{borderLeft:`4px solid ${color}`}}>
-                    <div style={{fontSize:12,fontWeight:600}}>{nameFromEmail(p)}</div>
+                {CAJA_PERSONAS_EMAILS.map(p=>{const b=cajaBalances[p]||{asignado:0,gastado:0,saldo:0};const color=b.saldo<=0?"#e11d48":b.saldo<100?"#71717a":"#2563eb";
+                  const persona=cajaPersonas.find(cp=>cp.email===p);
+                  return(<div key={p} className="card" style={{borderLeft:`4px solid ${color}`,position:"relative"}}>
+                    <button onClick={()=>handleRemovePersona(persona?.id,p)} title="Eliminar persona" style={{position:"absolute",top:8,right:8,background:"none",border:"none",color:"#d4d4d8",cursor:"pointer",fontSize:14,padding:2}}>✕</button>
+                    <div style={{fontSize:12,fontWeight:600}}>{persona?.nombre||nameFromEmail(p)}</div>
+                    <div style={{fontSize:10,color:"#a1a1aa",marginBottom:2}}>{p}</div>
                     <div style={{fontSize:20,fontWeight:700,color,margin:"4px 0"}}>{fmt(b.saldo)}</div>
                     <div style={{fontSize:10,color:"#a1a1aa"}}>Asignado: {fmt(b.asignado)} · Gastado: {fmt(b.gastado)}</div>
                   </div>);
@@ -941,7 +979,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                   <div className="form-row">
                     <select value={asigPersona} onChange={e=>setAsigPersona(e.target.value)} style={{minWidth:160}}>
                       <option value="">Seleccionar persona...</option>
-                      {CAJA_PERSONAS.map(p=><option key={p} value={p}>{nameFromEmail(p)} — Saldo: {fmt((cajaBalances[p]||{}).saldo||0)}</option>)}
+                      {CAJA_PERSONAS_EMAILS.map(p=><option key={p} value={p}>{(cajaPersonas.find(cp=>cp.email===p)?.nombre)||nameFromEmail(p)} — Saldo: {fmt((cajaBalances[p]||{}).saldo||0)}</option>)}
                     </select>
                     <input type="number" value={asigMonto} onChange={e=>setAsigMonto(e.target.value)} placeholder="Monto S/" min="1" step="0.01"/>
                     <input value={asigNota} onChange={e=>setAsigNota(e.target.value)} placeholder="Nota (opcional)"/>
@@ -953,13 +991,14 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               {loadingCaja?<div style={{textAlign:"center",padding:12,color:"#a1a1aa"}}>Cargando...</div>:
               cajaChica.length===0?<div style={{textAlign:"center",padding:12,color:"#a1a1aa",fontSize:12}}>Sin gastos de app móvil este mes</div>:(
                 <div className="card" style={{padding:0,overflow:"hidden",marginBottom:12}}>
-                  <table><thead><tr><th>Fecha</th><th>Persona</th><th>Concepto</th><th>Categoría</th><th className="text-right">Monto</th><th>Foto</th></tr></thead>
+                  <table><thead><tr><th>Fecha</th><th>Persona</th><th>Concepto</th><th>Categoría</th><th>Marca</th><th className="text-right">Monto</th><th>Foto</th></tr></thead>
                   <tbody>{cajaChica.map(g=>(
                     <tr key={g.id}>
                       <td style={{fontSize:12}}>{new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}</td>
                       <td style={{fontSize:12}}>{g.user_name||nameFromEmail(g.user_email)}</td>
                       <td>{g.concepto}</td>
                       <td><span className="badge">{g.categoria}</span></td>
+                      <td><span className="badge" style={g.marca&&g.marca!=="Agencia"?{background:"#2563eb",color:"#fff"}:{}}>{g.marca||"Agencia"}</span></td>
                       <td className="text-right font-bold tr">{fmt(g.monto)}</td>
                       <td className="text-center">{g.foto_url?<a href={g.foto_url} target="_blank" rel="noopener" style={{fontSize:16}}>📎</a>:"—"}</td>
                     </tr>
@@ -973,8 +1012,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                 <button className="btn btn-sm btn-gray" onClick={()=>loadCajaChica(vm)}>↻ Actualizar</button>
                 {cajaChica.length>0&&<button className="btn btn-sm btn-gray" style={{marginLeft:8}} onClick={()=>{
                   exportCSV("caja-chica-"+vm+".csv",
-                    ["Fecha","Persona","Email","Concepto","Categoría","Monto","Foto URL"],
-                    cajaChica.map(g=>[g.fecha,g.user_name,g.user_email,g.concepto,g.categoria,g.monto,g.foto_url||""])
+                    ["Fecha","Persona","Email","Concepto","Categoría","Marca","Monto","Foto URL"],
+                    cajaChica.map(g=>[g.fecha,g.user_name,g.user_email,g.concepto,g.categoria,g.marca||"Agencia",g.monto,g.foto_url||""])
                   );
                 }}>Exportar CSV</button>}
               </div>
