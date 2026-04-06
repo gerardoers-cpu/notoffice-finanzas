@@ -304,19 +304,38 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   };
 
   /* ── Caja chica from cloud (read-only in main app) ── */
+  const CAJA_PERSONAS=["ynes@notoffice.pe","andrea@notoffice.pe","gerardo@notoffice.pe"];
+  const nameFromEmail=(e)=>e?e.split("@")[0].replace(/\./g," ").replace(/\b\w/g,c=>c.toUpperCase()):"";
   const[cajaChica,setCajaChica]=useState([]);
+  const[cajaChicaAll,setCajaChicaAll]=useState([]);
+  const[cajaAsignaciones,setCajaAsignaciones]=useState([]);
   const[loadingCaja,setLoadingCaja]=useState(false);
   const loadCajaChica=async(month)=>{
     const sb=getSB();if(!sb)return;
     setLoadingCaja(true);
     try{
-      const{data,error}=await sb.from("caja_chica").select("*").eq("mes",month).order("fecha",{ascending:false});
-      if(!error&&data)setCajaChica(data);
+      const[gRes,gAllRes,aRes]=await Promise.all([
+        sb.from("caja_chica").select("*").eq("mes",month).order("fecha",{ascending:false}),
+        sb.from("caja_chica").select("*").order("fecha",{ascending:false}),
+        sb.from("caja_chica_asignaciones").select("*").order("fecha",{ascending:false})
+      ]);
+      if(!gRes.error&&gRes.data)setCajaChica(gRes.data);
+      if(!gAllRes.error&&gAllRes.data)setCajaChicaAll(gAllRes.data);
+      if(!aRes.error&&aRes.data)setCajaAsignaciones(aRes.data);
     }catch(e){console.warn("Caja chica load:",e);}
     setLoadingCaja(false);
   };
   useEffect(()=>{if(cloudMode)loadCajaChica(vm);},[vm,cloudMode]);
   const totalCajaCloud=cajaChica.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+  const cajaBalances=useMemo(()=>{
+    const b={};
+    CAJA_PERSONAS.forEach(p=>{
+      const totalAsig=cajaAsignaciones.filter(a=>a.persona_email===p).reduce((s,a)=>s+parseFloat(a.monto||0),0);
+      const totalGast=cajaChicaAll.filter(g=>g.user_email===p).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      b[p]={asignado:totalAsig,gastado:totalGast,saldo:totalAsig-totalGast};
+    });
+    return b;
+  },[cajaChicaAll,cajaAsignaciones]);
 
   /* ── Load from cloud on first mount ── */
   useEffect(()=>{
@@ -783,27 +802,65 @@ function App({userEmail="local",onLogout,cloudMode=false}){
 
         {/* ═══ EGRESOS > GASTOS ═══ */}
         {page==="gastos"&&(<>
-          <div className="grid g5" style={{marginBottom:16}}>
+          <div className="grid g4" style={{marginBottom:16}}>
             <div className="card"><div className="kpi-label">Fijos</div><div className="kpi-value tr">{fmt(calc.tFixed)}</div></div>
             <div className="card"><div className="kpi-label">Digitales</div><div className="kpi-value tb">{fmt(calc.tDigital)}</div></div>
-            <div className="card"><div className="kpi-label">Caja Chica</div><div className="kpi-value ta">{fmt(calc.tVar)}</div></div>
-            <div className="card"><div className="kpi-label">App Móvil</div><div className="kpi-value tp">{fmt(calc.tCajaCloud)}</div></div>
+            <div className="card"><div className="kpi-label">Caja Chica</div><div className="kpi-value ta">{fmt(calc.tVar+calc.tCajaCloud)}</div><div className="kpi-sub">Manual: {fmt(calc.tVar)} + App: {fmt(calc.tCajaCloud)}</div></div>
             <div className="card"><div className="kpi-label">Costos Proy.</div><div className="kpi-value tr">{fmt(calc.totalPCost)}</div></div>
           </div>
-          {cloudMode&&totalCajaCloud>0&&<div className="card" style={{marginBottom:16,borderLeft:"4px solid #7c3aed",background:"#faf5ff"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div><div style={{fontSize:12,fontWeight:600,color:"#7c3aed"}}>Caja Chica (App Móvil)</div><div style={{fontSize:11,color:"#94a3b8"}}>{cajaChica.length} gastos registrados desde celulares</div></div>
-              <div style={{fontSize:18,fontWeight:700,color:"#7c3aed"}}>{fmt(totalCajaCloud)}</div>
-            </div>
-          </div>}
           <div className="tabs">
-            {[["fijos","Fijos"],["digital","Digitales"],["variable","Caja Chica"],["oficina","Oficina"],["inversion","Inversión"],["proyectos","Costos Proyecto"],["cajaApp","App Móvil"]].map(([k,l])=>(
-              <button key={k} className={`tab ${gastoTab===k?"active":""}`} onClick={()=>{setGastoTab(k);if(k==="cajaApp"&&cloudMode)loadCajaChica(vm);}}>{l}</button>
+            {[["fijos","Fijos"],["digital","Digitales"],["variable","Caja Chica"],["oficina","Oficina"],["inversion","Inversión"],["proyectos","Costos Proyecto"]].map(([k,l])=>(
+              <button key={k} className={`tab ${gastoTab===k?"active":""}`} onClick={()=>{setGastoTab(k);if(k==="variable"&&cloudMode)loadCajaChica(vm);}}>{l}</button>
             ))}
           </div>
           {gastoTab==="fijos"&&<ExpBlock title="Gastos Fijos (mensuales)" items={fixedExp} total={calc.tFixed} color="tr" onAdd={e=>setFixedExp(p=>[...p,{...e,id:Date.now()}])} onDel={id=>setFixedExp(fixedExp.filter(e=>e.id!==id))}/>}
           {gastoTab==="digital"&&<ExpBlock title="Servicios Digitales" items={digitalExp} total={calc.tDigital} color="tb" onAdd={e=>setDigitalExp(p=>[...p,{...e,id:Date.now()}])} onDel={id=>setDigitalExp(digitalExp.filter(e=>e.id!==id))}/>}
-          {gastoTab==="variable"&&<ExpBlock title={`Caja Chica / Variables (${vm})`} items={variableExp.filter(e=>e.month===vm)} total={calc.tVar} color="ta" onAdd={e=>setVariableExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setVariableExp(variableExp.filter(e=>e.id!==id))}/>}
+          {gastoTab==="variable"&&(<div>
+            {/* Balance cards per person */}
+            {cloudMode&&<div>
+              <div className="sl">SALDOS DE CAJA CHICA POR PERSONA</div>
+              <div className="grid g3" style={{marginBottom:12}}>
+                {CAJA_PERSONAS.map(p=>{const b=cajaBalances[p]||{asignado:0,gastado:0,saldo:0};const color=b.saldo<=0?"#e11d48":b.saldo<100?"#d97706":"#059669";
+                  return(<div key={p} className="card" style={{borderLeft:`4px solid ${color}`}}>
+                    <div style={{fontSize:12,fontWeight:600}}>{nameFromEmail(p)}</div>
+                    <div style={{fontSize:20,fontWeight:700,color,margin:"4px 0"}}>{fmt(b.saldo)}</div>
+                    <div style={{fontSize:10,color:"#94a3b8"}}>Asignado: {fmt(b.asignado)} · Gastado: {fmt(b.gastado)}</div>
+                  </div>);
+                })}
+              </div>
+              <div className="sl">GASTOS REGISTRADOS DESDE APP MÓVIL — {vm}</div>
+              {loadingCaja?<div style={{textAlign:"center",padding:12,color:"#94a3b8"}}>Cargando...</div>:
+              cajaChica.length===0?<div style={{textAlign:"center",padding:12,color:"#94a3b8",fontSize:12}}>Sin gastos de app móvil este mes</div>:(
+                <div className="card" style={{padding:0,overflow:"hidden",marginBottom:12}}>
+                  <table><thead><tr><th>Fecha</th><th>Persona</th><th>Concepto</th><th>Categoría</th><th className="text-right">Monto</th><th>Foto</th></tr></thead>
+                  <tbody>{cajaChica.map(g=>(
+                    <tr key={g.id}>
+                      <td style={{fontSize:12}}>{new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}</td>
+                      <td style={{fontSize:12}}>{g.user_name||nameFromEmail(g.user_email)}</td>
+                      <td>{g.concepto}</td>
+                      <td><span className="badge">{g.categoria}</span></td>
+                      <td className="text-right font-bold tr">{fmt(g.monto)}</td>
+                      <td className="text-center">{g.foto_url?<a href={g.foto_url} target="_blank" rel="noopener" style={{fontSize:16}}>📎</a>:"—"}</td>
+                    </tr>
+                  ))}</tbody></table>
+                  <div style={{padding:"10px 12px",borderTop:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:13}}>
+                    <span>Total App Móvil ({vm})</span><span className="tp">{fmt(totalCajaCloud)}</span>
+                  </div>
+                </div>
+              )}
+              <div style={{marginBottom:12,textAlign:"right"}}>
+                <button className="btn btn-sm btn-gray" onClick={()=>loadCajaChica(vm)}>↻ Actualizar</button>
+                {cajaChica.length>0&&<button className="btn btn-sm btn-gray" style={{marginLeft:8}} onClick={()=>{
+                  exportCSV("caja-chica-"+vm+".csv",
+                    ["Fecha","Persona","Email","Concepto","Categoría","Monto","Foto URL"],
+                    cajaChica.map(g=>[g.fecha,g.user_name,g.user_email,g.concepto,g.categoria,g.monto,g.foto_url||""])
+                  );
+                }}>Exportar CSV</button>}
+              </div>
+            </div>}
+            <div className="sl">GASTOS VARIABLES MANUALES</div>
+            <ExpBlock title={`Gastos Variables / Otros (${vm})`} items={variableExp.filter(e=>e.month===vm)} total={calc.tVar} color="ta" onAdd={e=>setVariableExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setVariableExp(variableExp.filter(e=>e.id!==id))}/>
+          </div>)}
           {gastoTab==="oficina"&&<ExpBlock title="Gastos de Oficina" items={officeExp} total={calc.tOffice} color="" onAdd={e=>setOfficeExp(p=>[...p,{...e,id:Date.now()}])} onDel={id=>setOfficeExp(officeExp.filter(e=>e.id!==id))}/>}
           {gastoTab==="inversion"&&<ExpBlock title={`Inversión (${vm})`} items={investExp.filter(e=>e.month===vm)} total={calc.tInvest} color="tb" onAdd={e=>setInvestExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setInvestExp(investExp.filter(e=>e.id!==id))}/>}
           {gastoTab==="proyectos"&&(()=>{
@@ -846,48 +903,6 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             })}
             {shown.length===0&&<div style={{color:"#94a3b8",fontSize:12,textAlign:"center",padding:16}}>No hay proyectos.</div>}
           </div>);})()}
-          {gastoTab==="cajaApp"&&(
-            <div>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                <div><span style={{fontWeight:600,fontSize:13}}>Gastos desde App Móvil</span><span style={{fontSize:11,color:"#94a3b8",marginLeft:8}}>({cajaChica.length} gastos)</span></div>
-                <div><span className="font-bold tp">{fmt(totalCajaCloud)}</span>
-                  <button className="btn btn-sm btn-gray" style={{marginLeft:8}} onClick={()=>loadCajaChica(vm)}>↻ Actualizar</button>
-                </div>
-              </div>
-              <div className="info-box">Estos gastos fueron registrados por Andrea, Gerardo e Ynes desde la app de caja chica en sus celulares. Se integran automáticamente al sistema.</div>
-              {!cloudMode&&<div className="alert alert-amber">Conecta a Supabase (nube) para ver los gastos de la app móvil.</div>}
-              {loadingCaja?<div style={{textAlign:"center",padding:20,color:"#94a3b8"}}>Cargando gastos...</div>:
-              cajaChica.length===0?<div style={{textAlign:"center",padding:20,color:"#94a3b8"}}>No hay gastos de app móvil en este mes.</div>:(
-              <div className="card" style={{padding:0,overflow:"hidden"}}>
-                <table>
-                  <thead><tr><th>Fecha</th><th>Persona</th><th>Concepto</th><th>Categoría</th><th className="text-right">Monto</th><th>Foto</th></tr></thead>
-                  <tbody>
-                    {cajaChica.map(g=>(
-                      <tr key={g.id}>
-                        <td style={{fontSize:12}}>{new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}</td>
-                        <td style={{fontSize:12}}>{g.user_name||g.user_email.split("@")[0]}</td>
-                        <td>{g.concepto}</td>
-                        <td><span className="badge">{g.categoria}</span></td>
-                        <td className="text-right font-bold tr">{fmt(g.monto)}</td>
-                        <td className="text-center">{g.foto_url?<a href={g.foto_url} target="_blank" rel="noopener" style={{fontSize:16}}>📎</a>:"—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div style={{padding:"10px 12px",borderTop:"1px solid #e2e8f0",display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:13}}>
-                  <span>Total App Móvil</span><span className="tp">{fmt(totalCajaCloud)}</span>
-                </div>
-              </div>)}
-              {cajaChica.length>0&&<div style={{marginTop:8,textAlign:"right"}}>
-                <button className="btn btn-sm btn-gray" onClick={()=>{
-                  exportCSV("caja-chica-"+vm+".csv",
-                    ["Fecha","Persona","Email","Concepto","Categoría","Monto","Foto URL"],
-                    cajaChica.map(g=>[g.fecha,g.user_name,g.user_email,g.concepto,g.categoria,g.monto,g.foto_url||""])
-                  );
-                }}>Exportar CSV</button>
-              </div>}
-            </div>
-          )}
         </>)}
 
         {/* ═══ CONTROL > FACTURAS ═══ */}

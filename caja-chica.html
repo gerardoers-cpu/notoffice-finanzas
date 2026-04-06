@@ -9,7 +9,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiTm90T2ZmaWNlIENhamEgQ2hpY2EiLCJzaG9ydF9uYW1lIjoiQ2FqYSBDaGljYSIsImRpc3BsYXkiOiJzdGFuZGFsb25lIiwiYmFja2dyb3VuZF9jb2xvciI6IiNmOGZhZmMiLCJ0aGVtZV9jb2xvciI6IiMwNTk2NjkifQ==">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#059669">
@@ -34,6 +33,7 @@ textarea{resize:vertical;min-height:60px}
 .btn-primary{background:#059669;color:#fff}.btn-primary:hover{background:#047857}.btn-primary:disabled{opacity:.5}
 .btn-secondary{background:#f1f5f9;color:#475569}.btn-secondary:hover{background:#e2e8f0}
 .btn-google{background:#fff;color:#1e293b;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;gap:10px}
+.btn-sm{padding:10px 14px;font-size:13px;width:auto;display:inline-block}
 .photo-zone{border:2px dashed #d1d5db;border-radius:12px;padding:20px;text-align:center;cursor:pointer;color:#94a3b8;font-size:13px;transition:all .15s;position:relative;overflow:hidden}
 .photo-zone:hover,.photo-zone.drag{border-color:#059669;background:#f0fdf4;color:#059669}
 .photo-zone img{max-width:100%;max-height:200px;border-radius:8px;object-fit:contain}
@@ -43,7 +43,7 @@ textarea{resize:vertical;min-height:60px}
 .expense-left{flex:1;min-width:0}
 .expense-name{font-weight:600;font-size:14px}
 .expense-meta{font-size:12px;color:#94a3b8;margin-top:2px}
-.expense-amount{font-weight:700;font-size:15px;color:#e11d48;white-space:nowrap;margin-left:12px}
+.expense-amount{font-weight:700;font-size:15px;white-space:nowrap;margin-left:12px}
 .expense-thumb{width:40px;height:40px;border-radius:6px;object-fit:cover;margin-left:8px;cursor:pointer}
 .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;background:#f1f5f9;color:#64748b}
 .tabs{display:flex;background:#f1f5f9;border-radius:10px;padding:3px;margin-bottom:16px}
@@ -51,20 +51,22 @@ textarea{resize:vertical;min-height:60px}
 .tab.active{background:#fff;color:#1e293b;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .msg{padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px;text-align:center}
 .msg-ok{background:#ecfdf5;color:#059669}.msg-err{background:#fff1f2;color:#e11d48}
-.total-bar{background:linear-gradient(135deg,#ecfdf5,#f0fdf4);border:2px solid #a7f3d0;border-radius:14px;padding:16px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
-.total-bar .label{font-size:13px;color:#065f46}.total-bar .value{font-size:22px;font-weight:700;color:#059669}
-.month-nav{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:16px}
-.month-nav button{background:#f1f5f9;border:none;padding:8px 14px;border-radius:8px;font-size:18px;cursor:pointer;color:#64748b}
-.month-nav span{font-size:15px;font-weight:600;min-width:100px;text-align:center}
-.empty-state{text-align:center;padding:32px 16px;color:#94a3b8}
-.empty-state .icon{font-size:36px;margin-bottom:8px}
-.empty-state p{font-size:13px}
+.balance-card{border-radius:14px;padding:20px;margin-bottom:14px;text-align:center}
+.balance-ok{background:linear-gradient(135deg,#ecfdf5,#f0fdf4);border:2px solid #a7f3d0}
+.balance-low{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:2px solid #fde68a}
+.balance-zero{background:linear-gradient(135deg,#fff1f2,#ffe4e6);border:2px solid #fecdd3}
+.balance-label{font-size:12px;color:#64748b;margin-bottom:4px}
+.balance-value{font-size:28px;font-weight:700}
+.balance-sub{font-size:12px;color:#94a3b8;margin-top:6px}
+.summary-row{display:flex;justify-content:space-between;padding:8px 0;font-size:13px}
 .del-btn{background:none;border:none;color:#cbd5e1;font-size:16px;cursor:pointer;padding:4px}.del-btn:hover{color:#e11d48}
-.login-screen{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:#f8fafc;padding:20px}
-.login-box{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
 .lightbox{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.85);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
 .lightbox img{max-width:100%;max-height:90vh;border-radius:8px;object-fit:contain}
 .lightbox button{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.2);border:none;color:#fff;font-size:24px;width:40px;height:40px;border-radius:50%;cursor:pointer}
+.login-screen{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:#f8fafc;padding:20px}
+.login-box{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:380px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.asig-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:13px}
+.asig-item:last-child{border-bottom:none}
 </style>
 </head>
 <body>
@@ -74,8 +76,10 @@ const{useState,useEffect,useRef,useMemo}=React;
 
 const fmt=n=>"S/ "+Math.round(n).toLocaleString("es-PE");
 const ML=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const PERSONAS=["ynes@notoffice.pe","andrea@notoffice.pe","gerardo@notoffice.pe"];
+const nameFromEmail=(e)=>e?e.split("@")[0].replace(/\./g," ").replace(/\b\w/g,c=>c.toUpperCase()):"";
 
-/* ═══ SUPABASE CONFIG (shared with main app) ═══ */
+/* ═══ SUPABASE CONFIG ═══ */
 const SB_CONFIG_KEY="finanzas_sb_config";
 const getSBConfig=()=>{try{return JSON.parse(localStorage.getItem(SB_CONFIG_KEY)||"null");}catch(e){return null;}};
 const setSBConfig=(cfg)=>{localStorage.setItem(SB_CONFIG_KEY,JSON.stringify(cfg));};
@@ -89,7 +93,7 @@ const getSB=()=>{
 
 /* ═══ MAIN APP ═══ */
 function CajaChicaApp({user,onLogout}){
-  const[tab,setTab]=useState("nuevo"); // "nuevo" | "historial"
+  const[tab,setTab]=useState("mi_saldo");
   const[fecha,setFecha]=useState(new Date().toISOString().slice(0,10));
   const[monto,setMonto]=useState("");
   const[concepto,setConcepto]=useState("");
@@ -99,236 +103,325 @@ function CajaChicaApp({user,onLogout}){
   const[saving,setSaving]=useState(false);
   const[msg,setMsg]=useState(null);
   const[gastos,setGastos]=useState([]);
-  const[loadingHistory,setLoadingHistory]=useState(false);
+  const[asignaciones,setAsignaciones]=useState([]);
+  const[loading,setLoading]=useState(true);
   const[lightboxUrl,setLightboxUrl]=useState(null);
   const fileRef=useRef(null);
 
-  // Month navigation
-  const now=new Date();
-  const[viewMonth,setViewMonth]=useState(`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`);
-  const monthLabel=useMemo(()=>{
-    const[y,m]=viewMonth.split("-");
-    return `${ML[parseInt(m)-1]} ${y}`;
-  },[viewMonth]);
-  const prevMonth=()=>{
-    const[y,m]=viewMonth.split("-").map(Number);
-    const d=new Date(y,m-2,1);
-    setViewMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);
-  };
-  const nextMonth=()=>{
-    const[y,m]=viewMonth.split("-").map(Number);
-    const d=new Date(y,m,1);
-    setViewMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);
-  };
+  /* Asignar caja chica form */
+  const[asigPersona,setAsigPersona]=useState("");
+  const[asigMonto,setAsigMonto]=useState("");
+  const[asigNota,setAsigNota]=useState("");
 
-  // Load expenses for current month
-  const loadGastos=async()=>{
+  // Load ALL data (no month filter - continuous balance)
+  const loadData=async()=>{
     const sb=getSB();if(!sb)return;
-    setLoadingHistory(true);
+    setLoading(true);
     try{
-      const{data,error}=await sb.from("caja_chica")
-        .select("*")
-        .eq("mes",viewMonth)
-        .order("fecha",{ascending:false});
-      if(!error&&data)setGastos(data);
-    }catch(e){console.warn("Error loading:",e);}
-    setLoadingHistory(false);
+      const[gRes,aRes]=await Promise.all([
+        sb.from("caja_chica").select("*").order("fecha",{ascending:false}),
+        sb.from("caja_chica_asignaciones").select("*").order("fecha",{ascending:false})
+      ]);
+      if(!gRes.error&&gRes.data)setGastos(gRes.data);
+      if(!aRes.error&&aRes.data)setAsignaciones(aRes.data);
+    }catch(e){console.warn("Load error:",e);}
+    setLoading(false);
   };
 
-  useEffect(()=>{loadGastos();},[viewMonth]);
+  useEffect(()=>{loadData();},[]);
 
-  // Handle photo selection
-  const handlePhoto=(e)=>{
-    const file=e.target.files?.[0];
-    if(!file)return;
-    if(file.size>1048576){setMsg({type:"err",text:"La foto debe ser menor a 1 MB. Intenta con menor calidad."});return;}
-    setFoto(file);
-    const reader=new FileReader();
-    reader.onload=(ev)=>setFotoPreview(ev.target.result);
-    reader.readAsDataURL(file);
-  };
+  // Calculate balances per person
+  const balances=useMemo(()=>{
+    const b={};
+    PERSONAS.forEach(p=>{
+      const totalAsignado=asignaciones.filter(a=>a.persona_email===p).reduce((s,a)=>s+parseFloat(a.monto||0),0);
+      const totalGastado=gastos.filter(g=>g.user_email===p).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      b[p]={asignado:totalAsignado,gastado:totalGastado,saldo:totalAsignado-totalGastado};
+    });
+    return b;
+  },[gastos,asignaciones]);
 
-  // Upload photo to Supabase storage
+  const myBalance=balances[user.email]||{asignado:0,gastado:0,saldo:0};
+  const myGastos=gastos.filter(g=>g.user_email===user.email);
+
+  // Upload photo
   const uploadFoto=async()=>{
     if(!foto)return null;
     const sb=getSB();if(!sb)return null;
     const ext=foto.name.split(".").pop()||"jpg";
-    const path=`${viewMonth}/${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+    const path=`${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
     const{data,error}=await sb.storage.from("comprobantes").upload(path,foto,{contentType:foto.type});
     if(error){console.warn("Upload error:",error);return null;}
     const{data:{publicUrl}}=sb.storage.from("comprobantes").getPublicUrl(path);
     return publicUrl;
   };
 
+  const handlePhoto=(e)=>{
+    const file=e.target.files?.[0];
+    if(!file)return;
+    if(file.size>1048576){setMsg({type:"err",text:"La foto debe ser menor a 1 MB"});return;}
+    setFoto(file);
+    const reader=new FileReader();
+    reader.onload=(ev)=>setFotoPreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
   // Save expense
   const handleSave=async(e)=>{
     e.preventDefault();
-    if(!monto||parseFloat(monto)<=0){setMsg({type:"err",text:"Ingresa un monto válido"});return;}
+    const montoNum=parseFloat(monto);
+    if(!montoNum||montoNum<=0){setMsg({type:"err",text:"Ingresa un monto válido"});return;}
     if(!concepto.trim()){setMsg({type:"err",text:"Describe el gasto"});return;}
+    if(montoNum>myBalance.saldo){setMsg({type:"err",text:`Tu saldo es ${fmt(myBalance.saldo)}. No puedes gastar ${fmt(montoNum)}`});return;}
     setSaving(true);setMsg(null);
     try{
-      const sb=getSB();if(!sb){setMsg({type:"err",text:"No hay conexión a Supabase"});setSaving(false);return;}
+      const sb=getSB();if(!sb){setMsg({type:"err",text:"Sin conexión"});setSaving(false);return;}
       const fotoUrl=await uploadFoto();
-      const userName=user.email.split("@")[0].replace(/\./g," ").replace(/\b\w/g,c=>c.toUpperCase());
       const{error}=await sb.from("caja_chica").insert({
-        user_email:user.email,
-        user_name:userName,
-        fecha,
-        monto:parseFloat(monto),
-        concepto:concepto.trim(),
-        categoria:categoria.trim()||"Sin categoría",
-        foto_url:fotoUrl
+        user_email:user.email,user_name:nameFromEmail(user.email),fecha,
+        monto:montoNum,concepto:concepto.trim(),categoria:categoria.trim()||"Sin categoría",foto_url:fotoUrl
       });
-      if(error){setMsg({type:"err",text:"Error: "+error.message});}
+      if(error)setMsg({type:"err",text:"Error: "+error.message});
       else{
-        setMsg({type:"ok",text:"Gasto registrado correctamente"});
+        setMsg({type:"ok",text:"Gasto registrado"});
         setMonto("");setConcepto("");setCategoria("");setFoto(null);setFotoPreview(null);
         if(fileRef.current)fileRef.current.value="";
-        loadGastos();
-        setTimeout(()=>setMsg(null),3000);
+        loadData();setTimeout(()=>setMsg(null),3000);
       }
     }catch(e){setMsg({type:"err",text:"Error: "+e.message});}
     setSaving(false);
   };
 
-  // Delete expense
+  // Save assignment
+  const handleAsignar=async(e)=>{
+    e.preventDefault();
+    if(!asigPersona){setMsg({type:"err",text:"Selecciona una persona"});return;}
+    const m=parseFloat(asigMonto);
+    if(!m||m<=0){setMsg({type:"err",text:"Ingresa un monto válido"});return;}
+    setSaving(true);setMsg(null);
+    try{
+      const sb=getSB();if(!sb){setSaving(false);return;}
+      const{error}=await sb.from("caja_chica_asignaciones").insert({
+        persona_email:asigPersona,persona_name:nameFromEmail(asigPersona),
+        monto:m,nota:asigNota.trim()||"Asignación de caja chica",
+        asignado_por:user.email
+      });
+      if(error)setMsg({type:"err",text:"Error: "+error.message});
+      else{
+        setMsg({type:"ok",text:`${fmt(m)} asignados a ${nameFromEmail(asigPersona)}`});
+        setAsigMonto("");setAsigNota("");setAsigPersona("");
+        loadData();setTimeout(()=>setMsg(null),3000);
+      }
+    }catch(e){setMsg({type:"err",text:"Error: "+e.message});}
+    setSaving(false);
+  };
+
   const handleDelete=async(id)=>{
     if(!confirm("¿Eliminar este gasto?"))return;
     const sb=getSB();if(!sb)return;
-    const{error}=await sb.from("caja_chica").delete().eq("id",id);
-    if(!error)loadGastos();
+    await sb.from("caja_chica").delete().eq("id",id);
+    loadData();
   };
 
-  const totalMes=gastos.reduce((s,g)=>s+parseFloat(g.monto||0),0);
-  const misGastos=gastos.filter(g=>g.user_email===user.email);
-  const miTotal=misGastos.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+  const balanceClass=myBalance.saldo<=0?"balance-zero":myBalance.saldo<100?"balance-low":"balance-ok";
+  const balanceColor=myBalance.saldo<=0?"#e11d48":myBalance.saldo<100?"#d97706":"#059669";
 
   return(
     <div className="screen">
       <div className="top-bar">
         <div>
           <h1>Caja Chica</h1>
-          <div className="user-info">{user.email}</div>
+          <div className="user-info">{nameFromEmail(user.email)} · {user.email}</div>
         </div>
         <button onClick={onLogout}>Salir</button>
       </div>
 
       <div className="content">
+        {/* Balance card always visible */}
+        <div className={`balance-card ${balanceClass}`}>
+          <div className="balance-label">Mi saldo disponible</div>
+          <div className="balance-value" style={{color:balanceColor}}>{fmt(myBalance.saldo)}</div>
+          <div className="balance-sub">
+            Asignado: {fmt(myBalance.asignado)} · Gastado: {fmt(myBalance.gastado)}
+          </div>
+        </div>
+
         <div className="tabs">
-          <button className={`tab${tab==="nuevo"?" active":""}`} onClick={()=>setTab("nuevo")}>Nuevo Gasto</button>
-          <button className={`tab${tab==="historial"?" active":""}`} onClick={()=>{setTab("historial");loadGastos();}}>Historial</button>
+          <button className={`tab${tab==="mi_saldo"?" active":""}`} onClick={()=>setTab("mi_saldo")}>Nuevo Gasto</button>
+          <button className={`tab${tab==="historial"?" active":""}`} onClick={()=>setTab("historial")}>Mis Gastos</button>
+          <button className={`tab${tab==="asignar"?" active":""}`} onClick={()=>setTab("asignar")}>Asignar</button>
+          <button className={`tab${tab==="equipo"?" active":""}`} onClick={()=>setTab("equipo")}>Equipo</button>
         </div>
 
         {msg&&<div className={`msg msg-${msg.type}`}>{msg.text}</div>}
 
-        {tab==="nuevo"&&(
-          <form onSubmit={handleSave}>
-            <div className="card">
-              <h3>Registrar Gasto</h3>
-              <div className="row">
-                <div className="field">
-                  <label>Fecha</label>
-                  <input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} required/>
-                </div>
-                <div className="field">
-                  <label>Monto (S/)</label>
-                  <input type="number" step="0.01" min="0.01" value={monto} onChange={e=>setMonto(e.target.value)} placeholder="0.00" required inputMode="decimal"/>
-                </div>
-              </div>
-              <div className="field">
-                <label>Concepto</label>
-                <input type="text" value={concepto} onChange={e=>setConcepto(e.target.value)} placeholder="Ej: Taxi a reunión con cliente" required/>
-              </div>
-              <div className="field">
-                <label>Categoría (libre)</label>
-                <input type="text" value={categoria} onChange={e=>setCategoria(e.target.value)} placeholder="Ej: Transporte, Alimentación, Materiales..." list="cats"/>
-                <datalist id="cats">
-                  <option value="Transporte"/>
-                  <option value="Alimentación"/>
-                  <option value="Materiales"/>
-                  <option value="Servicios"/>
-                  <option value="Representación"/>
-                  <option value="Oficina"/>
-                  <option value="Digital"/>
-                  <option value="Otros"/>
-                </datalist>
-              </div>
-              <div className="field">
-                <label>Foto del comprobante (opcional, máx 1 MB)</label>
-                <div className="photo-zone">
-                  {fotoPreview?(
-                    <div>
-                      <img src={fotoPreview} alt="preview"/>
-                      <div style={{marginTop:8,fontSize:12}}>Toca para cambiar foto</div>
-                    </div>
-                  ):(
-                    <div>
-                      <div style={{fontSize:28,marginBottom:4}}>📷</div>
-                      <div>Toca para tomar foto o seleccionar</div>
-                    </div>
-                  )}
-                  <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto}/>
-                </div>
-              </div>
+        {/* TAB: Nuevo Gasto */}
+        {tab==="mi_saldo"&&(
+          myBalance.saldo<=0?(
+            <div className="card" style={{textAlign:"center",color:"#94a3b8"}}>
+              <div style={{fontSize:28,marginBottom:8}}>💰</div>
+              <div style={{fontWeight:600,color:"#e11d48",marginBottom:4}}>Sin saldo</div>
+              <div style={{fontSize:13}}>Pide que te asignen caja chica para poder registrar gastos.</div>
             </div>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving?"Guardando...":"Registrar Gasto"}
-            </button>
-          </form>
+          ):(
+            <form onSubmit={handleSave}>
+              <div className="card">
+                <h3>Registrar Gasto</h3>
+                <div className="row">
+                  <div className="field">
+                    <label>Fecha</label>
+                    <input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} required/>
+                  </div>
+                  <div className="field">
+                    <label>Monto (S/)</label>
+                    <input type="number" step="0.01" min="0.01" max={myBalance.saldo} value={monto} onChange={e=>setMonto(e.target.value)} placeholder="0.00" required inputMode="decimal"/>
+                  </div>
+                </div>
+                <div className="field">
+                  <label>Concepto</label>
+                  <input type="text" value={concepto} onChange={e=>setConcepto(e.target.value)} placeholder="Ej: Taxi a reunión con cliente" required/>
+                </div>
+                <div className="field">
+                  <label>Categoría</label>
+                  <input type="text" value={categoria} onChange={e=>setCategoria(e.target.value)} placeholder="Ej: Transporte, Alimentación..." list="cats"/>
+                  <datalist id="cats">
+                    <option value="Transporte"/><option value="Alimentación"/><option value="Materiales"/>
+                    <option value="Servicios"/><option value="Representación"/><option value="Oficina"/><option value="Otros"/>
+                  </datalist>
+                </div>
+                <div className="field">
+                  <label>Foto del comprobante (opcional, máx 1 MB)</label>
+                  <div className="photo-zone">
+                    {fotoPreview?(<div><img src={fotoPreview} alt="preview"/><div style={{marginTop:8,fontSize:12}}>Toca para cambiar</div></div>):(
+                      <div><div style={{fontSize:28,marginBottom:4}}>📷</div><div>Toca para tomar foto o seleccionar</div></div>
+                    )}
+                    <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto}/>
+                  </div>
+                </div>
+              </div>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving?"Guardando...":"Registrar Gasto"}
+              </button>
+            </form>
+          )
         )}
 
+        {/* TAB: Mis Gastos */}
         {tab==="historial"&&(
           <div>
-            <div className="month-nav">
-              <button onClick={prevMonth}>◀</button>
-              <span>{monthLabel}</span>
-              <button onClick={nextMonth}>▶</button>
-            </div>
-
-            <div className="total-bar">
-              <div>
-                <div className="label">Total del mes</div>
-                <div style={{fontSize:11,color:"#64748b"}}>{gastos.length} gastos</div>
-              </div>
-              <div className="value">{fmt(totalMes)}</div>
-            </div>
-
-            {gastos.length>0&&(
-              <div style={{marginBottom:12,fontSize:12,color:"#64748b",textAlign:"center"}}>
-                Mis gastos: {fmt(miTotal)} ({misGastos.length} de {gastos.length})
-              </div>
-            )}
-
-            {loadingHistory?(
-              <div className="empty-state"><p>Cargando...</p></div>
-            ):gastos.length===0?(
-              <div className="empty-state">
-                <div className="icon">📋</div>
-                <p>No hay gastos en {monthLabel}</p>
-              </div>
-            ):(
+            {loading?<div style={{textAlign:"center",padding:20,color:"#94a3b8"}}>Cargando...</div>:
+            myGastos.length===0?<div className="card" style={{textAlign:"center",color:"#94a3b8"}}><div style={{fontSize:28,marginBottom:8}}>📋</div><p>No tienes gastos registrados</p></div>:(
               <div className="card" style={{padding:8}}>
-                {gastos.map(g=>(
+                {myGastos.map(g=>(
                   <div className="expense-item" key={g.id}>
                     <div className="expense-left">
                       <div className="expense-name">{g.concepto}</div>
                       <div className="expense-meta">
-                        {g.user_name||g.user_email.split("@")[0]} · {new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}
+                        {new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short",year:"numeric"})}
                         {g.categoria&&<> · <span className="badge">{g.categoria}</span></>}
                       </div>
                     </div>
-                    <div className="expense-amount">{fmt(g.monto)}</div>
+                    <div className="expense-amount" style={{color:"#e11d48"}}>{fmt(g.monto)}</div>
                     {g.foto_url&&<img className="expense-thumb" src={g.foto_url} alt="" onClick={()=>setLightboxUrl(g.foto_url)}/>}
-                    {g.user_email===user.email&&<button className="del-btn" title="Eliminar" onClick={()=>handleDelete(g.id)}>✕</button>}
+                    <button className="del-btn" title="Eliminar" onClick={()=>handleDelete(g.id)}>✕</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* My assignments */}
+            {asignaciones.filter(a=>a.persona_email===user.email).length>0&&(
+              <div className="card" style={{marginTop:8}}>
+                <h3 style={{fontSize:13,color:"#64748b"}}>Mis asignaciones recibidas</h3>
+                {asignaciones.filter(a=>a.persona_email===user.email).map(a=>(
+                  <div className="asig-item" key={a.id}>
+                    <div>
+                      <div style={{fontWeight:600,color:"#059669"}}>+{fmt(a.monto)}</div>
+                      <div style={{fontSize:11,color:"#94a3b8"}}>{a.nota} · por {nameFromEmail(a.asignado_por)}</div>
+                    </div>
+                    <div style={{fontSize:11,color:"#94a3b8"}}>{new Date(a.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}</div>
                   </div>
                 ))}
               </div>
             )}
           </div>
         )}
+
+        {/* TAB: Asignar caja chica */}
+        {tab==="asignar"&&(
+          <form onSubmit={handleAsignar}>
+            <div className="card">
+              <h3>Asignar Caja Chica</h3>
+              <div style={{fontSize:12,color:"#64748b",marginBottom:12}}>Dale fondos a alguien del equipo para sus gastos.</div>
+              <div className="field">
+                <label>Persona</label>
+                <select value={asigPersona} onChange={e=>setAsigPersona(e.target.value)} required>
+                  <option value="">Seleccionar...</option>
+                  {PERSONAS.map(p=>(
+                    <option key={p} value={p}>{nameFromEmail(p)} — Saldo: {fmt((balances[p]||{}).saldo||0)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>Monto (S/)</label>
+                <input type="number" step="0.01" min="0.01" value={asigMonto} onChange={e=>setAsigMonto(e.target.value)} placeholder="500.00" required inputMode="decimal"/>
+              </div>
+              <div className="field">
+                <label>Nota (opcional)</label>
+                <input type="text" value={asigNota} onChange={e=>setAsigNota(e.target.value)} placeholder="Ej: Caja chica abril"/>
+              </div>
+            </div>
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving?"Asignando...":"Asignar Fondos"}
+            </button>
+          </form>
+        )}
+
+        {/* TAB: Equipo (ver todos) */}
+        {tab==="equipo"&&(
+          <div>
+            {PERSONAS.map(p=>{
+              const b=balances[p]||{asignado:0,gastado:0,saldo:0};
+              const bc=b.saldo<=0?"balance-zero":b.saldo<100?"balance-low":"balance-ok";
+              const color=b.saldo<=0?"#e11d48":b.saldo<100?"#d97706":"#059669";
+              const pGastos=gastos.filter(g=>g.user_email===p).slice(0,5);
+              return(
+                <div key={p} className="card">
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:15}}>{nameFromEmail(p)}</div>
+                      <div style={{fontSize:11,color:"#94a3b8"}}>{p}</div>
+                    </div>
+                    <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:20,fontWeight:700,color}}>{fmt(b.saldo)}</div>
+                      <div style={{fontSize:10,color:"#94a3b8"}}>de {fmt(b.asignado)}</div>
+                    </div>
+                  </div>
+                  {/* Progress bar */}
+                  <div style={{background:"#f1f5f9",borderRadius:6,height:6,marginBottom:8,overflow:"hidden"}}>
+                    <div style={{background:color,height:"100%",width:`${b.asignado>0?Math.min((b.gastado/b.asignado)*100,100):0}%`,borderRadius:6,transition:"width .3s"}}/>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#94a3b8"}}>
+                    <span>Gastado: {fmt(b.gastado)}</span>
+                    <span>Disponible: {fmt(b.saldo)}</span>
+                  </div>
+                  {pGastos.length>0&&(
+                    <div style={{marginTop:8,borderTop:"1px solid #f1f5f9",paddingTop:8}}>
+                      <div style={{fontSize:11,fontWeight:600,color:"#94a3b8",marginBottom:4}}>Últimos gastos</div>
+                      {pGastos.map(g=>(
+                        <div key={g.id} style={{display:"flex",justifyContent:"space-between",fontSize:12,padding:"3px 0"}}>
+                          <span style={{color:"#64748b"}}>{g.concepto}</span>
+                          <span style={{fontWeight:600,color:"#e11d48"}}>{fmt(g.monto)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* Lightbox para ver fotos */}
       {lightboxUrl&&(
         <div className="lightbox" onClick={()=>setLightboxUrl(null)}>
           <img src={lightboxUrl} alt="Comprobante"/>
@@ -350,8 +443,7 @@ function AuthWrapper(){
   const hasConfig=!!getSBConfig();
 
   useEffect(()=>{
-    const sb=getSB();
-    if(!sb){setLoading(false);return;}
+    const sb=getSB();if(!sb){setLoading(false);return;}
     sb.auth.getSession().then(({data:{session}})=>{
       if(session?.user)setUser({email:session.user.email});
       setLoading(false);
@@ -369,73 +461,53 @@ function AuthWrapper(){
     const{error:err}=await sb.auth.signInWithPassword({email,password});
     if(err)setError(err.message==="Invalid login credentials"?"Email o contraseña incorrectos":err.message);
   };
-
   const handleGoogleLogin=async()=>{
-    setError("");
-    const sb=getSB();if(!sb){setError("Configura Supabase primero");return;}
+    setError("");const sb=getSB();if(!sb)return;
     const{error:err}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin+window.location.pathname}});
     if(err)setError(err.message);
   };
-
   const handleLogout=async()=>{const sb=getSB();if(sb)await sb.auth.signOut();setUser(null);};
 
-  if(loading)return(
-    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",fontFamily:"Inter,sans-serif"}}>
-      <div style={{textAlign:"center"}}><div style={{fontSize:24,fontWeight:700,color:"#059669",marginBottom:8}}>Caja Chica</div><div style={{color:"#94a3b8"}}>Cargando...</div></div>
-    </div>
-  );
+  if(loading)return(<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",fontFamily:"Inter,sans-serif"}}>
+    <div style={{textAlign:"center"}}><div style={{fontSize:24,fontWeight:700,color:"#059669"}}>Caja Chica</div><div style={{color:"#94a3b8"}}>Cargando...</div></div>
+  </div>);
 
-  // Not configured — show setup
   if(!hasConfig||showSetup)return(
-    <div className="login-screen">
-      <div className="login-box">
-        <div style={{textAlign:"center",marginBottom:20}}>
-          <div style={{fontSize:24,fontWeight:700,color:"#059669",marginBottom:4}}>NotOffice Caja Chica</div>
-          <div style={{fontSize:13,color:"#94a3b8"}}>Configurar conexión a Supabase</div>
-        </div>
-        <SupabaseSetupMini onDone={()=>location.reload()}/>
+    <div className="login-screen"><div className="login-box">
+      <div style={{textAlign:"center",marginBottom:20}}>
+        <div style={{fontSize:24,fontWeight:700,color:"#059669",marginBottom:4}}>NotOffice Caja Chica</div>
+        <div style={{fontSize:13,color:"#94a3b8"}}>Configurar conexión</div>
       </div>
-    </div>
+      <SupabaseSetupMini onDone={()=>location.reload()}/>
+    </div></div>
   );
 
-  // Configured but not logged in
   if(!user)return(
-    <div className="login-screen">
-      <div className="login-box">
-        <div style={{textAlign:"center",marginBottom:20}}>
-          <div style={{fontSize:24,fontWeight:700,color:"#059669",marginBottom:4}}>NotOffice Caja Chica</div>
-          <div style={{fontSize:13,color:"#94a3b8"}}>Registra tus gastos desde el celular</div>
-        </div>
-        {error&&<div className="msg msg-err">{error}</div>}
-        <button onClick={handleGoogleLogin} className="btn btn-google" style={{marginBottom:12}}>
-          <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-          Ingresar con Google
-        </button>
-        <div style={{display:"flex",alignItems:"center",gap:12,margin:"8px 0"}}>
-          <div style={{flex:1,height:1,background:"#e2e8f0"}}/>
-          <span style={{fontSize:12,color:"#94a3b8"}}>o</span>
-          <div style={{flex:1,height:1,background:"#e2e8f0"}}/>
-        </div>
-        <form onSubmit={handleLogin}>
-          <div className="field">
-            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" required/>
-          </div>
-          <div className="field">
-            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Contraseña" required minLength={6}/>
-          </div>
-          <button type="submit" className="btn btn-primary" style={{marginBottom:8}}>Ingresar</button>
-        </form>
-        <div style={{textAlign:"center",marginTop:8}}>
-          <button onClick={()=>setShowSetup(true)} style={{background:"none",border:"none",color:"#94a3b8",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Cambiar configuración</button>
-        </div>
+    <div className="login-screen"><div className="login-box">
+      <div style={{textAlign:"center",marginBottom:20}}>
+        <div style={{fontSize:24,fontWeight:700,color:"#059669",marginBottom:4}}>NotOffice Caja Chica</div>
+        <div style={{fontSize:13,color:"#94a3b8"}}>Registra tus gastos desde el celular</div>
       </div>
-    </div>
+      {error&&<div className="msg msg-err">{error}</div>}
+      <button onClick={handleGoogleLogin} className="btn btn-google" style={{marginBottom:12}}>
+        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Ingresar con Google
+      </button>
+      <div style={{display:"flex",alignItems:"center",gap:12,margin:"8px 0"}}><div style={{flex:1,height:1,background:"#e2e8f0"}}/><span style={{fontSize:12,color:"#94a3b8"}}>o</span><div style={{flex:1,height:1,background:"#e2e8f0"}}/></div>
+      <form onSubmit={handleLogin}>
+        <div className="field"><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" required/></div>
+        <div className="field"><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Contraseña" required minLength={6}/></div>
+        <button type="submit" className="btn btn-primary">Ingresar</button>
+      </form>
+      <div style={{textAlign:"center",marginTop:8}}>
+        <button onClick={()=>setShowSetup(true)} style={{background:"none",border:"none",color:"#94a3b8",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>Cambiar configuración</button>
+      </div>
+    </div></div>
   );
 
   return <CajaChicaApp user={user} onLogout={handleLogout}/>;
 }
 
-/* ═══ MINI SUPABASE SETUP ═══ */
 function SupabaseSetupMini({onDone}){
   const cfg=getSBConfig()||{};
   const[url,setUrl]=useState(cfg.url||"");
@@ -448,19 +520,16 @@ function SupabaseSetupMini({onDone}){
     try{const sb=supabase.createClient(url,key);
       const{data,error}=await sb.from("caja_chica").select("id").limit(1);
       if(error)setResult("Error: "+error.message);
-      else{setResult("Conexión exitosa!");setSBConfig({url,key});_sb=null;
-        setTimeout(()=>onDone(),1500);}
+      else{setResult("Conexión exitosa!");setSBConfig({url,key});_sb=null;setTimeout(()=>onDone(),1500);}
     }catch(e){setResult("Error: "+e.message);}
     setTesting(false);
   };
-  return(
-    <div>
-      <div className="field"><label>Supabase URL</label><input value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://xxx.supabase.co"/></div>
-      <div className="field"><label>Supabase Anon Key</label><input value={key} onChange={e=>setKey(e.target.value)} placeholder="eyJhbGci..."/></div>
-      <button className="btn btn-primary" onClick={test} disabled={testing}>{testing?"Probando...":"Conectar"}</button>
-      {result&&<div className={`msg ${result.includes("exitosa")?"msg-ok":"msg-err"}`} style={{marginTop:12}}>{result}</div>}
-    </div>
-  );
+  return(<div>
+    <div className="field"><label>Supabase URL</label><input value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://xxx.supabase.co"/></div>
+    <div className="field"><label>Supabase Anon Key</label><input value={key} onChange={e=>setKey(e.target.value)} placeholder="eyJhbGci..."/></div>
+    <button className="btn btn-primary" onClick={test} disabled={testing}>{testing?"Probando...":"Conectar"}</button>
+    {result&&<div className={`msg ${result.includes("exitosa")?"msg-ok":"msg-err"}`} style={{marginTop:12}}>{result}</div>}
+  </div>);
 }
 
 ReactDOM.render(<AuthWrapper/>,document.getElementById("root"));
