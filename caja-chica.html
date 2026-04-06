@@ -135,7 +135,7 @@ const{useState,useEffect,useRef,useMemo}=React;
 const fmt=n=>"S/ "+Math.round(n).toLocaleString("es-PE");
 const Logo=({width=140,color="#18181b"})=>(<svg width={width} viewBox="0 0 556 53" fill={color} xmlns="http://www.w3.org/2000/svg"><polygon points="58.9 51.73 37.08 51.78 26.13 20.97 16.95 51.73 0 51.75 14.85 1.26 37.27 1.23 47.88 31.18 56.81 1.24 73.72 1.25 58.9 51.73"/><path d="M134.8,19.82c-1.85,25.09-29.46,38.53-51.69,31.24-7.11-2.33-11.96-8.56-12-15.96-.06-10.88,5.54-20.75,14.4-27.15C96.33.13,110.76-2.18,123.31,2.18c7.68,2.67,12.07,9.75,11.49,17.64ZM116.5,24.46c.63-3.82-1.52-7.11-5.37-8.14-9.45-2.52-20.67,2.1-21.77,12.95-.35,3.47,1.82,6.36,5.12,7.38,8.71,2.69,20.21-1.26,22.02-12.18Z"/><path d="M263.61,19.29c-1.4,24.88-28.33,38.77-50.9,32.1-8.5-2.51-13.65-9.92-12.81-18.67,2.35-24.53,28.87-37.72,51.23-30.89,7.84,2.39,12.94,9.33,12.49,17.46ZM236.92,35.6c4.94-2.21,7.86-6.68,8.39-11.85.34-3.3-1.57-6.2-4.78-7.22-9.62-3.05-21.34,1.79-22.35,12.7-.29,3.11,1.2,5.78,4.14,7.02,4.51,1.9,9.82,1.5,14.61-.64Z"/><path d="M506.86,32.61l-26.7.03c-1.17,1.35-1.94,3.16-2.5,5.23l30.05.06-4.05,13.82h-48.8c3.23-8.82,8.09-16.63,10.71-25.48,2.39-8.07,2.28-16.43,4.11-25.03l48.37-.02-3.9,13.84-30.09.03-.68,5.33,26.97.06-3.48,12.12Z"/><path d="M422.36,37.96c7.08.73,13.81-1.74,17.03-8.15l17.46.03c-7.1,18.3-29.22,26.89-47.29,21.67-8.39-2.42-13.49-9.69-12.77-18.32,2.03-24.41,27.74-38.01,49.56-31.62,9.65,2.83,14.76,11.99,12.39,21.63h-17.4c.27-3.65-1.58-6.57-5.01-7.52-4.15-1.15-8.76-.88-12.7,1.02-4.92,2.37-7.75,7.16-8.55,12.4-.73,4.81,2.38,8.34,7.28,8.85Z"/><path d="M315.36,20.94l-4.18,14.64-27.91.09-4.79,16.07h-17.48s14.85-50.52,14.85-50.52l46.7.06-4.25,14.55h-29.02c-.7,1.62-1.13,3.01-1.6,5.07l27.69.06Z"/><polygon points="368.43 20.95 364.23 35.6 336.3 35.65 331.52 51.75 314.05 51.75 328.9 1.22 375.56 1.27 371.43 15.8 342.22 15.82 340.71 20.89 368.43 20.95"/><polygon points="162.58 51.77 145.09 51.73 155.33 16.98 137.28 16.76 141.86 1.24 195.48 1.24 191.04 16.82 172.84 16.9 162.58 51.77"/><polygon points="384.62 51.69 367.11 51.77 381.95 1.26 399.45 1.24 384.62 51.69"/></svg>);
 const ML=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-const PERSONAS=["ynes@notoffice.pe","andrea@notoffice.pe","gerardo@notoffice.pe"];
+const MARCAS=["Marca Alpha","Marca Beta","Marca Gamma","Marca Delta","Marca Épsilon","Marca Zeta"];
 const nameFromEmail=(e)=>e?e.split("@")[0].replace(/\./g," ").replace(/\b\w/g,c=>c.toUpperCase()):"";
 
 /* ═══ SUPABASE CONFIG ═══ */
@@ -157,30 +157,32 @@ function CajaChicaApp({user,onLogout}){
   const[monto,setMonto]=useState("");
   const[concepto,setConcepto]=useState("");
   const[categoria,setCategoria]=useState("");
+  const[marca,setMarca]=useState("Agencia");
   const[foto,setFoto]=useState(null);
   const[fotoPreview,setFotoPreview]=useState(null);
   const[saving,setSaving]=useState(false);
   const[msg,setMsg]=useState(null);
   const[gastos,setGastos]=useState([]);
   const[asignaciones,setAsignaciones]=useState([]);
+  const[personas,setPersonas]=useState([]);
   const[loading,setLoading]=useState(true);
   const[lightboxUrl,setLightboxUrl]=useState(null);
   const fileRef=useRef(null);
 
-  const[asigPersona,setAsigPersona]=useState("");
-  const[asigMonto,setAsigMonto]=useState("");
-  const[asigNota,setAsigNota]=useState("");
+  const PERSONAS_EMAILS=personas.map(p=>p.email);
 
   const loadData=async()=>{
     const sb=getSB();if(!sb)return;
     setLoading(true);
     try{
-      const[gRes,aRes]=await Promise.all([
+      const[gRes,aRes,pRes]=await Promise.all([
         sb.from("caja_chica").select("*").order("fecha",{ascending:false}),
-        sb.from("caja_chica_asignaciones").select("*").order("fecha",{ascending:false})
+        sb.from("caja_chica_asignaciones").select("*").order("fecha",{ascending:false}),
+        sb.from("caja_chica_personas").select("*").eq("activo",true).order("nombre")
       ]);
       if(!gRes.error&&gRes.data)setGastos(gRes.data);
       if(!aRes.error&&aRes.data)setAsignaciones(aRes.data);
+      if(!pRes.error&&pRes.data)setPersonas(pRes.data);
     }catch(e){console.warn("Load error:",e);}
     setLoading(false);
   };
@@ -189,13 +191,13 @@ function CajaChicaApp({user,onLogout}){
 
   const balances=useMemo(()=>{
     const b={};
-    PERSONAS.forEach(p=>{
+    PERSONAS_EMAILS.forEach(p=>{
       const totalAsignado=asignaciones.filter(a=>a.persona_email===p).reduce((s,a)=>s+parseFloat(a.monto||0),0);
       const totalGastado=gastos.filter(g=>g.user_email===p).reduce((s,g)=>s+parseFloat(g.monto||0),0);
       b[p]={asignado:totalAsignado,gastado:totalGastado,saldo:totalAsignado-totalGastado};
     });
     return b;
-  },[gastos,asignaciones]);
+  },[gastos,asignaciones,PERSONAS_EMAILS]);
 
   const myBalance=balances[user.email]||{asignado:0,gastado:0,saldo:0};
   const myGastos=gastos.filter(g=>g.user_email===user.email);
@@ -233,12 +235,13 @@ function CajaChicaApp({user,onLogout}){
       const fotoUrl=await uploadFoto();
       const{error}=await sb.from("caja_chica").insert({
         user_email:user.email,user_name:nameFromEmail(user.email),fecha,
-        monto:montoNum,concepto:concepto.trim(),categoria:categoria.trim()||"Sin categoria",foto_url:fotoUrl
+        monto:montoNum,concepto:concepto.trim(),categoria:categoria.trim()||"Sin categoria",
+        marca:marca||"Agencia",foto_url:fotoUrl
       });
       if(error)setMsg({type:"err",text:"Error: "+error.message});
       else{
         setMsg({type:"ok",text:"Gasto registrado"});
-        setMonto("");setConcepto("");setCategoria("");setFoto(null);setFotoPreview(null);
+        setMonto("");setConcepto("");setCategoria("");setMarca("Agencia");setFoto(null);setFotoPreview(null);
         if(fileRef.current)fileRef.current.value="";
         loadData();setTimeout(()=>setMsg(null),3000);
       }
@@ -246,28 +249,6 @@ function CajaChicaApp({user,onLogout}){
     setSaving(false);
   };
 
-  const handleAsignar=async(e)=>{
-    e.preventDefault();
-    if(!asigPersona){setMsg({type:"err",text:"Selecciona una persona"});return;}
-    const m=parseFloat(asigMonto);
-    if(!m||m<=0){setMsg({type:"err",text:"Ingresa un monto valido"});return;}
-    setSaving(true);setMsg(null);
-    try{
-      const sb=getSB();if(!sb){setSaving(false);return;}
-      const{error}=await sb.from("caja_chica_asignaciones").insert({
-        persona_email:asigPersona,persona_name:nameFromEmail(asigPersona),
-        monto:m,nota:asigNota.trim()||"Asignacion de caja chica",
-        asignado_por:user.email
-      });
-      if(error)setMsg({type:"err",text:"Error: "+error.message});
-      else{
-        setMsg({type:"ok",text:`${fmt(m)} asignados a ${nameFromEmail(asigPersona)}`});
-        setAsigMonto("");setAsigNota("");setAsigPersona("");
-        loadData();setTimeout(()=>setMsg(null),3000);
-      }
-    }catch(e){setMsg({type:"err",text:"Error: "+e.message});}
-    setSaving(false);
-  };
 
   const handleDelete=async(id)=>{
     if(!confirm("Eliminar este gasto?"))return;
@@ -337,6 +318,13 @@ function CajaChicaApp({user,onLogout}){
                   </datalist>
                 </div>
                 <div className="field">
+                  <label>Marca o Agencia</label>
+                  <select value={marca} onChange={e=>setMarca(e.target.value)}>
+                    <option value="Agencia">Agencia (gasto general)</option>
+                    {MARCAS.map(m=>(<option key={m} value={m}>{m}</option>))}
+                  </select>
+                </div>
+                <div className="field">
                   <label>Comprobante</label>
                   <div className="photo-zone">
                     {fotoPreview?(<div><img src={fotoPreview} alt="preview"/><div style={{marginTop:8,fontSize:11,color:"#a1a1aa"}}>Toca para cambiar</div></div>):(
@@ -372,6 +360,7 @@ function CajaChicaApp({user,onLogout}){
                       <div className="expense-meta">
                         {new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short",year:"numeric"})}
                         {g.categoria&&<> &middot; <span className="badge">{g.categoria}</span></>}
+                        {g.marca&&<> &middot; <span className="badge" style={{background:g.marca==="Agencia"?"#18181b":"#2563eb",color:"#fff"}}>{g.marca}</span></>}
                       </div>
                     </div>
                     <div className="expense-amount">{fmt(g.monto)}</div>
@@ -399,40 +388,11 @@ function CajaChicaApp({user,onLogout}){
           </div>
         )}
 
-        {/* ═══ TAB: Asignar ═══ */}
-        {tab==="asignar"&&(
-          <form onSubmit={handleAsignar}>
-            <div className="card">
-              <h3>Asignar fondos</h3>
-              <div style={{fontSize:13,color:"#a1a1aa",marginBottom:16,lineHeight:1.5}}>Dale fondos a alguien del equipo.</div>
-              <div className="field">
-                <label>Persona</label>
-                <select value={asigPersona} onChange={e=>setAsigPersona(e.target.value)} required>
-                  <option value="">Seleccionar...</option>
-                  {PERSONAS.map(p=>(
-                    <option key={p} value={p}>{nameFromEmail(p)} — Saldo: {fmt((balances[p]||{}).saldo||0)}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="field">
-                <label>Monto (S/)</label>
-                <input type="number" step="0.01" min="0.01" value={asigMonto} onChange={e=>setAsigMonto(e.target.value)} placeholder="500.00" required inputMode="decimal"/>
-              </div>
-              <div className="field">
-                <label>Nota</label>
-                <input type="text" value={asigNota} onChange={e=>setAsigNota(e.target.value)} placeholder="Ej: Caja chica abril"/>
-              </div>
-            </div>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving?"Asignando...":"Asignar fondos"}
-            </button>
-          </form>
-        )}
-
         {/* ═══ TAB: Equipo ═══ */}
         {tab==="equipo"&&(
           <div>
-            {PERSONAS.map(p=>{
+            {PERSONAS_EMAILS.map(p=>{
+              const persona=personas.find(pp=>pp.email===p);
               const b=balances[p]||{asignado:0,gastado:0,saldo:0};
               const pct=b.asignado>0?Math.min((b.gastado/b.asignado)*100,100):0;
               const barColor=b.saldo<=0?"#dc2626":b.saldo<100?"#a1a1aa":"#18181b";
@@ -441,7 +401,7 @@ function CajaChicaApp({user,onLogout}){
                 <div key={p} className="person-card">
                   <div className="person-header">
                     <div>
-                      <div className="person-name">{nameFromEmail(p)}</div>
+                      <div className="person-name">{persona?.nombre||nameFromEmail(p)}</div>
                       <div className="person-email">{p}</div>
                     </div>
                     <div className="person-balance">
@@ -478,7 +438,6 @@ function CajaChicaApp({user,onLogout}){
       <div className="pill-nav">
         <button className={tab==="gasto"?"active":""} onClick={()=>setTab("gasto")}>Gasto</button>
         <button className={tab==="historial"?"active":""} onClick={()=>setTab("historial")}>Historial</button>
-        <button className={tab==="asignar"?"active":""} onClick={()=>setTab("asignar")}>Asignar</button>
         <button className={tab==="equipo"?"active":""} onClick={()=>setTab("equipo")}>Equipo</button>
       </div>
 
