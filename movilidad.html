@@ -309,7 +309,7 @@ function MainApp({user,onLogout,userRole}){
                     </tr>
                   ))}
                   {/* New entry row */}
-                  <NewEntryRow tarifario={tarifarioList} onAdd={addEntry}/>
+                  <NewEntryRow onAdd={addEntry}/>
                 </tbody>
                 {fmViajes.length>0&&<tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e4e4e7"}}>
                   <td colSpan={3}>Total</td>
@@ -497,37 +497,23 @@ function MainApp({user,onLogout,userRole}){
 }
 
 /* ── Inline new entry row component ── */
-function NewEntryRow({tarifario,onAdd}){
+function NewEntryRow({onAdd}){
   const[fecha,setFecha]=useState(new Date().toISOString().slice(0,10));
   const[loc,setLoc]=useState("");
   const[marca,setMarca]=useState("");
   const[tarifa,setTarifa]=useState("");
-  const[nota,setNota]=useState("");
-
-  const handleLocChange=(e)=>{
-    const v=e.target.value;setLoc(v);
-    const t=tarifario.find(x=>x.nombre===v);
-    if(t)setTarifa(t.tarifa.toString());
-  };
 
   const handleSubmit=()=>{
-    if(!fecha||!loc||!marca||!tarifa){alert("Completa fecha, ubicación, marca y tarifa");return;}
-    onAdd(fecha,loc,marca,parseFloat(tarifa),nota);
-    setLoc("");setMarca("");setTarifa("");setNota("");
+    if(!fecha||!loc||!marca||!tarifa){alert("Completa fecha, destino, marca y monto");return;}
+    onAdd(fecha,loc,marca,parseFloat(tarifa),"");
+    setLoc("");setMarca("");setTarifa("");
     setFecha(new Date().toISOString().slice(0,10));
   };
 
   return(
     <tr className="new-row">
       <td><input type="date" value={fecha} onChange={e=>setFecha(e.target.value)}/></td>
-      <td>
-        <select value={loc} onChange={handleLocChange}>
-          <option value="">Ubicación...</option>
-          {tarifario.map(t=><option key={t.id} value={t.nombre}>{t.nombre} ({fmt(t.tarifa)})</option>)}
-          <option value="__custom">Otra...</option>
-        </select>
-        {loc==="__custom"&&<input placeholder="Ubicación" onChange={e=>setLoc(e.target.value)} style={{marginTop:4}}/>}
-      </td>
+      <td><input type="text" value={loc} onChange={e=>setLoc(e.target.value)} placeholder="Destino..."/></td>
       <td>
         <select value={marca} onChange={e=>setMarca(e.target.value)}>
           <option value="">Marca...</option>
@@ -638,7 +624,7 @@ function FilmmakerView({user,onLogout}){
                 </td>
               </tr>
             ))}
-            <NewEntryRow tarifario={tarifarioList} onAdd={addEntry}/>
+            <NewEntryRow onAdd={addEntry}/>
           </tbody>
           {monthViajes.length>0&&<tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e4e4e7"}}>
             <td colSpan={3}>Total</td>
