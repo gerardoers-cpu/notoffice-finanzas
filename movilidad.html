@@ -332,7 +332,7 @@ function MainApp({user,onLogout,userRole}){
       {/* Tabs */}
       <div className="tabs">
         <button className={`tab ${tab==="registro"?"active":""}`} onClick={()=>setTab("registro")}>Registro Manual</button>
-        <button className={`tab ${tab==="validacion"?"active":""}`} onClick={()=>setTab("validacion")}>Validación App ({pendientes.length})</button>
+        <button className={`tab ${tab==="validacion"?"active":""}`} onClick={()=>setTab("validacion")}>Validación ({pendientes.length})</button>
         <button className={`tab ${tab==="resumen"?"active":""}`} onClick={()=>setTab("resumen")}>Resumen</button>
         <button className={`tab ${tab==="tarifario"?"active":""}`} onClick={()=>setTab("tarifario")}>Tarifario</button>
         <button className={`tab ${tab==="equipo"?"active":""}`} onClick={()=>setTab("equipo")}>Equipo</button>
@@ -404,10 +404,10 @@ function MainApp({user,onLogout,userRole}){
         </>}
       </>)}
 
-      {/* ═══ TAB: VALIDACIÓN APP ═══ */}
+      {/* ═══ TAB: VALIDACIÓN ═══ */}
       {tab==="validacion"&&(<>
         <div style={{fontSize:12,color:"#a1a1aa",marginBottom:12,background:"#fff",padding:"12px 16px",borderRadius:12,border:"1px solid #f0f0f0"}}>
-          Cuando la app de campo esté lista, los viajes registrados por filmmakers aparecerán aquí como pendientes. Solo los aprobados se reflejan en finanzas.
+          Todos los viajes del mes aparecen aquí. Aprueba o rechaza cada uno individualmente. Solo los aprobados se reflejan en finanzas.
         </div>
         {pendientes.length>0&&(
           <div className="bulk-bar">
@@ -421,21 +421,23 @@ function MainApp({user,onLogout,userRole}){
             </div>
           </div>
         )}
-        {(()=>{
-          const appViajes=filtered.filter(v=>v.origen==="app");
-          if(appViajes.length===0)return(<div className="empty"><div className="empty-icon">📱</div><div style={{fontWeight:600,fontSize:15}}>Sin viajes de la app</div><div style={{fontSize:12,marginTop:4}}>Los registros manuales se aprueban automáticamente. Aquí verás los que vengan de la app de campo.</div></div>);
-          return(<div className="card" style={{padding:0,overflow:"hidden"}}>
+        {filtered.length===0?(
+          <div className="empty"><div className="empty-icon">📋</div><div style={{fontWeight:600,fontSize:15}}>Sin viajes este mes</div><div style={{fontSize:12,marginTop:4}}>Registra viajes en la pestaña de Registro Manual o desde la app de campo.</div></div>
+        ):(
+          <div className="card" style={{padding:0,overflow:"hidden"}}>
             <table>
               <thead><tr>
-                <th style={{width:36}}><input type="checkbox" checked={appViajes.length>0&&appViajes.filter(v=>(v.estado||"pendiente")==="pendiente").every(v=>selected.has(v.id))} onChange={()=>{const p=appViajes.filter(v=>(v.estado||"pendiente")==="pendiente");if(p.every(v=>selected.has(v.id)))setSelected(new Set());else setSelected(new Set(p.map(v=>v.id)));}}/></th>
-                <th>Fecha</th><th>Filmmaker</th><th>Ubicación</th><th>Marca</th><th className="text-right">Tarifa</th><th>Estado</th><th>Acciones</th>
+                <th style={{width:36}}><input type="checkbox" checked={pendientes.length>0&&pendientes.every(v=>selected.has(v.id))} onChange={()=>{if(pendientes.every(v=>selected.has(v.id)))setSelected(new Set());else setSelected(new Set(pendientes.map(v=>v.id)));}}/></th>
+                <th>Fecha</th><th>Filmmaker</th><th>Salida</th><th>Grabación</th><th>Retorno</th><th>Marca</th><th className="text-right">Monto</th><th>Estado</th><th>Acciones</th>
               </tr></thead>
-              <tbody>{appViajes.map(v=>(
-                <tr key={v.id}>
+              <tbody>{filtered.map(v=>(
+                <tr key={v.id} style={{background:v.estado==="rechazado"?"#fef2f2":v.estado==="aprobado"?"#f0fdf4":"inherit"}}>
                   <td>{(v.estado||"pendiente")==="pendiente"&&<input type="checkbox" checked={selected.has(v.id)} onChange={()=>{const s=new Set(selected);if(s.has(v.id))s.delete(v.id);else s.add(v.id);setSelected(s);}}/>}</td>
                   <td style={{fontSize:12}}>{v.fecha}</td>
-                  <td style={{fontWeight:600,fontSize:12}}>{v.user_name}</td>
-                  <td>{v.locacion}</td>
+                  <td style={{fontWeight:600,fontSize:12}}>{v.registrado_por||v.user_name||"—"}</td>
+                  <td style={{fontSize:12}}>{v.salida||"—"}</td>
+                  <td style={{fontSize:12}}>{v.destino||"—"}</td>
+                  <td style={{fontSize:12}}>{v.retorno||"—"}</td>
                   <td><span className="badge" style={{background:"#f4f4f5",color:"#52525b"}}>{v.marca}</span></td>
                   <td className="text-right" style={{fontWeight:700}}>{fmt(v.tarifa)}</td>
                   <td><span className={`badge ${v.estado==="aprobado"?"b-ok":v.estado==="rechazado"?"b-rej":"b-pend"}`}>{v.estado||"pendiente"}</span></td>
@@ -446,8 +448,8 @@ function MainApp({user,onLogout,userRole}){
                 </tr>
               ))}</tbody>
             </table>
-          </div>);
-        })()}
+          </div>
+        )}
       </>)}
 
       {/* ═══ TAB: RESUMEN ═══ */}
