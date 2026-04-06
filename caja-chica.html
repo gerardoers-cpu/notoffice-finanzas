@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NotOffice CC</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#18181b">
+<link rel="manifest" href="/manifest-caja-chica.json">
+<link rel="apple-touch-icon" href="/icon-caja-192.png">
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('/sw-caja-chica.js')
+      .then(r=>console.log('SW registered',r.scope))
+      .catch(e=>console.log('SW failed',e));
+  });
+}
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#fafafa;color:#18181b;-webkit-text-size-adjust:100%;overflow-x:hidden}
+.screen{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;padding-bottom:80px}
+
+/* ── Top Bar: clean, no color ── */
+.top-bar{padding:20px 24px 16px;display:flex;align-items:flex-start;justify-content:space-between;background:#fafafa;position:sticky;top:0;z-index:10}
+.top-bar h1{font-size:28px;font-weight:800;color:#18181b;letter-spacing:-.5px;line-height:1.1}
+.top-bar .user-info{font-size:11px;color:#a1a1aa;margin-top:4px;font-weight:400}
+.top-bar .logout-btn{background:#18181b;border:none;color:#fff;padding:8px 16px;border-radius:20px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;letter-spacing:.3px}
+
+/* ── Content area ── */
+.content{flex:1;padding:0 20px 20px;max-width:480px;margin:0 auto;width:100%}
+
+/* ── Balance Hero Card ── */
+.balance-hero{background:#18181b;border-radius:24px;padding:32px 28px;margin-bottom:24px;text-align:center;position:relative;overflow:hidden}
+.balance-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.03)}
+.balance-hero::after{content:'';position:absolute;bottom:-20px;left:-20px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,.02)}
+.balance-hero .label{font-size:11px;text-transform:uppercase;letter-spacing:2px;color:rgba(255,255,255,.45);font-weight:600;margin-bottom:12px}
+.balance-hero .value{font-size:42px;font-weight:800;color:#fff;letter-spacing:-1.5px;line-height:1}
+.balance-hero .value.zero{color:#dc2626}
+.balance-hero .sub{display:flex;justify-content:center;gap:24px;margin-top:16px;font-size:12px;color:rgba(255,255,255,.5)}
+.balance-hero .sub span{display:flex;flex-direction:column;gap:2px}
+.balance-hero .sub .num{color:rgba(255,255,255,.8);font-weight:600}
+
+/* ── Bottom Pill Nav ── */
+.pill-nav{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#18181b;border-radius:50px;padding:5px;display:flex;gap:3px;z-index:20;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+.pill-nav button{padding:11px 18px;border:none;border-radius:50px;background:transparent;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;color:rgba(255,255,255,.45);transition:all .2s;white-space:nowrap}
+.pill-nav button.active{background:#fff;color:#18181b}
+
+/* ── Cards ── */
+.card{background:#fff;border-radius:20px;padding:24px;margin-bottom:16px;border:1px solid #f0f0f0}
+.card h3{font-size:18px;font-weight:700;margin-bottom:16px;color:#18181b;letter-spacing:-.3px}
+
+/* ── Form Elements ── */
+label{display:block;font-size:11px;font-weight:600;color:#a1a1aa;margin-bottom:6px;text-transform:uppercase;letter-spacing:.8px}
+input,select,textarea{width:100%;padding:14px 16px;border:1.5px solid #e4e4e7;border-radius:14px;font-size:16px;font-family:inherit;color:#18181b;background:#fff;-webkit-appearance:none;appearance:none;transition:all .15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#18181b;box-shadow:none}
+textarea{resize:vertical;min-height:60px}
+.field{margin-bottom:16px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── Buttons ── */
+.btn{width:100%;padding:16px;border:none;border-radius:16px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:-.2px}
+.btn-primary{background:#18181b;color:#fff}.btn-primary:hover{background:#27272a}.btn-primary:disabled{opacity:.35}
+.btn-secondary{background:#f4f4f5;color:#52525b}.btn-secondary:hover{background:#e4e4e7}
+.btn-google{background:#fff;color:#18181b;border:1.5px solid #e4e4e7;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600}
+.btn-sm{padding:10px 14px;font-size:13px;width:auto;display:inline-block}
+
+/* ── Photo Upload ── */
+.photo-zone{border:2px dashed #e4e4e7;border-radius:16px;padding:28px;text-align:center;cursor:pointer;color:#a1a1aa;font-size:13px;transition:all .15s;position:relative;overflow:hidden}
+.photo-zone:hover,.photo-zone.drag{border-color:#18181b;color:#18181b}
+.photo-zone img{max-width:100%;max-height:200px;border-radius:12px;object-fit:contain}
+.photo-zone input{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer}
+
+/* ── Expense List ── */
+.expense-item{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid #f4f4f5}
+.expense-item:last-child{border-bottom:none}
+.expense-left{flex:1;min-width:0}
+.expense-name{font-weight:600;font-size:15px;letter-spacing:-.2px}
+.expense-meta{font-size:11px;color:#a1a1aa;margin-top:3px}
+.expense-amount{font-weight:800;font-size:16px;white-space:nowrap;margin-left:12px;color:#dc2626}
+.expense-thumb{width:44px;height:44px;border-radius:10px;object-fit:cover;margin-left:10px;cursor:pointer}
+
+/* ── Badges ── */
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;background:#f4f4f5;color:#71717a}
+
+/* ── Messages ── */
+.msg{padding:14px 18px;border-radius:14px;font-size:13px;margin-bottom:16px;text-align:center;font-weight:600}
+.msg-ok{background:#18181b;color:#fff}
+.msg-err{background:#dc2626;color:#fff}
+
+/* ── Team Person Card ── */
+.person-card{background:#fff;border-radius:20px;padding:24px;margin-bottom:12px;border:1px solid #f0f0f0}
+.person-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.person-name{font-weight:700;font-size:17px;letter-spacing:-.3px}
+.person-email{font-size:11px;color:#a1a1aa}
+.person-balance{text-align:right}
+.person-balance .amount{font-size:24px;font-weight:800;letter-spacing:-.5px}
+.person-balance .of{font-size:11px;color:#a1a1aa}
+
+/* ── Progress Bar ── */
+.progress-bar{background:#f4f4f5;border-radius:8px;height:4px;margin:12px 0 8px;overflow:hidden}
+.progress-fill{height:100%;border-radius:8px;transition:width .3s}
+
+/* ── Assignment Item ── */
+.asig-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f4f4f5;font-size:13px}
+.asig-item:last-child{border-bottom:none}
+
+/* ── Lightbox ── */
+.lightbox{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.lightbox img{max-width:100%;max-height:90vh;border-radius:12px;object-fit:contain}
+.lightbox button{position:absolute;top:20px;right:20px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:20px;width:44px;height:44px;border-radius:50%;cursor:pointer;backdrop-filter:blur(8px)}
+
+/* ── Login ── */
+.login-screen{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:#fafafa;padding:20px}
+.login-box{background:#fff;border-radius:24px;padding:36px 28px;width:100%;max-width:380px;border:1px solid #f0f0f0}
+.login-title{font-size:32px;font-weight:800;letter-spacing:-.8px;text-align:center;margin-bottom:4px}
+.login-sub{font-size:13px;color:#a1a1aa;text-align:center;margin-bottom:28px}
+
+/* ── Delete Button ── */
+.del-btn{background:none;border:none;color:#d4d4d8;font-size:16px;cursor:pointer;padding:4px;margin-left:8px}.del-btn:hover{color:#dc2626}
+
+/* ── Utility ── */
+.divider{display:flex;align-items:center;gap:12px;margin:12px 0}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:#e4e4e7}
+.divider span{font-size:11px;color:#a1a1aa;font-weight:500}
+
+/* ── Empty State ── */
+.empty{text-align:center;padding:40px 20px}
+.empty-icon{font-size:36px;margin-bottom:12px;opacity:.3}
+.empty-title{font-weight:700;font-size:16px;margin-bottom:4px}
+.empty-text{font-size:13px;color:#a1a1aa}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useEffect,useRef,useMemo}=React;
+
+const fmt=n=>"S/ "+Math.round(n).toLocaleString("es-PE");
+const Logo=({width=140,color="#18181b"})=>(<svg width={width} viewBox="0 0 556 53" fill={color} xmlns="http://www.w3.org/2000/svg"><polygon points="58.9 51.73 37.08 51.78 26.13 20.97 16.95 51.73 0 51.75 14.85 1.26 37.27 1.23 47.88 31.18 56.81 1.24 73.72 1.25 58.9 51.73"/><path d="M134.8,19.82c-1.85,25.09-29.46,38.53-51.69,31.24-7.11-2.33-11.96-8.56-12-15.96-.06-10.88,5.54-20.75,14.4-27.15C96.33.13,110.76-2.18,123.31,2.18c7.68,2.67,12.07,9.75,11.49,17.64ZM116.5,24.46c.63-3.82-1.52-7.11-5.37-8.14-9.45-2.52-20.67,2.1-21.77,12.95-.35,3.47,1.82,6.36,5.12,7.38,8.71,2.69,20.21-1.26,22.02-12.18Z"/><path d="M263.61,19.29c-1.4,24.88-28.33,38.77-50.9,32.1-8.5-2.51-13.65-9.92-12.81-18.67,2.35-24.53,28.87-37.72,51.23-30.89,7.84,2.39,12.94,9.33,12.49,17.46ZM236.92,35.6c4.94-2.21,7.86-6.68,8.39-11.85.34-3.3-1.57-6.2-4.78-7.22-9.62-3.05-21.34,1.79-22.35,12.7-.29,3.11,1.2,5.78,4.14,7.02,4.51,1.9,9.82,1.5,14.61-.64Z"/><path d="M506.86,32.61l-26.7.03c-1.17,1.35-1.94,3.16-2.5,5.23l30.05.06-4.05,13.82h-48.8c3.23-8.82,8.09-16.63,10.71-25.48,2.39-8.07,2.28-16.43,4.11-25.03l48.37-.02-3.9,13.84-30.09.03-.68,5.33,26.97.06-3.48,12.12Z"/><path d="M422.36,37.96c7.08.73,13.81-1.74,17.03-8.15l17.46.03c-7.1,18.3-29.22,26.89-47.29,21.67-8.39-2.42-13.49-9.69-12.77-18.32,2.03-24.41,27.74-38.01,49.56-31.62,9.65,2.83,14.76,11.99,12.39,21.63h-17.4c.27-3.65-1.58-6.57-5.01-7.52-4.15-1.15-8.76-.88-12.7,1.02-4.92,2.37-7.75,7.16-8.55,12.4-.73,4.81,2.38,8.34,7.28,8.85Z"/><path d="M315.36,20.94l-4.18,14.64-27.91.09-4.79,16.07h-17.48s14.85-50.52,14.85-50.52l46.7.06-4.25,14.55h-29.02c-.7,1.62-1.13,3.01-1.6,5.07l27.69.06Z"/><polygon points="368.43 20.95 364.23 35.6 336.3 35.65 331.52 51.75 314.05 51.75 328.9 1.22 375.56 1.27 371.43 15.8 342.22 15.82 340.71 20.89 368.43 20.95"/><polygon points="162.58 51.77 145.09 51.73 155.33 16.98 137.28 16.76 141.86 1.24 195.48 1.24 191.04 16.82 172.84 16.9 162.58 51.77"/><polygon points="384.62 51.69 367.11 51.77 381.95 1.26 399.45 1.24 384.62 51.69"/></svg>);
+const ML=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+const MARCAS=[];
+const nameFromEmail=(e)=>e?e.split("@")[0].replace(/\./g," ").replace(/\b\w/g,c=>c.toUpperCase()):"";
+
+/* ═══ SUPABASE CONFIG (hardcoded) ═══ */
+const SB_URL="https://zysffenpldnvjqdyzckl.supabase.co";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5c2ZmZW5wbGRudmpxZHl6Y2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MzE2NzcsImV4cCI6MjA5MTAwNzY3N30.CjsghKCPBqOMU2wGewA9pIskGsmDTMdDPawOfMDaXXQ";
+const getSBConfig=()=>({url:SB_URL,key:SB_KEY});
+const setSBConfig=()=>{};
+let _sb=null;
+const getSB=()=>{
+  if(_sb)return _sb;
+  _sb=supabase.createClient(SB_URL,SB_KEY);return _sb;
+};
+
+/* ═══ MAIN APP ═══ */
+function CajaChicaApp({user,onLogout}){
+  const[tab,setTab]=useState("gasto");
+  const[fecha,setFecha]=useState(new Date().toISOString().slice(0,10));
+  const[monto,setMonto]=useState("");
+  const[concepto,setConcepto]=useState("");
+  const[categoria,setCategoria]=useState("");
+  const[marca,setMarca]=useState("Agencia");
+  const[tipo,setTipo]=useState("agencia");
+  const[viaPago,setViaPago]=useState("caja_chica");
+  const[foto,setFoto]=useState(null);
+  const[fotoPreview,setFotoPreview]=useState(null);
+  const[saving,setSaving]=useState(false);
+  const[msg,setMsg]=useState(null);
+  const[gastos,setGastos]=useState([]);
+  const[asignaciones,setAsignaciones]=useState([]);
+  const[personas,setPersonas]=useState([]);
+  const[loading,setLoading]=useState(true);
+  const[lightboxUrl,setLightboxUrl]=useState(null);
+  const fileRef=useRef(null);
+
+  const PERSONAS_EMAILS=personas.map(p=>p.email);
+
+  const loadData=async()=>{
+    const sb=getSB();if(!sb)return;
+    setLoading(true);
+    try{
+      const[gRes,aRes,pRes]=await Promise.all([
+        sb.from("caja_chica").select("*").order("fecha",{ascending:false}),
+        sb.from("caja_chica_asignaciones").select("*").order("fecha",{ascending:false}),
+        sb.from("caja_chica_personas").select("*").eq("activo",true).order("nombre")
+      ]);
+      if(!gRes.error&&gRes.data)setGastos(gRes.data);
+      if(!aRes.error&&aRes.data)setAsignaciones(aRes.data);
+      if(!pRes.error&&pRes.data)setPersonas(pRes.data);
+    }catch(e){console.warn("Load error:",e);}
+    setLoading(false);
+  };
+
+  useEffect(()=>{loadData();},[]);
+
+  const balances=useMemo(()=>{
+    const b={};
+    PERSONAS_EMAILS.forEach(p=>{
+      const totalAsignado=asignaciones.filter(a=>a.persona_email===p).reduce((s,a)=>s+parseFloat(a.monto||0),0);
+      const totalGastado=gastos.filter(g=>g.user_email===p&&(g.via_pago||"caja_chica")==="caja_chica").reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      b[p]={asignado:totalAsignado,gastado:totalGastado,saldo:totalAsignado-totalGastado};
+    });
+    return b;
+  },[gastos,asignaciones,PERSONAS_EMAILS]);
+
+  const myBalance=balances[user.email]||{asignado:0,gastado:0,saldo:0};
+  const myGastos=gastos.filter(g=>g.user_email===user.email);
+
+  const uploadFoto=async()=>{
+    if(!foto)return null;
+    const sb=getSB();if(!sb)return null;
+    const ext=foto.name.split(".").pop()||"jpg";
+    const path=`${Date.now()}_${Math.random().toString(36).slice(2,8)}.${ext}`;
+    const{data,error}=await sb.storage.from("comprobantes").upload(path,foto,{contentType:foto.type});
+    if(error){console.warn("Upload error:",error);return null;}
+    const{data:{publicUrl}}=sb.storage.from("comprobantes").getPublicUrl(path);
+    return publicUrl;
+  };
+
+  const handlePhoto=(e)=>{
+    const file=e.target.files?.[0];
+    if(!file)return;
+    if(file.size>1048576){setMsg({type:"err",text:"La foto debe ser menor a 1 MB"});return;}
+    setFoto(file);
+    const reader=new FileReader();
+    reader.onload=(ev)=>setFotoPreview(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave=async(e)=>{
+    e.preventDefault();
+    const montoNum=parseFloat(monto);
+    if(!montoNum||montoNum<=0){setMsg({type:"err",text:"Ingresa un monto valido"});return;}
+    if(!concepto.trim()){setMsg({type:"err",text:"Describe el gasto"});return;}
+    if(viaPago==="caja_chica"&&montoNum>myBalance.saldo){setMsg({type:"err",text:`Tu saldo es ${fmt(myBalance.saldo)}`});return;}
+    setSaving(true);setMsg(null);
+    try{
+      const sb=getSB();if(!sb){setMsg({type:"err",text:"Sin conexion"});setSaving(false);return;}
+      const fotoUrl=await uploadFoto();
+      const{error}=await sb.from("caja_chica").insert({
+        user_email:user.email,user_name:nameFromEmail(user.email),fecha,
+        monto:montoNum,concepto:concepto.trim(),categoria:categoria.trim()||"Sin categoria",
+        marca:marca||"Agencia",tipo:tipo||"agencia",via_pago:"caja_chica",
+        estado_cobro:tipo==="cliente"?"pendiente":"pendiente",
+        foto_url:fotoUrl
+      });
+      if(error)setMsg({type:"err",text:"Error: "+error.message});
+      else{
+        setMsg({type:"ok",text:"Gasto registrado"});
+        setMonto("");setConcepto("");setCategoria("");setMarca("Agencia");setTipo("agencia");setViaPago("caja_chica");setFoto(null);setFotoPreview(null);
+        if(fileRef.current)fileRef.current.value="";
+        loadData();setTimeout(()=>setMsg(null),3000);
+      }
+    }catch(e){setMsg({type:"err",text:"Error: "+e.message});}
+    setSaving(false);
+  };
+
+
+  const handleDelete=async(id)=>{
+    if(!confirm("Eliminar este gasto?"))return;
+    const sb=getSB();if(!sb)return;
+    await sb.from("caja_chica").delete().eq("id",id);
+    loadData();
+  };
+
+  const pctUsed=myBalance.asignado>0?Math.min((myBalance.gastado/myBalance.asignado)*100,100):0;
+
+  return(
+    <div className="screen">
+      {/* ── Top Bar ── */}
+      <div className="top-bar">
+        <div>
+          <Logo width={120} color="#18181b"/>
+          <div className="user-info" style={{marginTop:4}}>{nameFromEmail(user.email)} &middot; Caja Chica</div>
+        </div>
+        <button className="logout-btn" onClick={onLogout}>Salir</button>
+      </div>
+
+      <div className="content">
+        {/* ── Balance Hero ── */}
+        <div className="balance-hero">
+          <div className="label">Saldo disponible</div>
+          <div className={`value${myBalance.saldo<=0?" zero":""}`}>{fmt(myBalance.saldo)}</div>
+          <div className="sub">
+            <span><span className="num">{fmt(myBalance.asignado)}</span>asignado</span>
+            <span><span className="num">{fmt(myBalance.gastado)}</span>gastado</span>
+          </div>
+        </div>
+
+        {msg&&<div className={`msg msg-${msg.type}`}>{msg.text}</div>}
+
+        {/* ═══ TAB: Nuevo Gasto ═══ */}
+        {tab==="gasto"&&(
+          myBalance.saldo<=0&&tipo!=="cliente"?(
+            <div className="empty">
+              <div className="empty-icon">$</div>
+              <div className="empty-title" style={{color:"#dc2626"}}>Sin saldo</div>
+              <div className="empty-text">Pide que te asignen caja chica para registrar gastos.</div>
+              <button type="button" onClick={()=>setTipo("cliente")} style={{marginTop:12,padding:"10px 20px",background:"#2563eb",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Registrar gasto de cliente</button>
+            </div>
+          ):(
+            <form onSubmit={handleSave}>
+              <div className="card">
+                <h3>Nuevo gasto</h3>
+                <div className="row">
+                  <div className="field">
+                    <label>Fecha</label>
+                    <input type="date" value={fecha} onChange={e=>setFecha(e.target.value)} required/>
+                  </div>
+                  <div className="field">
+                    <label>Monto (S/)</label>
+                    <input type="number" step="0.01" min="0.01" max={myBalance.saldo} value={monto} onChange={e=>setMonto(e.target.value)} placeholder="0.00" required inputMode="decimal"/>
+                  </div>
+                </div>
+                <div className="field">
+                  <label>Concepto</label>
+                  <input type="text" value={concepto} onChange={e=>setConcepto(e.target.value)} placeholder="Ej: Taxi a reunion con cliente" required/>
+                </div>
+                <div className="field">
+                  <label>Categoria</label>
+                  <input type="text" value={categoria} onChange={e=>setCategoria(e.target.value)} placeholder="Transporte, Alimentacion..." list="cats"/>
+                  <datalist id="cats">
+                    <option value="Transporte"/><option value="Alimentacion"/><option value="Materiales"/>
+                    <option value="Servicios"/><option value="Representacion"/><option value="Oficina"/><option value="Otros"/>
+                  </datalist>
+                </div>
+                <div className="field">
+                  <label>Marca o Agencia</label>
+                  <select value={marca} onChange={e=>setMarca(e.target.value)}>
+                    <option value="Agencia">Agencia (gasto general)</option>
+                    {MARCAS.map(m=>(<option key={m} value={m}>{m}</option>))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Tipo de gasto</label>
+                  <div style={{display:"flex",gap:8}}>
+                    <button type="button" onClick={()=>{setTipo("agencia");setViaPago("caja_chica");}} style={{flex:1,padding:"12px 8px",border:tipo==="agencia"?"2px solid #18181b":"1.5px solid #e4e4e7",borderRadius:14,background:tipo==="agencia"?"#18181b":"#fff",color:tipo==="agencia"?"#fff":"#18181b",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+                      Gasto Agencia
+                    </button>
+                    <button type="button" onClick={()=>setTipo("cliente")} style={{flex:1,padding:"12px 8px",border:tipo==="cliente"?"2px solid #2563eb":"1.5px solid #e4e4e7",borderRadius:14,background:tipo==="cliente"?"#2563eb":"#fff",color:tipo==="cliente"?"#fff":"#18181b",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+                      Gasto Cliente
+                    </button>
+                  </div>
+                  <div style={{fontSize:11,color:"#a1a1aa",marginTop:4}}>{tipo==="agencia"?"La agencia absorbe este gasto":"Se facturará al cliente (+18% IGV)"}</div>
+                </div>
+                <div className="field">
+                  <label>Comprobante</label>
+                  <div className="photo-zone">
+                    {fotoPreview?(<div><img src={fotoPreview} alt="preview"/><div style={{marginTop:8,fontSize:11,color:"#a1a1aa"}}>Toca para cambiar</div></div>):(
+                      <div><div style={{fontSize:24,marginBottom:8,opacity:.3}}>&#9679;</div><div>Toca para tomar foto</div></div>
+                    )}
+                    <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto}/>
+                  </div>
+                </div>
+              </div>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving?"Guardando...":"Registrar gasto"}
+              </button>
+            </form>
+          )
+        )}
+
+        {/* ═══ TAB: Historial ═══ */}
+        {tab==="historial"&&(
+          <div>
+            {loading?<div style={{textAlign:"center",padding:40,color:"#a1a1aa"}}>Cargando...</div>:
+            myGastos.length===0?(
+              <div className="empty">
+                <div className="empty-icon">&#8212;</div>
+                <div className="empty-title">Sin gastos</div>
+                <div className="empty-text">Tus gastos registrados apareceran aqui.</div>
+              </div>
+            ):(
+              <div className="card" style={{padding:16}}>
+                {myGastos.map(g=>(
+                  <div className="expense-item" key={g.id}>
+                    <div className="expense-left">
+                      <div className="expense-name">{g.concepto}</div>
+                      <div className="expense-meta">
+                        {new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short",year:"numeric"})}
+                        {g.categoria&&<> &middot; <span className="badge">{g.categoria}</span></>}
+                        {g.marca&&<> &middot; <span className="badge" style={{background:g.marca==="Agencia"?"#18181b":"#2563eb",color:"#fff"}}>{g.marca}</span></>}
+                        {g.tipo==="cliente"&&<> &middot; <span className="badge" style={{background:"#f59e0b",color:"#fff"}}>Cliente{g.estado_cobro==="cobrado"?" ✓":g.estado_cobro==="facturado"?" (Fact.)":""}</span></>}
+                        {g.via_pago==="transferencia"&&<> &middot; <span className="badge" style={{background:"#6366f1",color:"#fff"}}>Transf.</span></>}
+                      </div>
+                    </div>
+                    <div className="expense-amount">{fmt(g.monto)}</div>
+                    {g.foto_url&&<img className="expense-thumb" src={g.foto_url} alt="" onClick={()=>setLightboxUrl(g.foto_url)}/>}
+                    <button className="del-btn" title="Eliminar" onClick={()=>handleDelete(g.id)}>&#10005;</button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {/* My assignments received */}
+            {asignaciones.filter(a=>a.persona_email===user.email).length>0&&(
+              <div className="card" style={{marginTop:4}}>
+                <h3 style={{fontSize:14,color:"#a1a1aa",fontWeight:600}}>Asignaciones recibidas</h3>
+                {asignaciones.filter(a=>a.persona_email===user.email).map(a=>(
+                  <div className="asig-item" key={a.id}>
+                    <div>
+                      <div style={{fontWeight:700,color:"#18181b"}}>+{fmt(a.monto)}</div>
+                      <div style={{fontSize:11,color:"#a1a1aa"}}>{a.nota} &middot; {nameFromEmail(a.asignado_por)}</div>
+                    </div>
+                    <div style={{fontSize:11,color:"#a1a1aa"}}>{new Date(a.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ TAB: Equipo ═══ */}
+        {tab==="equipo"&&(
+          <div>
+            {PERSONAS_EMAILS.map(p=>{
+              const persona=personas.find(pp=>pp.email===p);
+              const b=balances[p]||{asignado:0,gastado:0,saldo:0};
+              const pct=b.asignado>0?Math.min((b.gastado/b.asignado)*100,100):0;
+              const barColor=b.saldo<=0?"#dc2626":b.saldo<100?"#a1a1aa":"#18181b";
+              const pGastos=gastos.filter(g=>g.user_email===p).slice(0,5);
+              return(
+                <div key={p} className="person-card">
+                  <div className="person-header">
+                    <div>
+                      <div className="person-name">{persona?.nombre||nameFromEmail(p)}</div>
+                      <div className="person-email">{p}</div>
+                    </div>
+                    <div className="person-balance">
+                      <div className="amount" style={{color:b.saldo<=0?"#dc2626":"#18181b"}}>{fmt(b.saldo)}</div>
+                      <div className="of">de {fmt(b.asignado)}</div>
+                    </div>
+                  </div>
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{background:barColor,width:`${pct}%`}}/>
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"#a1a1aa"}}>
+                    <span>Gastado: {fmt(b.gastado)}</span>
+                    <span>Disponible: {fmt(b.saldo)}</span>
+                  </div>
+                  {pGastos.length>0&&(
+                    <div style={{marginTop:14,borderTop:"1px solid #f4f4f5",paddingTop:12}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"#a1a1aa",marginBottom:6,textTransform:"uppercase",letterSpacing:"1px"}}>Recientes</div>
+                      {pGastos.map(g=>(
+                        <div key={g.id} style={{display:"flex",justifyContent:"space-between",fontSize:13,padding:"4px 0"}}>
+                          <span style={{color:"#52525b"}}>{g.concepto}</span>
+                          <span style={{fontWeight:700,color:"#dc2626"}}>{fmt(g.monto)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* ── Bottom Pill Nav ── */}
+      <div className="pill-nav">
+        <button className={tab==="gasto"?"active":""} onClick={()=>setTab("gasto")}>Gasto</button>
+        <button className={tab==="historial"?"active":""} onClick={()=>setTab("historial")}>Historial</button>
+        <button className={tab==="equipo"?"active":""} onClick={()=>setTab("equipo")}>Equipo</button>
+      </div>
+
+      {lightboxUrl&&(
+        <div className="lightbox" onClick={()=>setLightboxUrl(null)}>
+          <img src={lightboxUrl} alt="Comprobante"/>
+          <button onClick={()=>setLightboxUrl(null)}>&#10005;</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══ AUTH WRAPPER ═══ */
+function AuthWrapper(){
+  const[user,setUser]=useState(null);
+  const[loading,setLoading]=useState(true);
+  const[email,setEmail]=useState("");
+  const[password,setPassword]=useState("");
+  const[error,setError]=useState("");
+  const[showSetup,setShowSetup]=useState(false);
+  const hasConfig=!!getSBConfig();
+
+  useEffect(()=>{
+    const sb=getSB();if(!sb){setLoading(false);return;}
+    sb.auth.getSession().then(({data:{session}})=>{
+      if(session?.user)setUser({email:session.user.email});
+      setLoading(false);
+    });
+    const{data:{subscription}}=sb.auth.onAuthStateChange((_,session)=>{
+      if(session?.user)setUser({email:session.user.email});
+      else setUser(null);
+    });
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  const handleLogin=async(e)=>{
+    e.preventDefault();setError("");
+    const sb=getSB();if(!sb){setError("Error de conexion");return;}
+    const{error:err}=await sb.auth.signInWithPassword({email,password});
+    if(err)setError(err.message==="Invalid login credentials"?"Email o contrasena incorrectos":err.message);
+  };
+  const handleGoogleLogin=async()=>{
+    setError("");const sb=getSB();if(!sb)return;
+    const{error:err}=await sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:window.location.origin+window.location.pathname}});
+    if(err)setError(err.message);
+  };
+  const handleLogout=async()=>{const sb=getSB();if(sb)await sb.auth.signOut();setUser(null);};
+
+  if(loading)return(<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",fontFamily:"Inter,sans-serif"}}>
+    <div style={{textAlign:"center"}}><Logo width={150} color="#18181b"/><div style={{color:"#a1a1aa",marginTop:12,fontSize:13}}>Cargando...</div></div>
+  </div>);
+
+  if(!hasConfig||showSetup)return(
+    <div className="login-screen"><div className="login-box">
+      <div style={{marginBottom:28,textAlign:"center"}}>
+        <Logo width={160} color="#18181b"/>
+        <div className="login-sub" style={{marginTop:10}}>Configurar conexion</div>
+      </div>
+      <SupabaseSetupMini onDone={()=>location.reload()}/>
+    </div></div>
+  );
+
+  if(!user)return(
+    <div className="login-screen"><div className="login-box">
+      <div style={{marginBottom:28,textAlign:"center"}}>
+        <Logo width={160} color="#18181b"/>
+        <div className="login-sub" style={{marginTop:10}}>Caja Chica</div>
+      </div>
+      {error&&<div className="msg msg-err">{error}</div>}
+      <button onClick={handleGoogleLogin} className="btn btn-google" style={{marginBottom:16}}>
+        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        Ingresar con Google
+      </button>
+      <div className="divider"><span>o</span></div>
+      <form onSubmit={handleLogin} style={{marginTop:12}}>
+        <div className="field"><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" required/></div>
+        <div className="field"><input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Contrasena" required minLength={6}/></div>
+        <button type="submit" className="btn btn-primary">Ingresar</button>
+      </form>
+    </div></div>
+  );
+
+  return <CajaChicaApp user={user} onLogout={handleLogout}/>;
+}
+
+function SupabaseSetupMini({onDone}){
+  const cfg=getSBConfig()||{};
+  const[url,setUrl]=useState(cfg.url||"");
+  const[key,setKey]=useState(cfg.key||"");
+  const[testing,setTesting]=useState(false);
+  const[result,setResult]=useState("");
+  const test=async()=>{
+    if(!url||!key){setResult("Completa ambos campos.");return;}
+    setTesting(true);setResult("");
+    try{const sb=supabase.createClient(url,key);
+      const{data,error}=await sb.from("caja_chica").select("id").limit(1);
+      if(error)setResult("Error: "+error.message);
+      else{setResult("Conexion exitosa!");setSBConfig({url,key});_sb=null;setTimeout(()=>onDone(),1500);}
+    }catch(e){setResult("Error: "+e.message);}
+    setTesting(false);
+  };
+  return(<div>
+    <div className="field"><label>Supabase URL</label><input value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://xxx.supabase.co"/></div>
+    <div className="field"><label>Anon Key</label><input value={key} onChange={e=>setKey(e.target.value)} placeholder="eyJhbGci..."/></div>
+    <button className="btn btn-primary" onClick={test} disabled={testing}>{testing?"Probando...":"Conectar"}</button>
+    {result&&<div className={`msg ${result.includes("exitosa")?"msg-ok":"msg-err"}`} style={{marginTop:12}}>{result}</div>}
+  </div>);
+}
+
+ReactDOM.render(<AuthWrapper/>,document.getElementById("root"));
+</script>
+</body>
+</html>
