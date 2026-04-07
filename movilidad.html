@@ -98,7 +98,19 @@ label{display:block;font-size:11px;font-weight:600;color:#a1a1aa;margin-bottom:6
 const{useState,useEffect,useMemo,useRef}=React;
 const fmt=n=>"S/ "+Math.round(n).toLocaleString("es-PE");
 const ML=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-const MARCAS=["Marca Alpha","Marca Beta","Marca Gamma","Marca Delta","Marca Épsilon","Marca Zeta","Agencia"];
+/* MARCAS se cargan dinámicamente de app_state (clientes de la app principal) */
+const MARCAS_FALLBACK=["Agencia"];
+const loadMarcasFromCloud=async()=>{
+  const sb=getSB();if(!sb)return MARCAS_FALLBACK;
+  try{
+    const{data,error}=await sb.from("app_state").select("*").eq("id","main").single();
+    if(error||!data)return MARCAS_FALLBACK;
+    const payload=data.data||data.state||null;
+    if(!payload||!payload.clients)return MARCAS_FALLBACK;
+    const names=payload.clients.filter(c=>c.active!==false).map(c=>c.name).sort();
+    return[...names,"Agencia"];
+  }catch(e){console.warn("Error loading marcas:",e);return MARCAS_FALLBACK;}
+};
 const Logo=({width=140,color="#18181b"})=>(<svg width={width} viewBox="0 0 556 53" fill={color} xmlns="http://www.w3.org/2000/svg"><polygon points="58.9 51.73 37.08 51.78 26.13 20.97 16.95 51.73 0 51.75 14.85 1.26 37.27 1.23 47.88 31.18 56.81 1.24 73.72 1.25 58.9 51.73"/><path d="M134.8,19.82c-1.85,25.09-29.46,38.53-51.69,31.24-7.11-2.33-11.96-8.56-12-15.96-.06-10.88,5.54-20.75,14.4-27.15C96.33.13,110.76-2.18,123.31,2.18c7.68,2.67,12.07,9.75,11.49,17.64ZM116.5,24.46c.63-3.82-1.52-7.11-5.37-8.14-9.45-2.52-20.67,2.1-21.77,12.95-.35,3.47,1.82,6.36,5.12,7.38,8.71,2.69,20.21-1.26,22.02-12.18Z"/><path d="M263.61,19.29c-1.4,24.88-28.33,38.77-50.9,32.1-8.5-2.51-13.65-9.92-12.81-18.67,2.35-24.53,28.87-37.72,51.23-30.89,7.84,2.39,12.94,9.33,12.49,17.46ZM236.92,35.6c4.94-2.21,7.86-6.68,8.39-11.85.34-3.3-1.57-6.2-4.78-7.22-9.62-3.05-21.34,1.79-22.35,12.7-.29,3.11,1.2,5.78,4.14,7.02,4.51,1.9,9.82,1.5,14.61-.64Z"/><path d="M506.86,32.61l-26.7.03c-1.17,1.35-1.94,3.16-2.5,5.23l30.05.06-4.05,13.82h-48.8c3.23-8.82,8.09-16.63,10.71-25.48,2.39-8.07,2.28-16.43,4.11-25.03l48.37-.02-3.9,13.84-30.09.03-.68,5.33,26.97.06-3.48,12.12Z"/><path d="M422.36,37.96c7.08.73,13.81-1.74,17.03-8.15l17.46.03c-7.1,18.3-29.22,26.89-47.29,21.67-8.39-2.42-13.49-9.69-12.77-18.32,2.03-24.41,27.74-38.01,49.56-31.62,9.65,2.83,14.76,11.99,12.39,21.63h-17.4c.27-3.65-1.58-6.57-5.01-7.52-4.15-1.15-8.76-.88-12.7,1.02-4.92,2.37-7.75,7.16-8.55,12.4-.73,4.81,2.38,8.34,7.28,8.85Z"/><path d="M315.36,20.94l-4.18,14.64-27.91.09-4.79,16.07h-17.48s14.85-50.52,14.85-50.52l46.7.06-4.25,14.55h-29.02c-.7,1.62-1.13,3.01-1.6,5.07l27.69.06Z"/><polygon points="368.43 20.95 364.23 35.6 336.3 35.65 331.52 51.75 314.05 51.75 328.9 1.22 375.56 1.27 371.43 15.8 342.22 15.82 340.71 20.89 368.43 20.95"/><polygon points="162.58 51.77 145.09 51.73 155.33 16.98 137.28 16.76 141.86 1.24 195.48 1.24 191.04 16.82 172.84 16.9 162.58 51.77"/><polygon points="384.62 51.69 367.11 51.77 381.95 1.26 399.45 1.24 384.62 51.69"/></svg>);
 
 const SB_CONFIG_KEY="finanzas_sb_config";
@@ -113,6 +125,7 @@ function MainApp({user,onLogout,userRole}){
   const[viajes,setViajes]=useState([]);
   const[tarifarioList,setTarifarioList]=useState([]);
   const[filmmakers,setFilmmakers]=useState([]);
+  const[marcasList,setMarcasList]=useState(MARCAS_FALLBACK);
   const[loading,setLoading]=useState(true);
   const[selected,setSelected]=useState(new Set());
   const[filterMarca,setFilterMarca]=useState("");
@@ -134,14 +147,16 @@ function MainApp({user,onLogout,userRole}){
     const sb=getSB();if(!sb)return;
     setLoading(true);
     try{
-      const[vRes,tRes,fRes]=await Promise.all([
+      const[vRes,tRes,fRes,mRes]=await Promise.all([
         sb.from("movilidad").select("*").order("fecha",{ascending:false}).limit(1000),
         sb.from("tarifario_movilidad").select("*").eq("activo",true).order("nombre"),
-        sb.from("filmmakers").select("*").eq("activo",true).order("nombre")
+        sb.from("filmmakers").select("*").eq("activo",true).order("nombre"),
+        loadMarcasFromCloud()
       ]);
       if(!vRes.error&&vRes.data)setViajes(vRes.data);
       if(!tRes.error&&tRes.data)setTarifarioList(tRes.data);
       if(!fRes.error&&fRes.data){setFilmmakers(fRes.data);if(!selFM&&fRes.data.length>0)setSelFM(fRes.data[0].id);}
+      if(mRes&&mRes.length>0)setMarcasList(mRes);
     }catch(e){console.warn("Load error:",e);}
     setLoading(false);
   };
@@ -392,7 +407,7 @@ function MainApp({user,onLogout,userRole}){
                     </tr>
                   ))}
                   {/* New entry row */}
-                  <NewEntryRow onAdd={addEntry}/>
+                  <NewEntryRow onAdd={addEntry} marcas={marcasList} viewMonth={viewMonth}/>
                 </tbody>
                 {fmViajes.length>0&&<tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e4e4e7"}}>
                   <td colSpan={5}>Total aprobado</td>
@@ -582,31 +597,45 @@ function MainApp({user,onLogout,userRole}){
 }
 
 /* ── Inline new entry row component ── */
-function NewEntryRow({onAdd}){
-  const[fecha,setFecha]=useState(new Date().toISOString().slice(0,10));
+function NewEntryRow({onAdd,marcas,viewMonth}){
+  /* Limitar fecha al mes seleccionado */
+  const[y,mo]=viewMonth.split("-").map(Number);
+  const minDate=viewMonth+"-01";
+  const lastDay=new Date(y,mo,0).getDate();
+  const maxDate=viewMonth+"-"+String(lastDay).padStart(2,"0");
+  const todayStr=new Date().toISOString().slice(0,10);
+  const defaultDate=todayStr>=minDate&&todayStr<=maxDate?todayStr:minDate;
+
+  const[fecha,setFecha]=useState(defaultDate);
   const[orig,setOrig]=useState("");
   const[dest,setDest]=useState("");
   const[ret,setRet]=useState("");
   const[marca,setMarca]=useState("");
   const[tarifa,setTarifa]=useState("");
 
+  /* Actualizar fecha si cambia el mes */
+  const prevMonth=React.useRef(viewMonth);
+  React.useEffect(()=>{if(prevMonth.current!==viewMonth){const t=new Date().toISOString().slice(0,10);const mn=viewMonth+"-01";const mx=viewMonth+"-"+String(new Date(y,mo,0).getDate()).padStart(2,"0");setFecha(t>=mn&&t<=mx?t:mn);prevMonth.current=viewMonth;}},[viewMonth]);
+
+  const MARCAS_LIST=marcas||MARCAS_FALLBACK;
+
   const handleSubmit=()=>{
     if(!fecha||!dest||!marca||!tarifa){alert("Completa fecha, destino, marca y monto");return;}
     onAdd(fecha,orig||"Oficina",dest,ret||orig||"Oficina",marca,parseFloat(tarifa));
     setOrig("");setDest("");setRet("");setMarca("");setTarifa("");
-    setFecha(new Date().toISOString().slice(0,10));
+    const t=new Date().toISOString().slice(0,10);setFecha(t>=minDate&&t<=maxDate?t:minDate);
   };
 
   return(<>
     <tr className="new-row">
-      <td><input type="date" value={fecha} onChange={e=>setFecha(e.target.value)}/></td>
+      <td><input type="date" value={fecha} min={minDate} max={maxDate} onChange={e=>setFecha(e.target.value)}/></td>
       <td><input type="text" value={orig} onChange={e=>setOrig(e.target.value)} placeholder="Punto de salida"/></td>
       <td><input type="text" value={dest} onChange={e=>setDest(e.target.value)} placeholder="Punto de grabación"/></td>
       <td><input type="text" value={ret} onChange={e=>setRet(e.target.value)} placeholder="Punto de retorno"/></td>
       <td>
         <select value={marca} onChange={e=>setMarca(e.target.value)}>
           <option value="">Marca...</option>
-          {MARCAS.map(m=><option key={m} value={m}>{m}{m==="Agencia"?" (→ OH)":""}</option>)}
+          {MARCAS_LIST.map(m=><option key={m} value={m}>{m}{m==="Agencia"?" (→ OH)":""}</option>)}
         </select>
       </td>
       <td><input type="number" value={tarifa} onChange={e=>setTarifa(e.target.value)} placeholder="S/" min="1" style={{textAlign:"right",width:80}}/></td>
@@ -619,6 +648,7 @@ function NewEntryRow({onAdd}){
 function FilmmakerView({user,onLogout}){
   const[viajes,setViajes]=useState([]);
   const[tarifarioList,setTarifarioList]=useState([]);
+  const[marcasList,setMarcasList]=useState(MARCAS_FALLBACK);
   const[loading,setLoading]=useState(true);
   const userEmail=user?.email||"";
   const userName=user?.user_metadata?.full_name||user?.user_metadata?.name||userEmail.split("@")[0];
@@ -633,12 +663,14 @@ function FilmmakerView({user,onLogout}){
     const sb=getSB();if(!sb)return;
     setLoading(true);
     try{
-      const[vRes,tRes]=await Promise.all([
+      const[vRes,tRes,mRes]=await Promise.all([
         sb.from("movilidad").select("*").eq("user_email",userEmail).order("fecha",{ascending:false}).limit(500),
-        sb.from("tarifario_movilidad").select("*").eq("activo",true).order("nombre")
+        sb.from("tarifario_movilidad").select("*").eq("activo",true).order("nombre"),
+        loadMarcasFromCloud()
       ]);
       if(!vRes.error&&vRes.data)setViajes(vRes.data);
       if(!tRes.error&&tRes.data)setTarifarioList(tRes.data);
+      if(mRes&&mRes.length>0)setMarcasList(mRes);
     }catch(e){console.warn("Load error:",e);}
     setLoading(false);
   };
@@ -715,7 +747,7 @@ function FilmmakerView({user,onLogout}){
                 <td>{(v.estado||"pendiente")==="pendiente"&&<button className="del-btn" onClick={()=>deleteEntry(v.id)}>✕</button>}</td>
               </tr>
             ))}
-            <NewEntryRow onAdd={addEntry}/>
+            <NewEntryRow onAdd={addEntry} marcas={marcasList} viewMonth={viewMonth}/>
           </tbody>
           {monthViajes.length>0&&<tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e4e4e7"}}>
             <td colSpan={5}>Total</td>
