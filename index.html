@@ -839,74 +839,6 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           {/* ── Equipos por marca ── */}
           <div className="sl">Equipos por Marca</div>
           {(()=>{
-            /* PersonCard inline — reused in both brand & transversal sections */
-            const PersonCard=({m,ctxLabel,ctxAmount})=>{
-              const isExp=editPerson===m.id;
-              const totalAssigned=m.assignments.reduce((s,a)=>s+a.amount,0);
-              const diff=m.bruto-totalAssigned;
-              const otherAssigns=m.assignments.length>1;
-              return(<div style={{padding:"8px 12px",background:isExp?"#fff":"#fafafa",borderRadius:8,marginBottom:4,border:isExp?"1px solid #e4e4e7":"1px solid transparent"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setEditPerson(isExp?null:m.id)}>
-                  <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <span style={{fontSize:12,color:"#a1a1aa"}}>{isExp?"▾":"▸"}</span>
-                    <span style={{fontWeight:600,fontSize:13}}>{m.name}</span>
-                    <span style={{fontSize:11,color:"#71717a"}}>{ctxLabel}</span>
-                    <span className={`badge ${m.regimen==="planilla"?"bb":"bpp"}`} style={{fontSize:9}}>{m.regimen==="planilla"?"P":"RH"}</span>
-                    {otherAssigns&&<span className="badge" style={{fontSize:9,background:"#f4f4f5",color:"#52525b"}}>{m.assignments.length} asign.</span>}
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    {ctxAmount!=null&&ctxAmount!==(m.inversion||m.bruto)&&<span style={{fontSize:11,color:"#a1a1aa"}}>{fmt(ctxAmount)} en marca</span>}
-                    <span style={{fontWeight:700,fontSize:13}} className="tr">{fmt(m.inversion||m.bruto)}</span>
-                    {(m.liquidacion||0)>0&&<span style={{fontSize:10,color:"#dc2626",fontWeight:600}}>+{fmt(m.liquidacion)} liq.</span>}
-                    <button className="del-btn" style={{fontSize:13}} onClick={e=>{e.stopPropagation();setTeam(prev=>prev.filter(t=>t.id!==m.id));}}>✕</button>
-                  </div>
-                </div>
-                {isExp&&(<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #f4f4f5"}}>
-                  <div style={{background:"#f4f4f5",borderRadius:8,padding:10,marginBottom:10}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-                      <span style={{fontSize:12,fontWeight:600,minWidth:50}}>Bruto</span>
-                      <input type="number" value={m.bruto} onChange={e=>{
-                        const newBruto=parseInt(e.target.value)||0;
-                        if(m.regimen==="planilla"){const newNeto=Math.round(newBruto/1.1137);const afp=Math.round(newNeto*0.1137);const es=Math.round(newNeto*0.09);
-                          setTeam(prev=>prev.map(t=>t.id===m.id?{...t,bruto:newBruto,neto:newNeto,essalud:es,afp,inversion:newBruto+es}:t));
-                        }else{setTeam(prev=>prev.map(t=>t.id===m.id?{...t,bruto:newBruto,neto:newBruto,inversion:newBruto}:t));}
-                      }} style={{width:120,textAlign:"right",fontWeight:600,fontSize:13,padding:"4px 8px"}}/>
-                      <span className={`badge ${m.regimen==="planilla"?"bb":"bpp"}`} style={{fontSize:9}}>{m.regimen==="planilla"?"Planilla":"RH"}</span>
-                    </div>
-                    {m.regimen==="planilla"&&<>
-                      <div style={{fontSize:11,color:"#71717a",paddingLeft:10,lineHeight:1.8}}>
-                        Neto: {fmt(m.neto)} · AFP: {fmt(m.afp)} · EsSalud: {fmt(m.essalud)}
-                      </div>
-                      <div style={{display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:700,borderTop:"1px solid #e4e4e7",marginTop:4,paddingTop:4}}>
-                        <span>Inversión Total</span><span className="tr">{fmt(m.inversion||m.bruto)}</span>
-                      </div>
-                    </>}
-                  </div>
-                  <div style={{fontSize:11,fontWeight:600,color:"#71717a",marginBottom:6}}>Distribución del costo</div>
-                  {m.assignments.map(a=><AssignRow key={a.id} a={a} clients={clients} canDel={m.assignments.length>1}
-                    onChange={up=>setTeam(prev=>prev.map(t=>t.id===m.id?{...t,assignments:t.assignments.map(x=>x.id===a.id?{...x,...up}:x)}:t))}
-                    onDel={()=>{if(m.assignments.length<=1){setTeam(prev=>prev.filter(t=>t.id!==m.id));}
-                      else setTeam(prev=>prev.map(t=>t.id===m.id?{...t,assignments:t.assignments.filter(x=>x.id!==a.id)}:t));}}/>)}
-                  <button className="btn btn-sm btn-gray" style={{marginTop:4,fontSize:11}} onClick={()=>setTeam(prev=>prev.map(t=>t.id===m.id?{...t,assignments:[...t.assignments,{id:Date.now(),clientId:null,role:"",amount:0}]}:t))}>+ Bono / otra marca</button>
-                  {diff!==0&&<div style={{fontSize:11,padding:"4px 8px",borderRadius:6,marginTop:6,
-                    background:diff>0?"#fafafa":"#fff1f2",color:diff>0?"#3f3f46":"#e11d48",fontWeight:600}}>
-                    {diff>0?"⚠ Sin asignar: "+fmt(diff):"⚠ Excede el bruto: "+fmt(Math.abs(diff))}
-                  </div>}
-                  {m.regimen==="planilla"&&(<div style={{marginTop:8,paddingTop:6,borderTop:"1px solid #f4f4f5"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      <span style={{fontSize:11,fontWeight:600,color:"#dc2626",minWidth:80}}>Liquidación</span>
-                      <input type="number" value={m.liquidacion||""} placeholder="0" onChange={e=>setTeam(prev=>prev.map(t=>t.id===m.id?{...t,liquidacion:parseInt(e.target.value)||0}:t))}
-                        style={{width:120,textAlign:"right",fontSize:12,padding:"4px 8px"}}/>
-                      <span style={{fontSize:10,color:"#a1a1aa"}}>No se copia al siguiente mes</span>
-                    </div>
-                    {(m.liquidacion||0)>0&&<div style={{fontSize:11,color:"#dc2626",fontWeight:600,marginTop:4}}>Costo total con liquidación: {fmt((m.inversion||m.bruto)+(m.liquidacion||0))}</div>}
-                  </div>)}
-                  <div style={{display:"flex",justifyContent:"flex-end",marginTop:8,paddingTop:6,borderTop:"1px solid #f4f4f5"}}>
-                    <button className="btn btn-sm btn-red" style={{opacity:.7,fontSize:11}} onClick={()=>setTeam(prev=>prev.filter(t=>t.id!==m.id))}>Eliminar</button>
-                  </div>
-                </div>)}
-              </div>);};
-
             const onlyTrans=team.filter(t=>t.assignments.every(a=>a.clientId===null));
             return(<>
               {clients.map(c=>{
@@ -924,7 +856,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                     const myAssigns=m.assignments.filter(a=>a.clientId===c.id);
                     const myAmount=myAssigns.reduce((s,a)=>s+a.amount,0);
                     const myRoles=myAssigns.map(a=>a.role).join(", ");
-                    return <PersonCard key={m.id} m={m} ctxLabel={myRoles} ctxAmount={myAmount}/>;
+                    return <PersonCard key={m.id} m={m} ctxLabel={myRoles} ctxAmount={myAmount} clients={clients} editPerson={editPerson} setEditPerson={setEditPerson} setTeam={setTeam}/>;
                   })}
                   <button className="btn btn-sm btn-gray" style={{marginTop:4}} onClick={()=>{setPreClient(c.id);setShowForm("team");}}>+ Agregar persona a {c.name}</button>
                 </div>);
@@ -942,7 +874,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                 </div>
                 {onlyTrans.map(m=>{
                   const myRoles=m.assignments.map(a=>a.role).join(", ");
-                  return <PersonCard key={m.id} m={m} ctxLabel={myRoles} ctxAmount={m.inversion||m.bruto}/>;
+                  return <PersonCard key={m.id} m={m} ctxLabel={myRoles} ctxAmount={m.inversion||m.bruto} clients={clients} editPerson={editPerson} setEditPerson={setEditPerson} setTeam={setTeam}/>;
                 })}
                 <button className="btn btn-sm btn-gray" style={{marginTop:4}} onClick={()=>{setPreClient(null);setShowForm("team");}}>+ Agregar persona transversal</button>
                 {/* Bonos transversales de gente que también tiene marca */}
@@ -2419,6 +2351,74 @@ function StaffForm({roles,onSave,onClose}){
       <button type="button" className="btn btn-green" onClick={doSave}>Guardar</button>
       <button type="button" className="btn btn-gray" onClick={onClose}>Cancelar</button>
     </div>
+  </div>);
+}
+
+function PersonCard({m,ctxLabel,ctxAmount,clients,editPerson,setEditPerson,setTeam}){
+  const isExp=editPerson===m.id;
+  const totalAssigned=m.assignments.reduce((s,a)=>s+a.amount,0);
+  const diff=m.bruto-totalAssigned;
+  const otherAssigns=m.assignments.length>1;
+  return(<div style={{padding:"8px 12px",background:isExp?"#fff":"#fafafa",borderRadius:8,marginBottom:4,border:isExp?"1px solid #e4e4e7":"1px solid transparent"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setEditPerson(isExp?null:m.id)}>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        <span style={{fontSize:12,color:"#a1a1aa"}}>{isExp?"▾":"▸"}</span>
+        <span style={{fontWeight:600,fontSize:13}}>{m.name}</span>
+        <span style={{fontSize:11,color:"#71717a"}}>{ctxLabel}</span>
+        <span className={`badge ${m.regimen==="planilla"?"bb":"bpp"}`} style={{fontSize:9}}>{m.regimen==="planilla"?"P":"RH"}</span>
+        {otherAssigns&&<span className="badge" style={{fontSize:9,background:"#f4f4f5",color:"#52525b"}}>{m.assignments.length} asign.</span>}
+      </div>
+      <div style={{display:"flex",alignItems:"center",gap:10}}>
+        {ctxAmount!=null&&ctxAmount!==(m.inversion||m.bruto)&&<span style={{fontSize:11,color:"#a1a1aa"}}>{fmt(ctxAmount)} en marca</span>}
+        <span style={{fontWeight:700,fontSize:13}} className="tr">{fmt(m.inversion||m.bruto)}</span>
+        {(m.liquidacion||0)>0&&<span style={{fontSize:10,color:"#dc2626",fontWeight:600}}>+{fmt(m.liquidacion)} liq.</span>}
+        <button className="del-btn" style={{fontSize:13}} onClick={e=>{e.stopPropagation();setTeam(prev=>prev.filter(t=>t.id!==m.id));}}>✕</button>
+      </div>
+    </div>
+    {isExp&&(<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #f4f4f5"}}>
+      <div style={{background:"#f4f4f5",borderRadius:8,padding:10,marginBottom:10}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+          <span style={{fontSize:12,fontWeight:600,minWidth:50}}>Bruto</span>
+          <input type="number" value={m.bruto} onChange={e=>{
+            const newBruto=parseInt(e.target.value)||0;
+            if(m.regimen==="planilla"){const newNeto=Math.round(newBruto/1.1137);const afp=Math.round(newNeto*0.1137);const es=Math.round(newNeto*0.09);
+              setTeam(prev=>prev.map(t=>t.id===m.id?{...t,bruto:newBruto,neto:newNeto,essalud:es,afp,inversion:newBruto+es}:t));
+            }else{setTeam(prev=>prev.map(t=>t.id===m.id?{...t,bruto:newBruto,neto:newBruto,inversion:newBruto}:t));}
+          }} style={{width:120,textAlign:"right",fontWeight:600,fontSize:13,padding:"4px 8px"}}/>
+          <span className={`badge ${m.regimen==="planilla"?"bb":"bpp"}`} style={{fontSize:9}}>{m.regimen==="planilla"?"Planilla":"RH"}</span>
+        </div>
+        {m.regimen==="planilla"&&<>
+          <div style={{fontSize:11,color:"#71717a",paddingLeft:10,lineHeight:1.8}}>
+            Neto: {fmt(m.neto)} · AFP: {fmt(m.afp)} · EsSalud: {fmt(m.essalud)}
+          </div>
+          <div style={{display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:700,borderTop:"1px solid #e4e4e7",marginTop:4,paddingTop:4}}>
+            <span>Inversión Total</span><span className="tr">{fmt(m.inversion||m.bruto)}</span>
+          </div>
+        </>}
+      </div>
+      <div style={{fontSize:11,fontWeight:600,color:"#71717a",marginBottom:6}}>Distribución del costo</div>
+      {m.assignments.map(a=><AssignRow key={a.id} a={a} clients={clients} canDel={m.assignments.length>1}
+        onChange={up=>setTeam(prev=>prev.map(t=>t.id===m.id?{...t,assignments:t.assignments.map(x=>x.id===a.id?{...x,...up}:x)}:t))}
+        onDel={()=>{if(m.assignments.length<=1){setTeam(prev=>prev.filter(t=>t.id!==m.id));}
+          else setTeam(prev=>prev.map(t=>t.id===m.id?{...t,assignments:t.assignments.filter(x=>x.id!==a.id)}:t));}}/>)}
+      <button className="btn btn-sm btn-gray" style={{marginTop:4,fontSize:11}} onClick={()=>setTeam(prev=>prev.map(t=>t.id===m.id?{...t,assignments:[...t.assignments,{id:Date.now(),clientId:null,role:"",amount:0}]}:t))}>+ Bono / otra marca</button>
+      {diff!==0&&<div style={{fontSize:11,padding:"4px 8px",borderRadius:6,marginTop:6,
+        background:diff>0?"#fafafa":"#fff1f2",color:diff>0?"#3f3f46":"#e11d48",fontWeight:600}}>
+        {diff>0?"⚠ Sin asignar: "+fmt(diff):"⚠ Excede el bruto: "+fmt(Math.abs(diff))}
+      </div>}
+      {m.regimen==="planilla"&&(<div style={{marginTop:8,paddingTop:6,borderTop:"1px solid #f4f4f5"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:11,fontWeight:600,color:"#dc2626",minWidth:80}}>Liquidación</span>
+          <input type="number" value={m.liquidacion||""} placeholder="0" onChange={e=>setTeam(prev=>prev.map(t=>t.id===m.id?{...t,liquidacion:parseInt(e.target.value)||0}:t))}
+            style={{width:120,textAlign:"right",fontSize:12,padding:"4px 8px"}}/>
+          <span style={{fontSize:10,color:"#a1a1aa"}}>No se copia al siguiente mes</span>
+        </div>
+        {(m.liquidacion||0)>0&&<div style={{fontSize:11,color:"#dc2626",fontWeight:600,marginTop:4}}>Costo total con liquidación: {fmt((m.inversion||m.bruto)+(m.liquidacion||0))}</div>}
+      </div>)}
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:8,paddingTop:6,borderTop:"1px solid #f4f4f5"}}>
+        <button className="btn btn-sm btn-red" style={{opacity:.7,fontSize:11}} onClick={()=>setTeam(prev=>prev.filter(t=>t.id!==m.id))}>Eliminar</button>
+      </div>
+    </div>)}
   </div>);
 }
 
