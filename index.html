@@ -1178,7 +1178,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             pendientes.forEach(g=>{const m=g.marca||"Agencia";if(!byMarca[m])byMarca[m]={gastos:[],total:0,factTotal:0};byMarca[m].gastos.push(g);byMarca[m].total+=parseFloat(g.monto||0);byMarca[m].factTotal+=parseFloat(g.monto||0)*1.18;});
             const handleEstado=async(id,val)=>{const sb=getSB();if(!sb)return;await sb.from("caja_chica").update({estado_cobro:val}).eq("id",id);loadCajaChica(vm);};
             return(<div>
-              <div className="info-box">Gastos realizados por cuenta de clientes (préstamos). Se deben facturar al cliente con 18% IGV. Registrar transferencias/RH desde aquí.</div>
+              <div className="info-box">Registro de préstamos a clientes. No afectan el flujo de caja — solo sirven para trackear lo que se debe cobrar (+18% IGV).</div>
               <div className="grid g3" style={{marginBottom:16}}>
                 <div className="card" style={{borderLeft:"4px solid #f59e0b"}}><div className="kpi-label">Pendiente de cobro</div><div className="kpi-value" style={{color:"#f59e0b"}}>{fmt(totalPend)}</div><div className="kpi-sub">A facturar: {fmt(totalPend*1.18)}</div></div>
                 <div className="card" style={{borderLeft:"4px solid #22c55e"}}><div className="kpi-label">Cobrado</div><div className="kpi-value" style={{color:"#22c55e"}}>{fmt(totalCob)}</div><div className="kpi-sub">{fmt(totalCob*1.18)} facturado</div></div>
@@ -1198,7 +1198,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                         fecha:fd.get("fecha")||new Date().toISOString().slice(0,10),
                         monto:m,concepto:fd.get("concepto")||"",categoria:fd.get("categoria")||"Servicio",
                         marca:fd.get("marca")||"Agencia",tipo:"cliente",
-                        via_pago:fd.get("via")||"transferencia",estado_cobro:"pendiente"
+                        via_pago:"prestamo",estado_cobro:"pendiente",mes:new Date().toISOString().slice(0,7)
                       });
                       if(error)alert("Error: "+error.message);
                       else{setShowForm(null);loadCajaChica(vm);setSaveMsg("Préstamo registrado");setTimeout(()=>setSaveMsg(""),3000);}
@@ -1211,7 +1211,6 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                       <div className="form-row">
                         <input name="concepto" placeholder="Concepto (ej: Actor para spot, compra materiales)" required style={{flex:2}}/>
                         <input name="categoria" placeholder="Categoría" defaultValue="Servicio"/>
-                        <select name="via"><option value="transferencia">Transferencia / RH</option><option value="caja_chica">Caja Chica</option></select>
                       </div>
                       <div style={{display:"flex",gap:8,marginTop:8}}>
                         <button type="submit" className="btn btn-sm btn-green">Registrar</button>
