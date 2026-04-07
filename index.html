@@ -268,7 +268,29 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[saveMsg,setSaveMsg]=useState("");
 
   const[clients,setClients]=useState(saved?.clients||INIT_CLIENTS);
-  const[team,setTeam]=useState(saved?.team||INIT_TEAM);
+  /* ── Team por mes: cada mes tiene su propia lista independiente ── */
+  const[teamByMonth,setTeamByMonth]=useState(()=>{
+    if(saved?.teamByMonth)return saved.teamByMonth;
+    /* Migración: si hay team viejo (array global), ponerlo en el mes actual */
+    if(saved?.team&&saved.team.length>0)return{[DEFAULT_VM]:saved.team};
+    if(INIT_TEAM.length>0)return{[DEFAULT_VM]:INIT_TEAM};
+    return{};
+  });
+  const team=teamByMonth[vm]||[];
+  const setTeam=(updater)=>setTeamByMonth(prev=>{
+    const cur=prev[vm]||[];
+    const next=typeof updater==="function"?updater(cur):updater;
+    return{...prev,[vm]:next};
+  });
+  const copyTeamFromPrev=()=>{
+    const mIdx=ALL_MONTHS.findIndex(m=>m.value===vm);
+    if(mIdx<=0)return;
+    const prevMonth=ALL_MONTHS[mIdx-1].value;
+    const prevTeam=teamByMonth[prevMonth]||[];
+    if(prevTeam.length===0){alert("El mes anterior no tiene equipo registrado.");return;}
+    if(team.length>0&&!confirm("Ya hay personas en este mes. ¿Reemplazar con el equipo del mes anterior?"))return;
+    setTeamByMonth(prev=>({...prev,[vm]:prevTeam.map(t=>({...t,id:Date.now()+Math.random()}))}));
+  };
   const[invoices,setInvoices]=useState(saved?.invoices||genInvoices);
   const[projects,setProjects]=useState(saved?.projects||INIT_PROJECTS);
   const[fixedExp,setFixedExp]=useState(saved?.fixedExp||INIT_FIXED);
@@ -417,7 +439,10 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     if(!cloudMode){setInitialLoaded(true);return;}
     loadStateCloud().then(cloudData=>{
       if(cloudData&&cloudData.clients){
-        setClients(cloudData.clients);setTeam(cloudData.team||[]);setInvoices(cloudData.invoices||[]);
+        setClients(cloudData.clients);
+        if(cloudData.teamByMonth){setTeamByMonth(cloudData.teamByMonth);}
+        else if(cloudData.team){setTeamByMonth(prev=>({...prev,[DEFAULT_VM]:cloudData.team}));}
+        setInvoices(cloudData.invoices||[]);
         setProjects(cloudData.projects||[]);setFixedExp(cloudData.fixedExp||[]);setDigitalExp(cloudData.digitalExp||[]);
         setVariableExp(cloudData.variableExp||[]);setOfficeExp(cloudData.officeExp||[]);setInvestExp(cloudData.investExp||[]);
         setClientFees(cloudData.clientFees||initFees());setMonthSnapshots(cloudData.monthSnapshots||{});
@@ -433,7 +458,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   /* ── Auto-save on data change ── */
   useEffect(()=>{
     if(!initialLoaded)return; /* don't save until cloud data is loaded */
-    const state={clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles,liquidaciones};
+    const state={clients,teamByMonth,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles,liquidaciones};
     const timer=setTimeout(()=>{
       saveStateLocal(state); /* always save locally as backup */
       if(cloudMode){
@@ -446,7 +471,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
       }
     },1500);
     return()=>clearTimeout(timer);
-  },[clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles,liquidaciones,initialLoaded]);
+  },[clients,teamByMonth,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles,liquidaciones,initialLoaded]);
 
   const NAV=[
     {section:"Ingresos"},
@@ -533,16 +558,17 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     return{totalFees,totalCob,totalPC,totalEm,allCob,allPC,allEm,mInv,mCob,mPC,mEm,totalPR,totalPCost,dedPay,transPay,totalPay,tLiquidaciones,
       tFixed,tDigital,tVar,tCajaCloud,tMovAgencia,tMovMarcas,tOffice,tInvest,overhead,structExp,structProfit,projProfit,netProfit,totalIncome,totalExpenses,clientProfit,
       totalPaidPC,totalPaidCob,paidPC,paidCob};
-  },[clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,vm,clientFees,totalCajaCloud,totalMovAgencia,totalMovMarcas,cajaChica,movMarcas,liquidaciones]);
+  },[clients,teamByMonth,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,vm,clientFees,totalCajaCloud,totalMovAgencia,totalMovMarcas,cajaChica,movMarcas,liquidaciones]);
 
   const history=useMemo(()=>{
     return MONTHS.map(({value:m,label})=>{
       const fees=clients.reduce((s,c)=>s+getFee(c.id,m),0);
       const pR=projects.filter(p=>p.month===m).reduce((s,p)=>s+p.revenue,0);
       const pC=projects.filter(p=>p.month===m).reduce((s,p)=>s+pCost(p),0);
-      /* Usar snapshot del mes si existe, sino datos actuales */
+      /* Usar snapshot del mes si existe, sino teamByMonth del mes */
       const snap=monthSnapshots[m];
-      const pay=snap?snap.team.reduce((s,t)=>s+(t.inversion||t.bruto||0),0):team.reduce((s,t)=>s+(t.inversion||t.bruto),0);
+      const mTeam=teamByMonth[m]||[];
+      const pay=snap?snap.team.reduce((s,t)=>s+(t.inversion||t.bruto||0),0):mTeam.reduce((s,t)=>s+(t.inversion||t.bruto),0);
       const fx=snap?snap.fixedExp.reduce((s,e)=>s+e.amount,0):fixedExp.reduce((s,e)=>s+e.amount,0);
       const dg=snap?snap.digitalExp.reduce((s,e)=>s+e.amount,0):digitalExp.reduce((s,e)=>s+e.amount,0);
       const vr=variableExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
@@ -553,7 +579,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
       const hasData=invoices.some(i=>i.month===m)||projects.some(p=>p.month===m)||vr>0||iv>0||fees>0||mv>0;
       return{month:label.split(" ")[0],m:m,fees,sExp,sProfit:fees-sExp,pProfit:pR-pC,total:(fees-sExp)+(pR-pC),income:fees+pR,pCost:pC,hasData,snapped:!!snap};
     });
-  },[clients,team,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,invoices,clientFees,monthSnapshots,vm,movilidadAll]);
+  },[clients,teamByMonth,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,invoices,clientFees,monthSnapshots,vm,movilidadAll]);
 
   const filtInv=useMemo(()=>{
     let list=invoices.filter(i=>i.month===vm&&i.type===facturaTab);
@@ -806,7 +832,13 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             <div className="card"><div className="kpi-label">AFP</div><div className="kpi-value ta">{fmt(team.reduce((s,t)=>s+t.afp,0))}</div></div>
             <div className="card" style={{borderColor:"#fecaca"}}><div className="kpi-label">Costo Total</div><div className="kpi-value tr">{fmt(calc.totalPay)}</div><div className="kpi-sub">Marcas {fmt(calc.dedPay)} · Trans {fmt(calc.transPay)}{calc.tLiquidaciones>0?" · Liq "+fmt(calc.tLiquidaciones):""}</div></div>
           </div>
-          <div className="info-box"><strong>Planilla:</strong> Se ingresa Bruto, se calcula Neto/AFP/EsSalud auto. <strong>RH:</strong> Solo monto. Distribución = Bruto entre marcas. Clic en persona para editar.</div>
+          <div className="info-box"><strong>Planilla:</strong> Se ingresa Bruto, se calcula Neto/AFP/EsSalud auto. <strong>RH:</strong> Solo monto. Distribución = Bruto entre marcas. Clic en persona para editar. <strong>Cada mes tiene su propia lista de equipo.</strong></div>
+          {team.length===0&&(()=>{const mIdx=ALL_MONTHS.findIndex(m=>m.value===vm);const prevM=mIdx>0?ALL_MONTHS[mIdx-1]:null;const prevT=prevM?(teamByMonth[prevM.value]||[]):[];
+            return prevT.length>0?(<div style={{background:"#eff6ff",borderRadius:8,padding:"12px 16px",marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{fontSize:13}}><strong>Este mes está vacío.</strong> El mes anterior tiene {prevT.length} persona{prevT.length>1?"s":""}.</div>
+              <button className="btn btn-blue btn-sm" onClick={copyTeamFromPrev}>Copiar equipo del mes anterior</button>
+            </div>):null;
+          })()}
           {showForm==="team"&&<TeamForm clients={clients} staff={staff} roles={roles} preClient={preClient} onAdd={t=>{setTeam(prev=>[...prev,{...t,id:Date.now()}]);setShowForm(null);setPreClient(null);}} onClose={()=>{setShowForm(null);setPreClient(null);}}/>}
 
           {/* ── Equipos por marca ── */}
@@ -1775,7 +1807,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               const marginHistory=MONTHS.map(({value:m,label})=>{
                 const mFees=clients.reduce((s,c)=>s+getFee(c.id,m),0);
                 const snap=monthSnapshots[m];
-                const mTransPay=snap?snap.team.reduce((s,t)=>t.assignments.filter(a=>a.clientId===null).reduce((sa,a)=>sa+a.amount,0)+s,0):team.reduce((s,t)=>s+tTrans(t),0);
+                const hmTeam=teamByMonth[m]||[];
+                const mTransPay=snap?snap.team.reduce((s,t)=>t.assignments.filter(a=>a.clientId===null).reduce((sa,a)=>sa+a.amount,0)+s,0):hmTeam.reduce((s,t)=>s+tTrans(t),0);
                 const mFx=snap?snap.fixedExp.reduce((s,e)=>s+e.amount,0):fixedExp.reduce((s,e)=>s+e.amount,0);
                 const mDg=snap?snap.digitalExp.reduce((s,e)=>s+e.amount,0):digitalExp.reduce((s,e)=>s+e.amount,0);
                 const mVr=variableExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
@@ -1784,7 +1817,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                 const row={month:label.split(" ")[0],m};
                 activeClients.forEach(c=>{
                   const f=getFee(c.id,m);
-                  const tc=snap?snap.team.reduce((s,t)=>t.assignments.filter(a=>a.clientId===c.id).reduce((sa,a)=>sa+a.amount,0)+s,0):team.reduce((s,t)=>s+tDed(t,c.id),0);
+                  const tc=snap?snap.team.reduce((s,t)=>t.assignments.filter(a=>a.clientId===c.id).reduce((sa,a)=>sa+a.amount,0)+s,0):hmTeam.reduce((s,t)=>s+tDed(t,c.id),0);
                   const oh=mFees>0?(f/mFees)*mOH:0;
                   const mg=f>0?((f-tc-oh)/f)*100:0;
                   row["c_"+c.id]=Math.round(mg*10)/10;
@@ -1855,8 +1888,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             const fees=clients.reduce((s,c)=>s+getFee(c.id,m),0);
             const pR=projects.filter(p=>p.month===m).reduce((s,p)=>s+p.revenue,0);
             const pC=projects.filter(p=>p.month===m).reduce((s,p)=>s+pCost(p),0);
-            const snap=monthSnapshots[m];
-            const pay=snap?snap.team.reduce((s,t)=>s+(t.inversion||t.bruto||0),0):team.reduce((s,t)=>s+(t.inversion||t.bruto),0);
+            const snap=monthSnapshots[m];const cfmTeam=teamByMonth[m]||[];
+            const pay=snap?snap.team.reduce((s,t)=>s+(t.inversion||t.bruto||0),0):cfmTeam.reduce((s,t)=>s+(t.inversion||t.bruto),0);
             const fx=snap?snap.fixedExp.reduce((s,e)=>s+e.amount,0):fixedExp.reduce((s,e)=>s+e.amount,0);
             const dg=snap?snap.digitalExp.reduce((s,e)=>s+e.amount,0):digitalExp.reduce((s,e)=>s+e.amount,0);
             const vr=variableExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
@@ -2171,7 +2204,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             <div style={{fontSize:12,color:"#71717a",marginBottom:12}}>Los datos se guardan automáticamente en tu navegador (localStorage). Si cambias de navegador o borras datos, se perderán.</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button className="btn btn-gray" onClick={()=>{
-                const data={clients,team,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles,liquidaciones};
+                const data={clients,teamByMonth,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles,liquidaciones};
                 const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
                 const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="finanzas_backup_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(url);
               }}>Exportar Backup (JSON)</button>
@@ -2179,7 +2212,9 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                 const inp=document.createElement("input");inp.type="file";inp.accept=".json";
                 inp.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
                   r.onload=ev=>{try{const d=JSON.parse(ev.target.result);
-                    if(d.clients&&d.team){setClients(d.clients);setTeam(d.team);setInvoices(d.invoices||[]);setProjects(d.projects||[]);
+                    if(d.clients&&(d.teamByMonth||d.team)){setClients(d.clients);
+                      if(d.teamByMonth){setTeamByMonth(d.teamByMonth);}else if(d.team){setTeamByMonth(prev=>({...prev,[vm]:d.team}));}
+                      setInvoices(d.invoices||[]);setProjects(d.projects||[]);
                       setFixedExp(d.fixedExp||[]);setDigitalExp(d.digitalExp||[]);setVariableExp(d.variableExp||[]);setOfficeExp(d.officeExp||[]);setInvestExp(d.investExp||[]);
                       setClientFees(d.clientFees||initFees());setMonthSnapshots(d.monthSnapshots||{});
                       if(d.staff)setStaff(d.staff);
