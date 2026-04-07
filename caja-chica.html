@@ -246,8 +246,9 @@ function CajaChicaApp({user,onLogout}){
     try{
       const sb=getSB();if(!sb){setMsg({type:"err",text:"Sin conexion"});setSaving(false);return;}
       const fotoUrl=await uploadFoto();
+      const mes=fecha.slice(0,7); /* "2026-04" from "2026-04-07" */
       const{error}=await sb.from("caja_chica").insert({
-        user_email:user.email,user_name:nameFromEmail(user.email),fecha,
+        user_email:user.email,user_name:nameFromEmail(user.email),fecha,mes,
         monto:montoNum,concepto:concepto.trim(),categoria:categoria.trim()||"Sin categoria",
         marca:marca||"Agencia",tipo:tipo||"agencia",via_pago:"caja_chica",
         estado_cobro:tipo==="cliente"?"pendiente":"pendiente",
@@ -293,7 +294,8 @@ function CajaChicaApp({user,onLogout}){
     const m=parseFloat(asigMonto);
     if(!asigEmail||!m||m<=0)return;
     const sb=getSB();if(!sb)return;
-    const{error}=await sb.from("caja_chica_asignaciones").insert({persona_email:asigEmail,monto:m,nota:asigNota.trim()||"Asignación",asignado_por:user.email,fecha:new Date().toISOString().slice(0,10)});
+    const hoy=new Date().toISOString().slice(0,10);
+    const{error}=await sb.from("caja_chica_asignaciones").insert({persona_email:asigEmail,monto:m,nota:asigNota.trim()||"Asignación",asignado_por:user.email,fecha:hoy,mes:hoy.slice(0,7)});
     if(error){setMsg({type:"err",text:"Error: "+error.message});return;}
     setAsigEmail("");setAsigMonto("");setAsigNota("");
     setMsg({type:"ok",text:"Saldo asignado"});setTimeout(()=>setMsg(null),3000);
