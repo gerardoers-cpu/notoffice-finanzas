@@ -2475,7 +2475,7 @@ function TeamForm({clients,staff,roles,onAdd,onClose,preClient}){
   const submit=()=>{
     if(!fd.name.trim()){alert("Ingresa el nombre de la persona.");return;}
     if(!bruto||bruto<=0){alert("El sueldo debe ser mayor a S/ 0.");return;}
-    if(!assigns.find(a=>a.isPrimary)?.clientId){alert("Selecciona la marca principal.");return;}
+    /* marca principal ya no es obligatoria — transversales van sin marca (OH) */
     /* Auto-set role on primary if missing */
     const finalAssigns=assigns.map(a=>a.isPrimary&&!a.role?{...a,role:fd.role||"Equipo"}:a);
     const valid=finalAssigns.filter(a=>a.amount>0);
@@ -2533,11 +2533,11 @@ function TeamForm({clients,staff,roles,onAdd,onClose,preClient}){
       </div>}
       {isRH&&bruto>0&&<div style={{fontSize:12,fontWeight:600,marginBottom:8,padding:"6px 10px",background:"#fff",borderRadius:8}}><span style={{color:"#a1a1aa"}}>Total RH:</span> <span>{fmt(bruto)}</span></div>}
 
-      {/* Primary assignment - marca principal */}
-      <div style={{fontSize:12,fontWeight:700,color:"#18181b",margin:"8px 0 6px"}}>Marca Principal</div>
+      {/* Primary assignment - marca principal o transversal */}
+      <div style={{fontSize:12,fontWeight:700,color:"#18181b",margin:"8px 0 6px"}}>{assigns[0]?.clientId===null&&preClient===null?"Transversal (OH)":"Marca Principal"}</div>
       <div style={{display:"flex",gap:4,marginBottom:4,alignItems:"center",background:"#fff",padding:"8px",borderRadius:8,border:"1px solid #e4e4e7"}}>
-        <select value={assigns[0]?.clientId!==null&&assigns[0]?.clientId!==undefined?String(assigns[0].clientId):""} onChange={e=>{const v=e.target.value;setAssigns(prev=>[{...prev[0],clientId:v?parseInt(v):null},...prev.slice(1)]);}} style={{width:160,fontSize:12,padding:"5px 6px"}}>
-          <option value="">Seleccionar marca...</option>
+        <select value={assigns[0]?.clientId!==null&&assigns[0]?.clientId!==undefined?String(assigns[0].clientId):"__trans__"} onChange={e=>{const v=e.target.value;setAssigns(prev=>[{...prev[0],clientId:v==="__trans__"?null:parseInt(v)},...prev.slice(1)]);}} style={{width:160,fontSize:12,padding:"5px 6px"}}>
+          <option value="__trans__">Transversal (OH)</option>
           {clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <select value={assigns[0]?.role||fd.role} onChange={e=>setAssigns(prev=>[{...prev[0],role:e.target.value},...prev.slice(1)])} style={{flex:1,fontSize:12,padding:"5px 6px"}}>
