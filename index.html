@@ -271,9 +271,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   /* ── Team por mes: cada mes tiene su propia lista independiente ── */
   const[teamByMonth,setTeamByMonth]=useState(()=>{
     if(saved?.teamByMonth)return saved.teamByMonth;
-    /* Migración: si hay team viejo (array global), ponerlo en el mes actual */
-    if(saved?.team&&saved.team.length>0)return{[DEFAULT_VM]:saved.team};
-    if(INIT_TEAM.length>0)return{[DEFAULT_VM]:INIT_TEAM};
+    /* Migración: team viejo (array global) → poner en todos los meses */
+    if(saved?.team&&saved.team.length>0){const m={};ALL_MONTHS.forEach(mo=>{m[mo.value]=saved.team.map(t=>({...t}));});return m;}
     return{};
   });
   const team=teamByMonth[vm]||[];
@@ -449,7 +448,11 @@ function App({userEmail="local",onLogout,cloudMode=false}){
       if(cloudData&&cloudData.clients){
         setClients(cloudData.clients);
         if(cloudData.teamByMonth){setTeamByMonth(cloudData.teamByMonth);}
-        else if(cloudData.team){setTeamByMonth(prev=>({...prev,[DEFAULT_VM]:cloudData.team}));}
+        else if(cloudData.team&&cloudData.team.length>0){
+          /* Migración: team viejo (array global) → poner en todos los meses para no perder datos */
+          const migrated={};ALL_MONTHS.forEach(m=>{migrated[m.value]=cloudData.team.map(t=>({...t,id:t.id||Date.now()+Math.random()}));});
+          setTeamByMonth(migrated);
+        }
         setInvoices(cloudData.invoices||[]);
         setProjects(cloudData.projects||[]);setFixedExp(cloudData.fixedExp||[]);setDigitalExp(cloudData.digitalExp||[]);
         setVariableExp(cloudData.variableExp||[]);setOfficeExp(cloudData.officeExp||[]);setInvestExp(cloudData.investExp||[]);
@@ -2114,7 +2117,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                 inp.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
                   r.onload=ev=>{try{const d=JSON.parse(ev.target.result);
                     if(d.clients&&(d.teamByMonth||d.team)){setClients(d.clients);
-                      if(d.teamByMonth){setTeamByMonth(d.teamByMonth);}else if(d.team){setTeamByMonth(prev=>({...prev,[vm]:d.team}));}
+                      if(d.teamByMonth){setTeamByMonth(d.teamByMonth);}else if(d.team&&d.team.length>0){const mg={};ALL_MONTHS.forEach(mo=>{mg[mo.value]=d.team.map(t=>({...t}));});setTeamByMonth(mg);}
                       setInvoices(d.invoices||[]);setProjects(d.projects||[]);
                       setFixedExp(d.fixedExp||[]);setDigitalExp(d.digitalExp||[]);setVariableExp(d.variableExp||[]);setOfficeExp(d.officeExp||[]);setInvestExp(d.investExp||[]);
                       setClientFees(d.clientFees||initFees());setMonthSnapshots(d.monthSnapshots||{});
