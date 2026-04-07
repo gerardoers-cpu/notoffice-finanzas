@@ -263,6 +263,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[asigMonto,setAsigMonto]=useState("");
   const[asigNota,setAsigNota]=useState("");
   const[expandedCajaPersona,setExpandedCajaPersona]=useState(null);
+  const[expandedMovPersona,setExpandedMovPersona]=useState(null);
   const[editingAsigId,setEditingAsigId]=useState(null);
   const[editAsigMonto,setEditAsigMonto]=useState("");
   const[editAsigNota,setEditAsigNota]=useState("");
@@ -689,9 +690,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             <button className="btn btn-green" onClick={()=>setShowForm(showForm==="newclient"?null:"newclient")}><Ic d={ic.plus} size={14} color="#fff"/> Nuevo Cliente</button>
           </div>
           {showForm==="newclient"&&<div className="form-card" style={{marginBottom:12}}><h4 style={{color:"#18181b"}}>Agregar Cliente</h4>
-            <form onSubmit={e=>{e.preventDefault();const f=new FormData(e.target);const nm=(f.get("n")||"").trim();const fee=parseInt(f.get("f"));
+            <form onSubmit={e=>{e.preventDefault();const f=new FormData(e.target);const nm=(f.get("n")||"").trim();const fee=parseInt(f.get("f"))||0;
               if(!nm){alert("Ingresa un nombre de cliente.");return;}
-              if(!fee||fee<=0){alert("El fee debe ser mayor a S/ 0.");return;}
               if(clients.some(c=>c.name.toLowerCase()===nm.toLowerCase())){alert("Ya existe un cliente con ese nombre.");return;}
               const nid=Date.now();setClients(p=>[...p,{id:nid,name:nm,fee}]);
                 setClientFees(prev=>{const nf={...prev};ALL_MONTHS.forEach(({value:m})=>{
@@ -702,7 +702,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             }}>
               <div className="form-row">
                 <input name="n" placeholder="Nombre del cliente" required style={{flex:2}}/>
-                <input name="f" type="number" placeholder="Fee mensual (S/)" required style={{flex:1}}/>
+                <input name="f" type="number" placeholder="Fee mensual (S/ 0 si no tiene)" style={{flex:1}}/>
                 <button type="submit" className="btn btn-green">Agregar</button>
                 <button type="button" className="btn btn-gray" onClick={()=>setShowForm(null)}>Cancelar</button>
               </div>
@@ -1132,24 +1132,55 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                   </tr></tfoot>
                 </table>
               </div>
-              {/* Summary by person (solo aprobados) */}
+              {/* Summary by person (todos los viajes, desglose expandible) */}
               {(()=>{
                 const byPerson={};
-                movAprobada.forEach(v=>{
-                  const k=v.user_email;
-                  if(!byPerson[k])byPerson[k]={name:v.user_name||v.user_email?.split("@")[0],count:0,total:0};
-                  byPerson[k].count++;
-                  byPerson[k].total+=parseFloat(v.tarifa||0);
+                movilidad.forEach(v=>{
+                  const k=v.user_email||v.user_name;
+                  if(!byPerson[k])byPerson[k]={name:v.user_name||v.user_email?.split("@")[0],viajes:[],totalAprobado:0,totalPendiente:0};
+                  byPerson[k].viajes.push(v);
+                  const monto=parseFloat(v.tarifa||0);
+                  if(v.estado==="aprobado")byPerson[k].totalAprobado+=monto;
+                  else if((v.estado||"pendiente")==="pendiente")byPerson[k].totalPendiente+=monto;
                 });
-                const people=Object.values(byPerson).sort((a,b)=>b.total-a.total);
+                const people=Object.values(byPerson).sort((a,b)=>(b.totalAprobado+b.totalPendiente)-(a.totalAprobado+a.totalPendiente));
                 return(<div className="card" style={{marginTop:14}}>
-                  <div style={{fontWeight:700,fontSize:13,marginBottom:8}}>Por persona</div>
-                  {people.map(p=>(
-                    <div key={p.name} style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid #f4f4f5",fontSize:13}}>
-                      <span>{p.name} <span style={{color:"#a1a1aa"}}>({p.count})</span></span>
-                      <span style={{fontWeight:700}}>{fmt(p.total)}</span>
-                    </div>
-                  ))}
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:10}}>Por persona</div>
+                  {people.length===0&&<div style={{fontSize:12,color:"#a1a1aa"}}>Sin registros este mes</div>}
+                  {people.map(p=>{
+                    const isExp=expandedMovPersona===p.name;
+                    return(<div key={p.name} style={{borderBottom:"1px solid #f4f4f5"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",cursor:"pointer"}} onClick={()=>setExpandedMovPersona(isExp?null:p.name)}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{fontSize:14,color:"#a1a1aa"}}>{isExp?"▾":"▸"}</span>
+                          <span style={{fontWeight:600,fontSize:13}}>{p.name}</span>
+                          <span className="badge bb" style={{fontSize:10}}>{p.viajes.length} viaje{p.viajes.length>1?"s":""}</span>
+                        </div>
+                        <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                          {p.totalPendiente>0&&<span style={{fontSize:11,color:"#92400e"}}>Pend: {fmt(p.totalPendiente)}</span>}
+                          <span style={{fontWeight:700,fontSize:14,color:"#059669"}}>{fmt(p.totalAprobado)}</span>
+                        </div>
+                      </div>
+                      {isExp&&(<div style={{paddingBottom:10,paddingLeft:22}}>
+                        <table style={{fontSize:12}}>
+                          <thead><tr><th>Fecha</th><th>Ubicación</th><th>Marca</th><th>Estado</th><th className="text-right">Monto</th></tr></thead>
+                          <tbody>{p.viajes.sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(v=>(
+                            <tr key={v.id} style={{opacity:v.estado==="rechazado"?.4:1}}>
+                              <td>{v.fecha}</td>
+                              <td>{v.destino||v.locacion||"—"}</td>
+                              <td><span className="badge" style={{background:"#f4f4f5",color:"#52525b",fontSize:10}}>{v.marca}</span></td>
+                              <td><span className={`badge ${v.estado==="aprobado"?"bg":(v.estado||"pendiente")==="pendiente"?"bb":"br"}`} style={{fontSize:9}}>{v.estado||"pendiente"}</span></td>
+                              <td className="text-right" style={{fontWeight:600}}>{fmt(v.tarifa)}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                        <div style={{display:"flex",gap:16,marginTop:8,fontSize:11,color:"#71717a",borderTop:"1px solid #f4f4f5",paddingTop:6}}>
+                          {p.viajes.filter(v=>v.marca!=="Agencia").length>0&&<span>Marcas: {fmt(p.viajes.filter(v=>v.estado==="aprobado"&&v.marca!=="Agencia").reduce((s,v)=>s+parseFloat(v.tarifa||0),0))}</span>}
+                          {p.viajes.filter(v=>v.marca==="Agencia").length>0&&<span>Agencia: {fmt(p.viajes.filter(v=>v.estado==="aprobado"&&v.marca==="Agencia").reduce((s,v)=>s+parseFloat(v.tarifa||0),0))}</span>}
+                        </div>
+                      </div>)}
+                    </div>);
+                  })}
                 </div>);
               })()}
               {/* Export */}
