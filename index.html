@@ -111,7 +111,7 @@ const YEARS=(()=>{const ys=[];for(let y=START_YEAR;y<=END_YEAR;y++)ys.push(y);re
 /* MONTHS = filtered by selected year (set dynamically in App) — fallback to all for init */
 let MONTHS=ALL_MONTHS;
 const getYearMonths=(y)=>ALL_MONTHS.filter(m=>m.year===y);
-const DEFAULT_VM=`${Math.max(CUR_YEAR,START_YEAR)}-${String(Math.min(Math.max(CUR_YEAR>=START_YEAR?CUR_MONTH:1,1),12)).padStart(2,"0")}`;
+const DEFAULT_VM=`${Math.max(CUR_YEAR,START_YEAR)}-01`;
 
 /* ── CSS bar chart ── */
 function SimpleBar({data,keys,colors}){
