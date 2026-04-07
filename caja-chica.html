@@ -180,6 +180,7 @@ function CajaChicaApp({user,onLogout}){
   const[loading,setLoading]=useState(true);
   const[lightboxUrl,setLightboxUrl]=useState(null);
   const fileRef=useRef(null);
+  const fileRefGallery=useRef(null);
 
   const PERSONAS_EMAILS=personas.map(p=>p.email);
 
@@ -256,7 +257,7 @@ function CajaChicaApp({user,onLogout}){
       else{
         setMsg({type:"ok",text:"Gasto registrado"});
         setMonto("");setConcepto("");setCategoria("");setMarca("Agencia");setTipo("agencia");setViaPago("caja_chica");setFoto(null);setFotoPreview(null);
-        if(fileRef.current)fileRef.current.value="";
+        if(fileRef.current)fileRef.current.value="";if(fileRefGallery.current)fileRefGallery.current.value="";
         loadData();setTimeout(()=>setMsg(null),3000);
       }
     }catch(e){setMsg({type:"err",text:"Error: "+e.message});}
@@ -381,12 +382,22 @@ function CajaChicaApp({user,onLogout}){
                 </div>
                 <div className="field">
                   <label>Comprobante</label>
-                  <div className="photo-zone">
-                    {fotoPreview?(<div><img src={fotoPreview} alt="preview"/><div style={{marginTop:8,fontSize:11,color:"#a1a1aa"}}>Toca para cambiar</div></div>):(
-                      <div><div style={{fontSize:24,marginBottom:8,opacity:.3}}>&#9679;</div><div>Toca para tomar foto</div></div>
-                    )}
-                    <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto}/>
-                  </div>
+                  {fotoPreview?(
+                    <div className="photo-zone" onClick={()=>{setFoto(null);setFotoPreview(null);if(fileRef.current)fileRef.current.value="";if(fileRefGallery.current)fileRefGallery.current.value="";}}>
+                      <div><img src={fotoPreview} alt="preview"/><div style={{marginTop:8,fontSize:11,color:"#a1a1aa"}}>Toca para quitar</div></div>
+                    </div>
+                  ):(
+                    <div style={{display:"flex",gap:10}}>
+                      <div className="photo-zone" style={{flex:1}} onClick={()=>fileRef.current?.click()}>
+                        <div><div style={{fontSize:24,marginBottom:6}}>📷</div><div>Tomar foto</div></div>
+                      </div>
+                      <div className="photo-zone" style={{flex:1}} onClick={()=>fileRefGallery.current?.click()}>
+                        <div><div style={{fontSize:24,marginBottom:6}}>🖼</div><div>Subir foto</div></div>
+                      </div>
+                    </div>
+                  )}
+                  <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{display:"none"}}/>
+                  <input ref={fileRefGallery} type="file" accept="image/*" onChange={handlePhoto} style={{display:"none"}}/>
                 </div>
               </div>
               <button type="submit" className="btn btn-primary" disabled={saving}>
