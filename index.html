@@ -1210,7 +1210,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                       </div>
                       <div className="form-row">
                         <input name="concepto" placeholder="Concepto (ej: Actor para spot, compra materiales)" required style={{flex:2}}/>
-                        <input name="categoria" placeholder="Categoría" defaultValue="Servicio"/>
+                        <select name="categoria"><option value="Pago de servicio">Pago de servicio</option><option value="Compra">Compra</option></select>
                       </div>
                       <div style={{display:"flex",gap:8,marginTop:8}}>
                         <button type="submit" className="btn btn-sm btn-green">Registrar</button>
