@@ -190,8 +190,9 @@ const INIT_INV=[];
 
 /* ═══ SUPABASE CONFIG ═══ */
 const SB_CONFIG_KEY="finanzas_sb_config";
-const getSBConfig=()=>{try{return JSON.parse(localStorage.getItem(SB_CONFIG_KEY)||"null");}catch(e){return null;}};
-const setSBConfig=(cfg)=>{localStorage.setItem(SB_CONFIG_KEY,JSON.stringify(cfg));};
+const SB_DEFAULTS={url:"https://zysffenpldnvjqdyzckl.supabase.co",key:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5c2ZmZW5wbGRudmpxZHl6Y2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MzE2NzcsImV4cCI6MjA5MTAwNzY3N30.CjsghKCPBqOMU2wGewA9pIskGsmDTMdDPawOfMDaXXQ"};
+const getSBConfig=()=>{try{const c=JSON.parse(localStorage.getItem(SB_CONFIG_KEY)||"null");return(c?.url&&c?.key)?c:SB_DEFAULTS;}catch(e){return SB_DEFAULTS;}};
+const setSBConfig=(cfg)=>{if(cfg)localStorage.setItem(SB_CONFIG_KEY,JSON.stringify(cfg));else localStorage.removeItem(SB_CONFIG_KEY);};
 let _sb=null;
 const getSB=()=>{
   if(_sb)return _sb;
@@ -206,10 +207,20 @@ const loadStateLocal=()=>{try{const s=localStorage.getItem(STORAGE_KEY);return s
 const saveStateLocal=(data)=>{try{localStorage.setItem(STORAGE_KEY,JSON.stringify(data));}catch(e){}};
 
 const loadStateCloud=async()=>{
-  const sb=getSB();if(!sb)return null;
-  try{const{data,error}=await sb.from("app_state").select("data").eq("id","main").single();
-    if(error||!data)return null;return data.data&&Object.keys(data.data).length>0?data.data:null;
-  }catch(e){console.warn("Cloud load failed:",e);return null;}
+  const sb=getSB();if(!sb){console.error("[CLOUD] No Supabase client");return null;}
+  try{
+    /* Intentar con columna "data" primero, luego "state" como fallback */
+    let{data,error}=await sb.from("app_state").select("*").eq("id","main").single();
+    console.log("[CLOUD] Raw response:",{data,error});
+    if(error){console.error("[CLOUD] Query error:",error.message,error.code,error.details);return null;}
+    if(!data){console.warn("[CLOUD] No row found for id=main");return null;}
+    /* La columna puede llamarse "data" o "state" */
+    const payload=data.data||data.state||null;
+    console.log("[CLOUD] Payload keys:",payload?Object.keys(payload):"NULL");
+    console.log("[CLOUD] Clients count:",payload?.clients?.length||0);
+    if(payload&&Object.keys(payload).length>0)return payload;
+    return null;
+  }catch(e){console.error("[CLOUD] Load exception:",e);return null;}
 };
 const saveStateCloud=async(state,email)=>{
   const sb=getSB();if(!sb)return false;
@@ -443,9 +454,12 @@ function App({userEmail="local",onLogout,cloudMode=false}){
 
   /* ── Load from cloud on first mount ── */
   useEffect(()=>{
-    if(!cloudMode){setInitialLoaded(true);return;}
+    if(!cloudMode){console.log("[INIT] Local mode, skip cloud load");setInitialLoaded(true);return;}
+    console.log("[INIT] Cloud mode, loading from Supabase...");
     loadStateCloud().then(cloudData=>{
+      console.log("[INIT] Cloud data received:", cloudData?"HAS DATA ("+Object.keys(cloudData).join(",")+")":"NULL");
       if(cloudData&&cloudData.clients){
+        console.log("[INIT] Loading",cloudData.clients.length,"clients from cloud");
         setClients(cloudData.clients);
         if(cloudData.teamByMonth){setTeamByMonth(cloudData.teamByMonth);}
         else if(cloudData.team&&cloudData.team.length>0){
