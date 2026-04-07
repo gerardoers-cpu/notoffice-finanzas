@@ -289,7 +289,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     const prevTeam=teamByMonth[prevMonth]||[];
     if(prevTeam.length===0){alert("El mes anterior no tiene equipo registrado.");return;}
     if(team.length>0&&!confirm("Ya hay personas en este mes. ¿Reemplazar con el equipo del mes anterior?"))return;
-    setTeamByMonth(prev=>({...prev,[vm]:prevTeam.map(t=>({...t,id:Date.now()+Math.random()}))}));
+    /* Excluir personas con liquidación (ya se fueron) y limpiar el campo liquidacion */
+    setTeamByMonth(prev=>({...prev,[vm]:prevTeam.filter(t=>!t.liquidacion||t.liquidacion<=0).map(t=>({...t,id:Date.now()+Math.random(),liquidacion:0}))}));
   };
   const[invoices,setInvoices]=useState(saved?.invoices||genInvoices);
   const[projects,setProjects]=useState(saved?.projects||INIT_PROJECTS);
@@ -301,11 +302,6 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[staff,setStaff]=useState(saved?.staff||INIT_STAFF);
   const[roles,setRoles]=useState(saved?.roles||INIT_ROLES);
   const[editStaffId,setEditStaffId]=useState(null);
-  const[liquidaciones,setLiquidaciones]=useState(saved?.liquidaciones||[]);
-  const[showLiquidar,setShowLiquidar]=useState(null);
-  const[liquidarMonto,setLiquidarMonto]=useState("");
-  const[liquidarNota,setLiquidarNota]=useState("");
-
   /* Per-month fees: { month: { clientId: { base:number, services:[{id,name,amount}] } } } */
   const[clientFees,setClientFees]=useState(saved?.clientFees||initFees);
   const getEntry=(cId,m)=>(clientFees[m]&&clientFees[m][cId])||{base:0,services:[]};
@@ -448,7 +444,6 @@ function App({userEmail="local",onLogout,cloudMode=false}){
         setClientFees(cloudData.clientFees||initFees());setMonthSnapshots(cloudData.monthSnapshots||{});
         if(cloudData.staff)setStaff(cloudData.staff);
         if(cloudData.roles)setRoles(cloudData.roles);
-        if(cloudData.liquidaciones)setLiquidaciones(cloudData.liquidaciones);
         setSaveMsg("Datos cargados de la nube");setTimeout(()=>setSaveMsg(""),3000);
       }
       setInitialLoaded(true);
@@ -458,7 +453,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   /* ── Auto-save on data change ── */
   useEffect(()=>{
     if(!initialLoaded)return; /* don't save until cloud data is loaded */
-    const state={clients,teamByMonth,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles,liquidaciones};
+    const state={clients,teamByMonth,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles};
     const timer=setTimeout(()=>{
       saveStateLocal(state); /* always save locally as backup */
       if(cloudMode){
@@ -471,7 +466,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
       }
     },1500);
     return()=>clearTimeout(timer);
-  },[clients,teamByMonth,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles,liquidaciones,initialLoaded]);
+  },[clients,teamByMonth,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles,initialLoaded]);
 
   const NAV=[
     {section:"Ingresos"},
@@ -519,7 +514,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     const totalPCost=mProj.reduce((s,p)=>s+pCost(p),0);
     const dedPay=team.reduce((s,t)=>s+tAllDed(t),0);
     const transPay=team.reduce((s,t)=>s+tTrans(t),0);
-    const tLiquidaciones=liquidaciones.filter(l=>l.mes===vm).reduce((s,l)=>s+l.monto,0);
+    const tLiquidaciones=team.reduce((s,t)=>s+(t.liquidacion||0),0);
     const totalPay=dedPay+transPay+tLiquidaciones;
     const tFixed=fixedExp.reduce((s,e)=>s+e.amount,0);
     const tDigital=digitalExp.reduce((s,e)=>s+e.amount,0);
@@ -558,7 +553,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     return{totalFees,totalCob,totalPC,totalEm,allCob,allPC,allEm,mInv,mCob,mPC,mEm,totalPR,totalPCost,dedPay,transPay,totalPay,tLiquidaciones,
       tFixed,tDigital,tVar,tCajaCloud,tMovAgencia,tMovMarcas,tOffice,tInvest,overhead,structExp,structProfit,projProfit,netProfit,totalIncome,totalExpenses,clientProfit,
       totalPaidPC,totalPaidCob,paidPC,paidCob};
-  },[clients,teamByMonth,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,vm,clientFees,totalCajaCloud,totalMovAgencia,totalMovMarcas,cajaChica,movMarcas,liquidaciones]);
+  },[clients,teamByMonth,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,vm,clientFees,totalCajaCloud,totalMovAgencia,totalMovMarcas,cajaChica,movMarcas]);
 
   const history=useMemo(()=>{
     return MONTHS.map(({value:m,label})=>{
@@ -862,7 +857,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
                     {ctxAmount!=null&&ctxAmount!==(m.inversion||m.bruto)&&<span style={{fontSize:11,color:"#a1a1aa"}}>{fmt(ctxAmount)} en marca</span>}
                     <span style={{fontWeight:700,fontSize:13}} className="tr">{fmt(m.inversion||m.bruto)}</span>
-                    <button className="del-btn" style={{fontSize:13}} onClick={e=>{e.stopPropagation();if(m.regimen==="planilla"){setShowLiquidar(m);setLiquidarMonto("");setLiquidarNota("");}else{setTeam(prev=>prev.filter(t=>t.id!==m.id));};}}>✕</button>
+                    {(m.liquidacion||0)>0&&<span style={{fontSize:10,color:"#dc2626",fontWeight:600}}>+{fmt(m.liquidacion)} liq.</span>}
+                    <button className="del-btn" style={{fontSize:13}} onClick={e=>{e.stopPropagation();setTeam(prev=>prev.filter(t=>t.id!==m.id));}}>✕</button>
                   </div>
                 </div>
                 {isExp&&(<div style={{marginTop:10,paddingTop:10,borderTop:"1px solid #f4f4f5"}}>
@@ -896,9 +892,17 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                     background:diff>0?"#fafafa":"#fff1f2",color:diff>0?"#3f3f46":"#e11d48",fontWeight:600}}>
                     {diff>0?"⚠ Sin asignar: "+fmt(diff):"⚠ Excede el bruto: "+fmt(Math.abs(diff))}
                   </div>}
+                  {m.regimen==="planilla"&&(<div style={{marginTop:8,paddingTop:6,borderTop:"1px solid #f4f4f5"}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      <span style={{fontSize:11,fontWeight:600,color:"#dc2626",minWidth:80}}>Liquidación</span>
+                      <input type="number" value={m.liquidacion||""} placeholder="0" onChange={e=>setTeam(prev=>prev.map(t=>t.id===m.id?{...t,liquidacion:parseInt(e.target.value)||0}:t))}
+                        style={{width:120,textAlign:"right",fontSize:12,padding:"4px 8px"}}/>
+                      <span style={{fontSize:10,color:"#a1a1aa"}}>No se copia al siguiente mes</span>
+                    </div>
+                    {(m.liquidacion||0)>0&&<div style={{fontSize:11,color:"#dc2626",fontWeight:600,marginTop:4}}>Costo total con liquidación: {fmt((m.inversion||m.bruto)+(m.liquidacion||0))}</div>}
+                  </div>)}
                   <div style={{display:"flex",justifyContent:"flex-end",marginTop:8,paddingTop:6,borderTop:"1px solid #f4f4f5"}}>
-                    {m.regimen==="planilla"?<button className="btn btn-sm btn-red" style={{opacity:.7,fontSize:11}} onClick={()=>{setShowLiquidar(m);setLiquidarMonto("");setLiquidarNota("");}}>Liquidar</button>
-                    :<button className="btn btn-sm btn-red" style={{opacity:.7,fontSize:11}} onClick={()=>setTeam(prev=>prev.filter(t=>t.id!==m.id))}>Eliminar</button>}
+                    <button className="btn btn-sm btn-red" style={{opacity:.7,fontSize:11}} onClick={()=>setTeam(prev=>prev.filter(t=>t.id!==m.id))}>Eliminar</button>
                   </div>
                 </div>)}
               </div>);};
@@ -955,57 +959,6 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             </>);
           })()}
 
-          {/* ── Liquidaciones ── */}
-          {liquidaciones.filter(l=>l.mes===vm).length>0&&(<>
-            <div className="sl" style={{marginTop:16}}>Liquidaciones del mes</div>
-            <div className="card">
-              {liquidaciones.filter(l=>l.mes===vm).map(l=>(<div key={l.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #f4f4f5"}}>
-                <div>
-                  <div style={{fontWeight:600,fontSize:13}}>{l.nombre}</div>
-                  <div style={{fontSize:11,color:"#71717a"}}>{l.nota||"Liquidación"} · {l.fecha}</div>
-                  <div style={{fontSize:10,color:"#a1a1aa"}}>Neto: {fmt(l.neto)} · Bruto: {fmt(l.bruto)}</div>
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <span style={{fontWeight:700,fontSize:14,color:"#dc2626"}}>{fmt(l.monto)}</span>
-                  <button className="del-btn" style={{fontSize:11}} onClick={()=>setLiquidaciones(prev=>prev.filter(x=>x.id!==l.id))}>✕</button>
-                </div>
-              </div>))}
-              <div style={{display:"flex",justifyContent:"space-between",paddingTop:8,fontWeight:700,fontSize:13}}>
-                <span>Total liquidaciones</span>
-                <span className="tr">{fmt(liquidaciones.filter(l=>l.mes===vm).reduce((s,l)=>s+l.monto,0))}</span>
-              </div>
-            </div>
-          </>)}
-
-          {/* ── Modal Liquidar ── */}
-          {showLiquidar&&(<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000}} onClick={()=>setShowLiquidar(null)}>
-            <div className="card" style={{width:380,maxWidth:"90vw"}} onClick={e=>e.stopPropagation()}>
-              <div style={{fontWeight:700,fontSize:15,marginBottom:12}}>Liquidar a {showLiquidar.name}</div>
-              <div style={{fontSize:12,color:"#71717a",marginBottom:12,lineHeight:1.6}}>
-                Régimen: Planilla · Neto: {fmt(showLiquidar.neto)} · Bruto: {fmt(showLiquidar.bruto)}<br/>
-                Esta persona no será considerada para el próximo mes.
-              </div>
-              <div style={{marginBottom:10}}>
-                <label style={{fontSize:11,fontWeight:600,color:"#71717a"}}>Monto de liquidación (S/)</label>
-                <input type="number" placeholder="Ingresa el monto" value={liquidarMonto} onChange={e=>setLiquidarMonto(e.target.value)}
-                  style={{width:"100%",marginTop:4,padding:"8px 12px",fontSize:14,fontWeight:600}}/>
-              </div>
-              <div style={{marginBottom:12}}>
-                <label style={{fontSize:11,fontWeight:600,color:"#71717a"}}>Nota (opcional)</label>
-                <input type="text" placeholder="Motivo, CTS, gratificación, etc." value={liquidarNota} onChange={e=>setLiquidarNota(e.target.value)}
-                  style={{width:"100%",marginTop:4,padding:"6px 12px",fontSize:12}}/>
-              </div>
-              <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-                <button className="btn btn-gray" onClick={()=>setShowLiquidar(null)}>Cancelar</button>
-                <button className="btn btn-red" disabled={!liquidarMonto||parseFloat(liquidarMonto)<=0} onClick={()=>{
-                  const m=parseFloat(liquidarMonto);
-                  setLiquidaciones(prev=>[...prev,{id:Date.now(),personId:showLiquidar.id,nombre:showLiquidar.name,neto:showLiquidar.neto||0,bruto:showLiquidar.bruto||0,monto:m,nota:liquidarNota.trim(),fecha:new Date().toISOString().slice(0,10),mes:vm}]);
-                  setTeam(prev=>prev.filter(t=>t.id!==showLiquidar.id));
-                  setShowLiquidar(null);setLiquidarMonto("");setLiquidarNota("");
-                }}>Confirmar Liquidación</button>
-              </div>
-            </div>
-          </div>)}
         </>)}
 
         {/* ═══ EGRESOS > GASTOS ═══ */}
@@ -2204,7 +2157,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             <div style={{fontSize:12,color:"#71717a",marginBottom:12}}>Los datos se guardan automáticamente en tu navegador (localStorage). Si cambias de navegador o borras datos, se perderán.</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
               <button className="btn btn-gray" onClick={()=>{
-                const data={clients,teamByMonth,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles,liquidaciones};
+                const data={clients,teamByMonth,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles};
                 const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
                 const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="finanzas_backup_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(url);
               }}>Exportar Backup (JSON)</button>
@@ -2219,7 +2172,6 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                       setClientFees(d.clientFees||initFees());setMonthSnapshots(d.monthSnapshots||{});
                       if(d.staff)setStaff(d.staff);
                       if(d.roles)setRoles(d.roles);
-                      if(d.liquidaciones)setLiquidaciones(d.liquidaciones);
                       setSaveMsg("Backup restaurado");setTimeout(()=>setSaveMsg(""),3000);
                     }else alert("Archivo inválido");}catch(err){alert("Error al leer: "+err.message);}};r.readAsText(f);};inp.click();
               }}>Importar Backup</button>
