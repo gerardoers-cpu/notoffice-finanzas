@@ -309,6 +309,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const setBase=(cId,m,v)=>setClientFees(prev=>{const e=getEntry(cId,m);return{...prev,[m]:{...prev[m],[cId]:{...e,base:v}}};});
   const addSvc=(cId,m,name,amount)=>setClientFees(prev=>{const e=getEntry(cId,m);return{...prev,[m]:{...prev[m],[cId]:{...e,services:[...e.services,{id:Date.now(),name,amount}]}}};});
   const delSvc=(cId,m,sId)=>setClientFees(prev=>{const e=getEntry(cId,m);return{...prev,[m]:{...prev[m],[cId]:{...e,services:e.services.filter(s=>s.id!==sId)}}};});
+  const editSvc=(cId,m,sId,updates)=>setClientFees(prev=>{const e=getEntry(cId,m);return{...prev,[m]:{...prev[m],[cId]:{...e,services:e.services.map(s=>s.id===sId?{...s,...updates}:s)}}};});
   const[expandedClient,setExpandedClient]=useState(null);
   const[editPerson,setEditPerson]=useState(null);
   const[editInvoice,setEditInvoice]=useState(null);
@@ -719,8 +720,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                 </div>
                 <div style={{fontSize:12,fontWeight:600,color:"#71717a",marginBottom:6}}>Servicios adicionales</div>
                 {entry.services.map(sv=>(<div key={sv.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:4,padding:"4px 8px",background:"#fafafa",borderRadius:6}}>
-                  <span style={{flex:1,fontSize:12}}>{sv.name}</span>
-                  <span style={{fontWeight:600,fontSize:12,color:"#18181b"}}>{fmt(sv.amount)}</span>
+                  <input value={sv.name} onChange={e=>editSvc(c.id,vm,sv.id,{name:e.target.value})} style={{flex:1,fontSize:12,padding:"3px 6px",border:"1px solid transparent",borderRadius:4,background:"transparent"}} onFocus={e=>{e.target.style.border="1px solid #d4d4d8";e.target.style.background="#fff";}} onBlur={e=>{e.target.style.border="1px solid transparent";e.target.style.background="transparent";}}/>
+                  <input type="number" value={sv.amount} onChange={e=>editSvc(c.id,vm,sv.id,{amount:parseInt(e.target.value)||0})} style={{width:90,fontWeight:600,fontSize:12,textAlign:"right",padding:"3px 6px",border:"1px solid transparent",borderRadius:4,background:"transparent"}} onFocus={e=>{e.target.style.border="1px solid #d4d4d8";e.target.style.background="#fff";}} onBlur={e=>{e.target.style.border="1px solid transparent";e.target.style.background="transparent";}}/>
                   <button className="del-btn" onClick={()=>delSvc(c.id,vm,sv.id)}>✕</button>
                 </div>))}
                 <SvcForm onAdd={(n,a)=>addSvc(c.id,vm,n,a)}/>
