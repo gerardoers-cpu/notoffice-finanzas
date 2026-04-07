@@ -260,7 +260,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     const sb=getSB();if(!sb){alert("Sin conexión a Supabase");return;}
     const{error}=await sb.from("caja_chica_asignaciones").insert({
       persona_email:asigPersona,persona_name:asigPersona.split("@")[0].replace(/\./g," ").replace(/\b\w/g,c=>c.toUpperCase()),
-      monto:parseFloat(asigMonto),nota:asigNota.trim()||"Asignación de caja chica",asignado_por:userEmail
+      monto:parseFloat(asigMonto),nota:asigNota.trim()||"Asignación de caja chica",asignado_por:userEmail,mes:vm
     });
     if(error)alert("Error: "+error.message);
     else{setAsigMonto("");setAsigNota("");setAsigPersona("");setShowAsignarCaja(false);loadCajaChica(vm);setSaveMsg("Caja chica asignada");setTimeout(()=>setSaveMsg(""),3000);}
@@ -423,12 +423,23 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const cajaBalances=useMemo(()=>{
     const b={};
     CAJA_PERSONAS_EMAILS.forEach(p=>{
-      const totalAsig=cajaAsignaciones.filter(a=>a.persona_email===p).reduce((s,a)=>s+parseFloat(a.monto||0),0);
-      const totalGast=cajaChicaAll.filter(g=>g.user_email===p&&(g.via_pago||"caja_chica")==="caja_chica").reduce((s,g)=>s+parseFloat(g.monto||0),0);
-      b[p]={asignado:totalAsig,gastado:totalGast,saldo:totalAsig-totalGast};
+      /* Asignaciones hasta el mes actual (mes<=vm o sin campo mes para datos legacy) */
+      const asigHastaMes=cajaAsignaciones.filter(a=>a.persona_email===p&&(!a.mes||a.mes<=vm));
+      const asigEsteMes=cajaAsignaciones.filter(a=>a.persona_email===p&&a.mes===vm);
+      const asigAnterior=cajaAsignaciones.filter(a=>a.persona_email===p&&(!a.mes||a.mes<vm));
+      /* Gastos hasta el mes actual */
+      const gastHastaMes=cajaChicaAll.filter(g=>g.user_email===p&&(g.via_pago||"caja_chica")==="caja_chica"&&(!g.mes||g.mes<=vm));
+      const gastEsteMes=cajaChicaAll.filter(g=>g.user_email===p&&(g.via_pago||"caja_chica")==="caja_chica"&&g.mes===vm);
+      const gastAnterior=cajaChicaAll.filter(g=>g.user_email===p&&(g.via_pago||"caja_chica")==="caja_chica"&&(!g.mes||g.mes<vm));
+      const totalAsig=asigHastaMes.reduce((s,a)=>s+parseFloat(a.monto||0),0);
+      const totalGast=gastHastaMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      const asignadoEsteMes=asigEsteMes.reduce((s,a)=>s+parseFloat(a.monto||0),0);
+      const gastadoEsteMes=gastEsteMes.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      const saldoAnterior=asigAnterior.reduce((s,a)=>s+parseFloat(a.monto||0),0)-gastAnterior.reduce((s,g)=>s+parseFloat(g.monto||0),0);
+      b[p]={asignado:totalAsig,gastado:totalGast,saldo:totalAsig-totalGast,asignadoEsteMes,gastadoEsteMes,saldoAnterior};
     });
     return b;
-  },[cajaChicaAll,cajaAsignaciones,CAJA_PERSONAS_EMAILS]);
+  },[cajaChicaAll,cajaAsignaciones,CAJA_PERSONAS_EMAILS,vm]);
 
   /* ── Load from cloud on first mount ── */
   useEffect(()=>{
@@ -945,17 +956,22 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                       </div>
                       <div style={{textAlign:"right"}}>
                         <div style={{fontSize:20,fontWeight:700,color}}>{fmt(b.saldo)}</div>
-                        <div style={{fontSize:10,color:"#a1a1aa"}}>Asignado: {fmt(b.asignado)} · Gastado: {fmt(b.gastado)}</div>
+                        <div style={{fontSize:10,color:"#a1a1aa"}}>
+                          {b.saldoAnterior!==0&&<span style={{color:b.saldoAnterior>0?"#059669":"#e11d48"}}>Anterior: {fmt(b.saldoAnterior)} · </span>}
+                          Este mes: +{fmt(b.asignadoEsteMes||0)} / -{fmt(b.gastadoEsteMes||0)}
+                        </div>
+                        {b.saldo<0&&<div style={{fontSize:10,fontWeight:700,color:"#e11d48"}}>⚠ Déficit</div>}
                       </div>
                     </div>
                     {isExpanded&&(
                       <div style={{marginTop:12,borderTop:"1px solid #f0f0f0",paddingTop:10}}>
                         <div style={{fontSize:11,fontWeight:700,color:"#a1a1aa",marginBottom:6,textTransform:"uppercase",letterSpacing:"1px"}}>Historial de asignaciones</div>
                         {pAsig.length===0?<div style={{fontSize:12,color:"#a1a1aa",padding:"8px 0"}}>Sin asignaciones</div>:(
-                          <table style={{width:"100%",fontSize:12}}><thead><tr style={{background:"#f9fafb"}}><th style={{padding:"6px 8px",textAlign:"left"}}>Fecha</th><th style={{padding:"6px 8px",textAlign:"left"}}>Nota</th><th style={{padding:"6px 8px",textAlign:"right"}}>Monto</th><th style={{padding:"6px 8px",textAlign:"left"}}>Por</th><th style={{padding:"6px 8px",width:80}}>Acciones</th></tr></thead>
+                          <table style={{width:"100%",fontSize:12}}><thead><tr style={{background:"#f9fafb"}}><th style={{padding:"6px 8px",textAlign:"left"}}>Fecha</th><th style={{padding:"6px 8px",textAlign:"left"}}>Mes</th><th style={{padding:"6px 8px",textAlign:"left"}}>Nota</th><th style={{padding:"6px 8px",textAlign:"right"}}>Monto</th><th style={{padding:"6px 8px",textAlign:"left"}}>Por</th><th style={{padding:"6px 8px",width:80}}>Acciones</th></tr></thead>
                           <tbody>{pAsig.map(a=>(
                             <tr key={a.id} style={{borderBottom:"1px solid #f4f4f5"}}>
-                              <td style={{padding:"6px 8px"}}>{new Date(a.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short",year:"numeric"})}</td>
+                              <td style={{padding:"6px 8px"}}>{new Date(a.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}</td>
+                              <td style={{padding:"6px 8px",fontSize:10,color:a.mes===vm?"#2563eb":"#a1a1aa",fontWeight:a.mes===vm?600:400}}>{a.mes||"—"}</td>
                               {editingAsigId===a.id?(
                                 <>
                                   <td style={{padding:"4px 6px"}}><input value={editAsigNota} onChange={e=>setEditAsigNota(e.target.value)} style={{width:"100%",padding:"4px 6px",fontSize:11,border:"1px solid #d4d4d8",borderRadius:6}}/></td>
