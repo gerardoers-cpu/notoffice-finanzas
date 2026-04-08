@@ -356,6 +356,55 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[editInvoice,setEditInvoice]=useState(null);
   const[editProject,setEditProject]=useState(null);
   const[preClient,setPreClient]=useState(null);
+  /* Preparar Mes state */
+  const[showPrepMes,setShowPrepMes]=useState(false);
+  const prevMonthIdx=ALL_MONTHS.findIndex(m=>m.value===vm)-1;
+  const prevMes=prevMonthIdx>=0?ALL_MONTHS[prevMonthIdx]:null;
+  const prevMesVal=prevMes?prevMes.value:null;
+  const prevTeamData=prevMesVal?(teamByMonth[prevMesVal]||[]):[];
+  const prevFeesData=prevMesVal?(clientFees[prevMesVal]||{}):{};
+  const prevVarExp=prevMesVal?variableExp.filter(e=>e.month===prevMesVal):[];
+  const prevInvExp=prevMesVal?investExp.filter(e=>e.month===prevMesVal):[];
+  const prevInvoices=prevMesVal?invoices.filter(i=>i.month===prevMesVal):[];
+
+  const copyFees=()=>{
+    if(!prevMesVal){alert("No hay mes anterior disponible.");return;}
+    if(Object.keys(prevFeesData).length===0){alert("El mes anterior no tiene fees configurados.");return;}
+    const curFees=clientFees[vm]||{};
+    if(Object.keys(curFees).length>0&&!confirm("¿Reemplazar fees de este mes?"))return;
+    setClientFees(prev=>{const nf={...prev};nf[vm]={};clients.forEach(c=>{const pe=getEntry(c.id,prevMesVal);
+      nf[vm][c.id]={base:pe.base,services:pe.services.map(s=>({...s,id:Date.now()+Math.random()}))};});return nf;});
+  };
+  const copyTeamByClient=(clientId)=>{
+    if(!prevMesVal){alert("No hay mes anterior disponible.");return;}
+    const isTransversal=clientId===null;
+    const prevMembers=prevTeamData.filter(t=>{
+      if(isTransversal)return t.assignments.every(a=>a.clientId===null);
+      return t.assignments.some(a=>a.clientId===clientId);
+    }).filter(t=>!t.liquidacion||t.liquidacion<=0);
+    if(prevMembers.length===0){alert("No hay personas en este equipo el mes anterior.");return;}
+    const label=isTransversal?"transversal":clients.find(c=>c.id===clientId)?.name||"";
+    /* Check if any of these people already exist in current month */
+    const curNames=team.map(t=>t.name);
+    const dupes=prevMembers.filter(t=>curNames.includes(t.name));
+    if(dupes.length>0&&!confirm("Ya existen "+dupes.length+" persona(s) de equipo "+label+" en este mes ("+dupes.map(d=>d.name).join(", ")+"). ¿Agregar de todas formas?"))return;
+    /* Add only people not already in current month */
+    const newMembers=prevMembers.filter(t=>!curNames.includes(t.name)).map(t=>({...t,id:Date.now()+Math.random(),liquidacion:0}));
+    if(newMembers.length===0){alert("Todas las personas de "+label+" ya están en este mes.");return;}
+    setTeamByMonth(prev=>({...prev,[vm]:[...(prev[vm]||[]),...newMembers]}));
+  };
+  const copyAllTeam=()=>{
+    if(!prevMesVal){alert("No hay mes anterior disponible.");return;}
+    if(prevTeamData.length===0){alert("El mes anterior no tiene equipo.");return;}
+    if(team.length>0&&!confirm("¿Reemplazar TODO el equipo de este mes?"))return;
+    setTeamByMonth(prev=>({...prev,[vm]:prevTeamData.filter(t=>!t.liquidacion||t.liquidacion<=0).map(t=>({...t,id:Date.now()+Math.random(),liquidacion:0}))}));
+  };
+  const clearMonth=()=>{
+    if(!confirm("¿Borrar TODOS los datos de "+ML[parseInt(vm.split("-")[1])-1]+"? Esto incluye equipo y fees de este mes."))return;
+    setTeamByMonth(prev=>({...prev,[vm]:[]}));
+    setClientFees(prev=>({...prev,[vm]:{}}));
+  };
+
   /* Cotizador state */
   const[simName,setSimName]=useState("Nuevo Cliente");
   const[simFee,setSimFee]=useState("");
@@ -706,6 +755,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           <div style={{display:"flex",alignItems:"center",gap:16}}>
             {saveMsg&&<span style={{fontSize:11,color:"#fff",fontWeight:600,background:saveMsg.includes("nube")?"#059669":"#18181b",padding:"6px 16px",borderRadius:20,animation:"fadeIn .2s",whiteSpace:"nowrap"}}>{saveMsg.includes("nube")?"☁️ ":""}{saveMsg}</span>}
             <button className="btn btn-sm btn-gray" title="Cerrar mes: guarda snapshot de planilla y gastos actuales para este mes" onClick={()=>{takeSnapshot();setSaveMsg("Mes cerrado ✓");setTimeout(()=>setSaveMsg(""),3000);}}>Cerrar {ML[parseInt(vm.split("-")[1])-1]}</button>
+            <button className="btn btn-sm btn-blue" onClick={()=>setShowPrepMes(!showPrepMes)}><Ic d={ic.repeat} size={13} color="#fff"/> Preparar Mes</button>
             <div style={{display:"flex",alignItems:"center",gap:4,background:"#f4f4f5",borderRadius:10,padding:3}}>
               {YEARS.map(y=>(
                 <button key={y} onClick={()=>setVm(`${y}-${vm.split("-")[1]}`)} style={{padding:"5px 14px",borderRadius:8,border:"none",fontSize:12,fontWeight:selYear===y?700:500,cursor:"pointer",fontFamily:"inherit",background:selYear===y?"#18181b":"transparent",color:selYear===y?"#fff":"#71717a",transition:"all .15s"}}>{y}</button>
@@ -722,6 +772,90 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             </div>
           </div>
         </div>
+
+        {/* Panel Preparar Mes */}
+        {showPrepMes&&(()=>{
+          /* Build per-client team groups from previous month */
+          const prevClientGroups=[];
+          const seenClients=new Set();
+          prevTeamData.forEach(t=>{t.assignments.forEach(a=>{if(a.clientId&&!seenClients.has(a.clientId)){seenClients.add(a.clientId);}});});
+          clients.forEach(c=>{
+            if(!seenClients.has(c.id))return;
+            const members=prevTeamData.filter(t=>t.assignments.some(a=>a.clientId===c.id)).filter(t=>!t.liquidacion||t.liquidacion<=0);
+            if(members.length>0)prevClientGroups.push({id:c.id,name:c.name,members});
+          });
+          const prevTrans=prevTeamData.filter(t=>t.assignments.every(a=>a.clientId===null)).filter(t=>!t.liquidacion||t.liquidacion<=0);
+          const curNames=team.map(t=>t.name);
+          return(<div style={{background:"#18181b",padding:"20px 24px",borderBottom:"1px solid #333"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+            <div><div style={{color:"#fff",fontWeight:700,fontSize:16}}>Preparar {ML[parseInt(vm.split("-")[1])-1]} {vm.split("-")[0]}</div>
+              <div style={{color:"#71717a",fontSize:12}}>{prevMes?"Copiar desde "+prevMes.label:"No hay mes anterior"} · Este mes: {team.length} personas, {Object.keys(clientFees[vm]||{}).length} clientes con fee</div></div>
+            <button onClick={()=>setShowPrepMes(false)} style={{background:"none",border:"none",color:"#71717a",fontSize:18,cursor:"pointer"}}>✕</button>
+          </div>
+
+          {/* Ingresos Recurrentes */}
+          <div style={{marginBottom:16}}>
+            <div style={{color:"#a1a1aa",fontSize:10,textTransform:"uppercase",letterSpacing:1,marginBottom:8,fontWeight:700}}>Ingresos Recurrentes</div>
+            <div style={{background:"#27272a",borderRadius:10,padding:"12px 14px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div><span style={{color:"#fff",fontWeight:600,fontSize:13}}>Fees de {clients.length} clientes</span>
+                <div style={{fontSize:11,color:"#71717a"}}>Mes anterior: {Object.keys(prevFeesData).length} clientes con fee</div></div>
+              <button className="btn btn-sm" style={{background:"#3f3f46",color:"#fff",border:"none",fontSize:11}}
+                onClick={()=>{copyFees();}} disabled={!prevMesVal}>
+                <Ic d={ic.repeat} size={11} color="#fff"/> Copiar fees
+              </button>
+            </div>
+          </div>
+
+          {/* Equipo por marca */}
+          <div style={{marginBottom:16}}>
+            <div style={{color:"#a1a1aa",fontSize:10,textTransform:"uppercase",letterSpacing:1,marginBottom:8,fontWeight:700}}>Equipo por Marca</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:8}}>
+              {prevClientGroups.map(g=>{
+                const copied=g.members.filter(m=>curNames.includes(m.name)).length;
+                const pending=g.members.length-copied;
+                return(<div key={g.id} style={{background:"#27272a",borderRadius:10,padding:"12px 14px"}}>
+                  <div style={{color:"#fff",fontWeight:600,fontSize:13,marginBottom:4}}>{g.name}</div>
+                  <div style={{fontSize:11,color:"#71717a",marginBottom:6}}>{g.members.map(m=>m.name).join(", ")}</div>
+                  <div style={{fontSize:11,marginBottom:6}}>{copied>0&&<span style={{color:"#22c55e"}}>✓ {copied} copiado{copied>1?"s":""}</span>}{pending>0&&<span style={{color:"#fbbf24",marginLeft:copied?8:0}}>{pending} pendiente{pending>1?"s":""}</span>}</div>
+                  <button className="btn btn-sm" style={{background:pending>0?"#3f3f46":"#22c55e",color:"#fff",border:"none",fontSize:11,width:"100%",opacity:pending===0?0.5:1}}
+                    onClick={()=>copyTeamByClient(g.id)} disabled={pending===0}>
+                    {pending>0?(<><Ic d={ic.repeat} size={11} color="#fff"/> Copiar equipo</>):"✓ Completo"}
+                  </button>
+                </div>);
+              })}
+              {/* Transversal */}
+              {prevTrans.length>0&&(()=>{
+                const copied=prevTrans.filter(m=>curNames.includes(m.name)).length;
+                const pending=prevTrans.length-copied;
+                return(<div style={{background:"#27272a",borderRadius:10,padding:"12px 14px",borderLeft:"3px solid #71717a"}}>
+                  <div style={{color:"#fff",fontWeight:600,fontSize:13,marginBottom:4}}>Transversal</div>
+                  <div style={{fontSize:11,color:"#71717a",marginBottom:6}}>{prevTrans.map(m=>m.name).join(", ")}</div>
+                  <div style={{fontSize:11,marginBottom:6}}>{copied>0&&<span style={{color:"#22c55e"}}>✓ {copied} copiado{copied>1?"s":""}</span>}{pending>0&&<span style={{color:"#fbbf24",marginLeft:copied?8:0}}>{pending} pendiente{pending>1?"s":""}</span>}</div>
+                  <button className="btn btn-sm" style={{background:pending>0?"#3f3f46":"#22c55e",color:"#fff",border:"none",fontSize:11,width:"100%",opacity:pending===0?0.5:1}}
+                    onClick={()=>copyTeamByClient(null)} disabled={pending===0}>
+                    {pending>0?(<><Ic d={ic.repeat} size={11} color="#fff"/> Copiar transversal</>):"✓ Completo"}
+                  </button>
+                </div>);
+              })()}
+            </div>
+          </div>
+
+          {/* Acciones globales */}
+          <div style={{display:"flex",gap:8,borderTop:"1px solid #333",paddingTop:12}}>
+            <button className="btn btn-sm" style={{background:"#3f3f46",color:"#fff",border:"none",fontSize:11}} disabled={!prevMesVal}
+              onClick={()=>{
+                if(!confirm("¿Copiar TODO (equipo completo + fees) desde "+prevMes.label+"?"))return;
+                copyAllTeam();copyFees();
+              }}>
+              <Ic d={ic.repeat} size={11} color="#fff"/> Copiar TODO desde {prevMes?prevMes.label.split(" ")[0]:"—"}
+            </button>
+            <button className="btn btn-sm" style={{background:"#dc2626",color:"#fff",border:"none",fontSize:11}}
+              onClick={()=>{clearMonth();setShowPrepMes(false);}}>
+              Borrar todo de {ML[parseInt(vm.split("-")[1])-1]}
+            </button>
+          </div>
+        </div>);
+        })()}
 
         <div className="content"><div className="ci">
 
