@@ -141,6 +141,7 @@ const ic={
   receipt:"M4 2v20l4-3 4 3 4-3 4 3V2z",
   briefcase:"M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2",
   users:"M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2M9 11a4 4 0 100-8 4 4 0 000 8z",
+  user:"M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z",
   down:"M23 6l-9.5 9.5-5-5L1 18",
   pie:"M21.21 15.89A10 10 0 118 2.83M22 12A10 10 0 0012 2v10z",
   file:"M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6",
@@ -550,6 +551,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     {section:"Reportes"},
     {id:"comercial",label:"Comercial",icon:"barchart"},
     {id:"rentabilidad",label:"Rentabilidad x Cliente",icon:"pie"},
+    {id:"rent-persona",label:"Rentabilidad x Persona",icon:"user"},
     {id:"cashflow",label:"Cashflow",icon:"dollar"},
     {id:"alertas",label:"Alertas",icon:"alert"},
     {section:""},
@@ -618,9 +620,41 @@ function App({userEmail="local",onLogout,cloudMode=false}){
         cobrado:cInv.filter(i=>i.status==="Cobrada").reduce((s,i)=>s+i.amount,0),
         porCobrar:cInv.filter(i=>i.status==="Por cobrar").reduce((s,i)=>s+i.amount,0)};
     });
+    /* ── Rentabilidad x Persona ── */
+    const totalTeamInversion=team.reduce((s,t)=>s+(t.inversion||t.bruto||0),0);
+    const personProfit=team.map(t=>{
+      const dedAssigns=t.assignments.filter(a=>a.clientId!==null);
+      const transAssigns=t.assignments.filter(a=>a.clientId===null);
+      const totalDed=dedAssigns.reduce((s,a)=>s+a.amount,0);
+      const totalTrans=transAssigns.reduce((s,a)=>s+a.amount,0);
+      const costTotal=t.inversion||t.bruto||0;
+      /* Ingreso que genera: proporción del fee de cada cliente */
+      let ingresoGenerado=0;
+      const clientDetail=[];
+      dedAssigns.forEach(a=>{
+        const cl=clients.find(c=>c.id===a.clientId);
+        if(!cl)return;
+        const cFee=getFee(cl.id,vm);
+        const totalTeamCost=team.reduce((s2,t2)=>s2+tDed(t2,cl.id),0);
+        const share=totalTeamCost>0?(a.amount/totalTeamCost):0;
+        const ingreso=Math.round(cFee*share);
+        ingresoGenerado+=ingreso;
+        clientDetail.push({name:cl.name,asignado:a.amount,fee:cFee,share,ingreso,role:a.role});
+      });
+      /* Overhead proporcional al peso del trabajador en la nómina total */
+      const ohShare=totalTeamInversion>0?(costTotal/totalTeamInversion):0;
+      const ohAsignado=Math.round(overhead*ohShare);
+      const utilidad=ingresoGenerado-costTotal-ohAsignado;
+      const costoTotal=costTotal+ohAsignado;
+      const margen=ingresoGenerado>0?((utilidad/ingresoGenerado)*100):0;
+      const roi=costoTotal>0?((ingresoGenerado/costoTotal)*100):0;
+      return{id:t.id,name:t.name,regimen:t.regimen,inversion:costTotal,neto:t.neto,bruto:t.bruto,
+        totalDed,totalTrans,ingresoGenerado,ohAsignado,costoTotal,utilidad,margen,roi,clientDetail,
+        nClientes:dedAssigns.length};
+    }).sort((a,b)=>b.utilidad-a.utilidad);
     return{totalFees,totalCob,totalPC,totalEm,allCob,allPC,allEm,mInv,mCob,mPC,mEm,totalPR,totalPCost,dedPay,transPay,totalPay,tLiquidaciones,
       tFixed,tDigital,tVar,tCajaCloud,tMovAgencia,tMovMarcas,tOffice,tInvest,overhead,structExp,structProfit,projProfit,netProfit,totalIncome,totalExpenses,clientProfit,
-      totalPaidPC,totalPaidCob,paidPC,paidCob};
+      totalPaidPC,totalPaidCob,paidPC,paidCob,personProfit};
   },[clients,teamByMonth,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,vm,clientFees,totalCajaCloud,totalMovAgencia,totalMovMarcas,cajaChica,movMarcas]);
 
   const history=useMemo(()=>{
@@ -1938,6 +1972,118 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               }}>Exportar CSV</button>
             </div>
           </>)}
+        </>)}
+
+        {/* ═══ REPORTES > RENTABILIDAD x PERSONA ═══ */}
+        {page==="rent-persona"&&(<>
+          <h2>Rentabilidad por Persona — {ML[parseInt(vm.split("-")[1])-1]} {vm.split("-")[0]}</h2>
+          {(()=>{
+            const pp=calc.personProfit||[];
+            const totalIng=pp.reduce((s,p)=>s+p.ingresoGenerado,0);
+            const totalInv=pp.reduce((s,p)=>s+p.inversion,0);
+            const totalUtil=pp.reduce((s,p)=>s+p.utilidad,0);
+            const rentables=pp.filter(p=>p.utilidad>0).length;
+            const noRentables=pp.filter(p=>p.utilidad<=0&&p.ingresoGenerado>0).length;
+            return(<>
+              {/* KPIs */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:20}}>
+                <div className="card"><div className="kpi-label">Ingreso generado</div><div className="kpi-value tg">{fmt(totalIng)}</div></div>
+                <div className="card"><div className="kpi-label">Inversión equipo</div><div className="kpi-value tr">{fmt(totalInv)}</div></div>
+                <div className="card" style={{borderLeft:`3px solid ${totalUtil>=0?"#2563eb":"#dc2626"}`}}><div className="kpi-label">Utilidad total</div><div className="kpi-value" style={{color:totalUtil>=0?"#18181b":"#dc2626"}}>{fmt(totalUtil)}</div></div>
+                <div className="card"><div className="kpi-label">Rentables / No rentables</div><div className="kpi-value">{rentables} <span style={{color:"#a1a1aa",fontSize:14}}>/ {noRentables}</span></div></div>
+              </div>
+              {/* Chart bar */}
+              {(()=>{
+                const maxAbs=Math.max(...pp.map(p=>Math.abs(p.utilidad)),1);
+                return(<div className="card" style={{marginBottom:16}}>
+                  <div style={{fontWeight:700,fontSize:14,marginBottom:12}}>Utilidad por Persona</div>
+                  {pp.map(p=>{
+                    const pct=Math.abs(p.utilidad)/maxAbs*100;
+                    const isPos=p.utilidad>=0;
+                    return(<div key={p.id} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                      <div style={{width:120,fontSize:12,fontWeight:600,textAlign:"right",flexShrink:0}}>{p.name}</div>
+                      <div style={{flex:1,height:22,background:"#f4f4f5",borderRadius:4,position:"relative",overflow:"hidden"}}>
+                        <div style={{width:pct+"%",height:"100%",background:isPos?"#18181b":"#dc2626",borderRadius:4,transition:"width 0.3s"}}/>
+                      </div>
+                      <div style={{width:90,fontSize:12,fontWeight:600,textAlign:"right",color:isPos?"#18181b":"#dc2626"}}>{fmt(p.utilidad)}</div>
+                    </div>);
+                  })}
+                </div>);
+              })()}
+              {/* Table */}
+              <div className="card" style={{overflow:"auto"}}>
+                <table>
+                  <thead><tr>
+                    <th>Persona</th><th>Régimen</th><th className="text-right">Inversión</th>
+                    <th className="text-right">Overhead</th><th className="text-right">Costo Total</th>
+                    <th className="text-right">Ingreso Gen.</th><th className="text-right">Utilidad</th>
+                    <th className="text-center">Margen</th><th className="text-center">ROI</th>
+                    <th className="text-center">Clientes</th>
+                  </tr></thead>
+                  <tbody>
+                    {pp.map(p=>(<tr key={p.id}>
+                      <td style={{fontWeight:600}}>{p.name}</td>
+                      <td><span className={`badge ${p.regimen==="planilla"?"bg":"ba"}`}>{p.regimen==="planilla"?"Planilla":"RH"}</span></td>
+                      <td className="text-right">{fmt(p.inversion)}</td>
+                      <td className="text-right" style={{color:"#71717a"}}>{fmt(p.ohAsignado)}</td>
+                      <td className="text-right tr">{fmt(p.costoTotal)}</td>
+                      <td className="text-right tg">{fmt(p.ingresoGenerado)}</td>
+                      <td className="text-right" style={{fontWeight:700,color:p.utilidad>=0?"#18181b":"#dc2626"}}>{fmt(p.utilidad)}</td>
+                      <td className="text-center"><span className={`badge ${p.margen>=30?"bg":p.margen>=10?"ba":"br"}`}>{p.margen.toFixed(1)}%</span></td>
+                      <td className="text-center"><span style={{fontWeight:600,color:p.roi>=100?"#18181b":"#dc2626"}}>{p.roi.toFixed(0)}%</span></td>
+                      <td className="text-center">{p.nClientes}</td>
+                    </tr>))}
+                  </tbody>
+                  <tfoot><tr style={{fontWeight:700}}>
+                    <td>Total</td><td></td>
+                    <td className="text-right">{fmt(totalInv)}</td>
+                    <td className="text-right" style={{color:"#71717a"}}>{fmt(pp.reduce((s,p)=>s+p.ohAsignado,0))}</td>
+                    <td className="text-right tr">{fmt(pp.reduce((s,p)=>s+p.costoTotal,0))}</td>
+                    <td className="text-right tg">{fmt(totalIng)}</td>
+                    <td className="text-right" style={{color:totalUtil>=0?"#18181b":"#dc2626"}}>{fmt(totalUtil)}</td>
+                    <td></td><td></td><td></td>
+                  </tr></tfoot>
+                </table>
+              </div>
+              {/* Detalle expandible por persona */}
+              <div style={{marginTop:16}}>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:8}}>Detalle por Persona</div>
+                {pp.filter(p=>p.clientDetail.length>0).map(p=>(<div key={p.id} className="card" style={{marginBottom:8,cursor:"pointer"}} onClick={e=>{
+                  const det=e.currentTarget.querySelector(".pp-detail");
+                  if(det)det.style.display=det.style.display==="none"?"block":"none";
+                }}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div><span style={{fontWeight:700}}>{p.name}</span> <span style={{fontSize:12,color:"#71717a"}}>({p.regimen==="planilla"?"Planilla":"RH"} · Inversión {fmt(p.inversion)})</span></div>
+                    <div style={{fontWeight:700,color:p.utilidad>=0?"#18181b":"#dc2626"}}>{fmt(p.utilidad)}</div>
+                  </div>
+                  <div className="pp-detail" style={{display:"none",marginTop:8}}>
+                    <table style={{fontSize:12}}>
+                      <thead><tr><th>Cliente</th><th>Rol</th><th className="text-right">Asignado</th><th className="text-right">Fee Cliente</th><th className="text-center">% Particip.</th><th className="text-right">Ingreso Prop.</th></tr></thead>
+                      <tbody>{p.clientDetail.map((cd,i)=>(<tr key={i}>
+                        <td style={{fontWeight:600}}>{cd.name}</td><td>{cd.role||"—"}</td>
+                        <td className="text-right">{fmt(cd.asignado)}</td>
+                        <td className="text-right">{fmt(cd.fee)}</td>
+                        <td className="text-center">{(cd.share*100).toFixed(1)}%</td>
+                        <td className="text-right tg">{fmt(cd.ingreso)}</td>
+                      </tr>))}</tbody>
+                    </table>
+                    {p.totalTrans>0&&<div style={{fontSize:11,color:"#71717a",marginTop:4}}>+ {fmt(p.totalTrans)} en asignaciones transversales (overhead)</div>}
+                  </div>
+                </div>))}
+                {pp.filter(p=>p.clientDetail.length===0).length>0&&(<div className="card" style={{background:"#fafafa"}}>
+                  <div style={{fontWeight:600,fontSize:12,color:"#71717a",marginBottom:4}}>Solo transversales (sin clientes dedicados)</div>
+                  {pp.filter(p=>p.clientDetail.length===0).map(p=>(<div key={p.id} style={{fontSize:12,padding:"2px 0"}}>{p.name} — Inversión {fmt(p.inversion)}, Transversal {fmt(p.totalTrans)}</div>))}
+                </div>)}
+              </div>
+              {/* Export */}
+              <div style={{marginTop:12}}>
+                <button className="btn btn-gray" onClick={()=>{
+                  const rows=pp.map(p=>[p.name,p.regimen,p.inversion,p.ohAsignado,p.costoTotal,p.ingresoGenerado,p.utilidad,p.margen.toFixed(1)+"%",p.roi.toFixed(0)+"%",p.nClientes]);
+                  exportCSV("rentabilidad_persona_"+vm+".csv",["Persona","Régimen","Inversión","Overhead","Costo Total","Ingreso Gen.","Utilidad","Margen","ROI","Clientes"],rows);
+                }}>Exportar CSV</button>
+              </div>
+            </>);
+          })()}
         </>)}
 
         {/* ═══ REPORTES > CASHFLOW ═══ */}
