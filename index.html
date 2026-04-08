@@ -288,15 +288,16 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     const mes=g.fecha.slice(0,7);
     const esReembolsable=g.reembolsable;
     const conceptoFull=g.beneficiario?(g.concepto+" — "+g.beneficiario):g.concepto;
-    const{error}=await sb.from("caja_chica").insert({
+    const row={
       user_email:personaEmail,user_name:persona?.nombre||nameFromEmail(personaEmail),
       fecha:g.fecha,concepto:conceptoFull,categoria:g.categoria,marca:g.marca,
       tipo:esReembolsable?"cliente":"agencia",
       via_pago:esReembolsable?"prestamo":"caja_chica",
-      estado_cobro:esReembolsable?"pendiente":null,
       monto:parseFloat(g.monto),
       registrado_por:userEmail,mes,origen:"web"
-    });
+    };
+    if(esReembolsable)row.estado_cobro="pendiente";
+    const{error}=await sb.from("caja_chica").insert(row);
     if(error)alert("Error: "+error.message);
     else{
       setGastoForm({fecha:"",concepto:"",beneficiario:"",categoria:"Materiales",marca:"Agencia",monto:"",reembolsable:false});
@@ -412,14 +413,15 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     setLoadingCaja(false);
   };
   const CAJA_PERSONAS_EMAILS=cajaPersonas.map(p=>p.email);
-  /* Lista de todos los nombres del equipo para autocompletado de beneficiario */
+  /* Lista de nombres de trabajadores (planilla + caja chica) para autocompletado */
   const allTeamNames=React.useMemo(()=>{
     const names=new Set();
+    /* Equipo del mes actual (planilla/RH) */
     team.forEach(t=>{if(t.name)names.add(t.name);});
+    /* Personas de caja chica */
     cajaPersonas.forEach(p=>{if(p.nombre)names.add(p.nombre);});
-    userRoles.forEach(r=>{if(r.nombre)names.add(r.nombre);});
     return[...names].sort();
-  },[team,cajaPersonas,userRoles]);
+  },[team,cajaPersonas]);
   const handleAddPersona=async()=>{
     if(!newPersonaEmail.trim()){alert("Ingresa un email");return;}
     const sb=getSB();if(!sb)return;
@@ -1048,7 +1050,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                             <div style={{display:"flex",flexDirection:"column",gap:2,flex:1,position:"relative"}}>
                               <label style={{fontSize:9,color:"#a1a1aa",fontWeight:700}}>BENEFICIARIO / A QUIÉN SE PAGÓ</label>
                               <input value={beneficiarioSearch} onChange={e=>{setBeneficiarioSearch(e.target.value);setGastoForm(f=>({...f,beneficiario:e.target.value}));}} placeholder="Escribe nombre..." style={{padding:"6px 8px",fontSize:12}} autoComplete="off"/>
-                              {beneficiarioSearch.length>=2&&allTeamNames.filter(n=>n.toLowerCase().includes(beneficiarioSearch.toLowerCase())).length>0&&(
+                              {beneficiarioSearch.length>=2&&!allTeamNames.includes(beneficiarioSearch)&&allTeamNames.filter(n=>n.toLowerCase().includes(beneficiarioSearch.toLowerCase())).length>0&&(
                                 <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e4e4e7",borderRadius:8,zIndex:10,maxHeight:120,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,.1)"}}>
                                   {allTeamNames.filter(n=>n.toLowerCase().includes(beneficiarioSearch.toLowerCase())).map(n=>(
                                     <div key={n} onClick={()=>{setBeneficiarioSearch(n);setGastoForm(f=>({...f,beneficiario:n}));}} style={{padding:"8px 10px",fontSize:12,cursor:"pointer",borderBottom:"1px solid #f4f4f5"}} onMouseEnter={e=>e.target.style.background="#f0f0f0"} onMouseLeave={e=>e.target.style.background="#fff"}>{n}</div>
