@@ -2115,13 +2115,17 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             const of_=snap?snap.officeExp.reduce((s,e)=>s+e.amount,0):officeExp.reduce((s,e)=>s+e.amount,0);
             const iv=investExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
             const mv=movAprobadaAll.filter(v=>v.mes===m).reduce((s,v)=>s+parseFloat(v.tarifa||0),0); /* total movilidad for structExp */
-            const costFijo=pay+fx+dg+vr+of_+iv+mv;
+            const costOp=pay+fx+dg+vr+of_+mv; /* OPEX: sin inversiones */
+            const costFijo=costOp+iv; /* Total estructura (con CAPEX) */
             const totalIn=fees+pR;
-            const utilFijo=fees-costFijo;
+            const ebitda=fees-costOp; /* Resultado Operativo (EBITDA) */
+            const utilFijo=fees-costFijo; /* Utilidad estructura (con CAPEX) */
             const utilProy=pR-pC;
             const utilTotal=utilFijo+utilProy;
+            const capex=iv;
+            const flujoCajaLibre=ebitda+utilProy-capex; /* Free Cash Flow */
             const hasData=fees>0||pR>0||vr>0||iv>0||mv>0;
-            return{month:label.split(" ")[0],m,fees,pR,pC,totalIn,costFijo,utilFijo,utilProy,utilTotal,hasData};
+            return{month:label.split(" ")[0],m,fees,pR,pC,totalIn,costOp,costFijo,ebitda,utilFijo,utilProy,utilTotal,capex,flujoCajaLibre,hasData};
           });
           const act=cfData.filter(h=>h.hasData);
           /* Current month */
@@ -2130,11 +2134,15 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           const yFees=act.reduce((s,h)=>s+h.fees,0);
           const yPR=act.reduce((s,h)=>s+h.pR,0);
           const yTotalIn=yFees+yPR;
+          const yCostOp=act.reduce((s,h)=>s+h.costOp,0);
           const yCostFijo=act.reduce((s,h)=>s+h.costFijo,0);
           const yPC=act.reduce((s,h)=>s+h.pC,0);
+          const yCapex=act.reduce((s,h)=>s+h.capex,0);
+          const yEbitda=yFees-yCostOp;
           const yUtilFijo=yFees-yCostFijo;
           const yUtilProy=yPR-yPC;
           const yUtilTotal=yUtilFijo+yUtilProy;
+          const yFCL=yEbitda+yUtilProy-yCapex;
           /* Chart helpers */
           const chartH=220;const barH=chartH-40;
           const maxIE=Math.max(...act.map(h=>Math.max(h.totalIn,h.costFijo+h.pC)),1);
@@ -2158,12 +2166,19 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             <div className="card" style={{borderLeft:"3px solid #dc2626"}}><div className="kpi-label">Costos Proyectos</div><div className="kpi-value tr">{fmt(cur.pC)}</div></div>
             <div className="card" style={{borderLeft:"3px solid #71717a",background:"#fafafa"}}><div className="kpi-label">Total Costos</div><div className="kpi-value" style={{fontWeight:800,color:"#dc2626"}}>{fmt(cur.costFijo+cur.pC)}</div></div>
           </div>
-          {/* Utilidades */}
-          <div className="sl">UTILIDADES</div>
+          {/* Resultado Operativo */}
+          <div className="sl">RESULTADO OPERATIVO</div>
+          <div className="grid g3" style={{marginBottom:12}}>
+            <div className="card"><div className="kpi-label">EBITDA Estructura</div><div className={`kpi-value ${cur.ebitda>=0?"tg":"tr"}`}>{fmt(cur.ebitda)}</div><div className="kpi-sub">Fees − OPEX (sin CAPEX)</div></div>
+            <div className="card"><div className="kpi-label">Margen Bruto Proyectos</div><div className={`kpi-value ${cur.utilProy>=0?"tg":"tr"}`}>{fmt(cur.utilProy)}</div><div className="kpi-sub">{cur.pR>0?(cur.utilProy/cur.pR*100).toFixed(1):"0.0"}% margen</div></div>
+            <div className="card" style={{borderLeft:"3px solid #2563eb"}}><div className="kpi-label">EBITDA Total</div><div className={`kpi-value ${(cur.ebitda+cur.utilProy)>=0?"tg":"tr"}`}>{fmt(cur.ebitda+cur.utilProy)}</div><div className="kpi-sub">{cur.totalIn>0?((cur.ebitda+cur.utilProy)/cur.totalIn*100).toFixed(1):"0.0"}% margen operativo</div></div>
+          </div>
+          {/* CAPEX y Flujo de Caja Libre */}
+          <div className="sl">FLUJO DE CAJA</div>
           <div className="grid g3" style={{marginBottom:20}}>
-            <div className="card"><div className="kpi-label">Utilidad Fijos</div><div className={`kpi-value ${cur.utilFijo>=0?"tg":"tr"}`}>{fmt(cur.utilFijo)}</div><div className="kpi-sub">{cur.fees>0?(cur.utilFijo/cur.fees*100).toFixed(1):"0.0"}% margen</div></div>
-            <div className="card"><div className="kpi-label">Utilidad Proyectos</div><div className={`kpi-value ${cur.utilProy>=0?"tg":"tr"}`}>{fmt(cur.utilProy)}</div><div className="kpi-sub">{cur.pR>0?(cur.utilProy/cur.pR*100).toFixed(1):"0.0"}% margen</div></div>
-            <div className="card" style={{background:"#18181b",borderColor:"#18181b"}}><div className="kpi-label" style={{color:"#a1a1aa"}}>Utilidad Total</div><div className="kpi-value" style={{color:cur.utilTotal>=0?"#60a5fa":"#fca5a5"}}>{fmt(cur.utilTotal)}</div><div className="kpi-sub" style={{color:"#71717a"}}>{cur.totalIn>0?(cur.utilTotal/cur.totalIn*100).toFixed(1):"0.0"}% margen total</div></div>
+            <div className="card"><div className="kpi-label">CAPEX (Inversiones)</div><div className="kpi-value tr">{fmt(cur.capex)}</div><div className="kpi-sub">Equipos, licencias, activos</div></div>
+            <div className="card"><div className="kpi-label">Resultado Neto</div><div className={`kpi-value ${cur.utilTotal>=0?"tg":"tr"}`}>{fmt(cur.utilTotal)}</div><div className="kpi-sub">EBITDA − CAPEX + Proyectos</div></div>
+            <div className="card" style={{background:"#18181b",borderColor:"#18181b"}}><div className="kpi-label" style={{color:"#a1a1aa"}}>Flujo de Caja Libre</div><div className="kpi-value" style={{color:cur.flujoCajaLibre>=0?"#60a5fa":"#fca5a5"}}>{fmt(cur.flujoCajaLibre)}</div><div className="kpi-sub" style={{color:"#71717a"}}>Disponible para reinversión o distribución</div></div>
           </div>
 
           {/* ── Chart: Ingresos vs Egresos mes a mes ── */}
