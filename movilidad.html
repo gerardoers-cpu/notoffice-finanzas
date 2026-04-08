@@ -221,11 +221,15 @@ function MainApp({user,onLogout,userRole}){
 
   /* ── Approval actions (individual trips, no email) ── */
   const updateEstado=async(ids,estado)=>{
-    const sb=getSB();if(!sb)return;
+    const sb=getSB();if(!sb){alert("Sin conexión a Supabase");return;}
+    console.log("[MOV] Updating",ids.length,"trips to",estado);
     const now=new Date().toISOString();
+    let errCount=0;
     for(const id of ids){
-      await sb.from("movilidad").update({estado,aprobado_por:estado==="aprobado"?userEmail:null,aprobado_at:estado==="aprobado"?now:null}).eq("id",id);
+      const{error}=await sb.from("movilidad").update({estado,aprobado_por:estado==="aprobado"?userEmail:null,aprobado_at:estado==="aprobado"?now:null}).eq("id",id);
+      if(error){console.error("[MOV] Update error for id",id,":",error.message,error.code,error.details,error.hint);errCount++;}
     }
+    if(errCount>0)alert("Error al actualizar "+errCount+" viaje(s). Posible problema de permisos en Supabase. Revisa la consola (Cmd+Option+J) para más detalle.");
     setSelected(new Set());loadData();
   };
 
@@ -846,3 +850,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
+
