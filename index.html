@@ -262,8 +262,17 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[asigPersona,setAsigPersona]=useState("");
   const[asigMonto,setAsigMonto]=useState("");
   const[asigNota,setAsigNota]=useState("");
-  const[showRegistrarGasto,setShowRegistrarGasto]=useState(false);
-  const[gastoForm,setGastoForm]=useState({persona:"",fecha:"",concepto:"",categoria:"Materiales",marca:"Agencia",monto:"",reembolsable:false});
+  const[gastoFormPersona,setGastoFormPersona]=useState(null); /* email de la persona a la que se le agrega gasto */
+  const[gastoForm,setGastoForm]=useState({fecha:"",concepto:"",beneficiario:"",categoria:"Materiales",marca:"Agencia",monto:"",reembolsable:false});
+  const[beneficiarioSearch,setBeneficiarioSearch]=useState("");
+  /* Lista de todos los nombres del equipo para autocompletado */
+  const allTeamNames=React.useMemo(()=>{
+    const names=new Set();
+    team.forEach(t=>{if(t.name)names.add(t.name);});
+    cajaPersonas.forEach(p=>{if(p.nombre)names.add(p.nombre);});
+    userRoles.forEach(r=>{if(r.nombre)names.add(r.nombre);});
+    return[...names].sort();
+  },[team,cajaPersonas,userRoles]);
   const[expandedCajaPersona,setExpandedCajaPersona]=useState(null);
   const[expandedMovPersona,setExpandedMovPersona]=useState(null);
   const[editingAsigId,setEditingAsigId]=useState(null);
@@ -279,18 +288,17 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     if(error)alert("Error: "+error.message);
     else{setAsigMonto("");setAsigNota("");setAsigPersona("");setShowAsignarCaja(false);loadCajaChica(vm);setSaveMsg("Caja chica asignada");setTimeout(()=>setSaveMsg(""),3000);}
   };
-  const handleRegistrarGasto=async()=>{
+  const handleRegistrarGasto=async(personaEmail)=>{
     const g=gastoForm;
-    if(!g.persona||!g.fecha||!g.concepto||!g.monto||parseFloat(g.monto)<=0){alert("Completa persona, fecha, concepto y monto");return;}
+    if(!g.fecha||!g.concepto||!g.monto||parseFloat(g.monto)<=0){alert("Completa fecha, concepto y monto");return;}
     const sb=getSB();if(!sb){alert("Sin conexión a Supabase");return;}
-    const persona=cajaPersonas.find(cp=>cp.email===g.persona);
+    const persona=cajaPersonas.find(cp=>cp.email===personaEmail);
     const mes=g.fecha.slice(0,7);
-    /* Si es reembolsable → tipo="cliente", via_pago="prestamo", estado_cobro="pendiente"
-       Si NO es reembolsable → tipo="agencia", via_pago="caja_chica" */
     const esReembolsable=g.reembolsable;
+    const conceptoFull=g.beneficiario?(g.concepto+" — "+g.beneficiario):g.concepto;
     const{error}=await sb.from("caja_chica").insert({
-      user_email:g.persona,user_name:persona?.nombre||nameFromEmail(g.persona),
-      fecha:g.fecha,concepto:g.concepto,categoria:g.categoria,marca:g.marca,
+      user_email:personaEmail,user_name:persona?.nombre||nameFromEmail(personaEmail),
+      fecha:g.fecha,concepto:conceptoFull,categoria:g.categoria,marca:g.marca,
       tipo:esReembolsable?"cliente":"agencia",
       via_pago:esReembolsable?"prestamo":"caja_chica",
       estado_cobro:esReembolsable?"pendiente":null,
@@ -299,9 +307,9 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     });
     if(error)alert("Error: "+error.message);
     else{
-      setGastoForm({persona:"",fecha:"",concepto:"",categoria:"Materiales",marca:"Agencia",monto:"",reembolsable:false});
-      setShowRegistrarGasto(false);loadCajaChica(vm);
-      setSaveMsg(esReembolsable?"Gasto registrado + préstamo creado":"Gasto registrado");
+      setGastoForm({fecha:"",concepto:"",beneficiario:"",categoria:"Materiales",marca:"Agencia",monto:"",reembolsable:false});
+      setBeneficiarioSearch("");setGastoFormPersona(null);loadCajaChica(vm);
+      setSaveMsg(esReembolsable?"Gasto + préstamo registrado":"Gasto registrado");
       setTimeout(()=>setSaveMsg(""),3000);
     }
   };
@@ -1009,9 +1017,80 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                         {b.saldo<0&&<div style={{fontSize:10,fontWeight:700,color:"#e11d48"}}>⚠ Déficit</div>}
                       </div>
                     </div>
-                    {isExpanded&&(
-                      <div style={{marginTop:12,borderTop:"1px solid #f0f0f0",paddingTop:10}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"#a1a1aa",marginBottom:6,textTransform:"uppercase",letterSpacing:"1px"}}>Historial de asignaciones</div>
+                    {isExpanded&&(()=>{
+                      const pGastos=cajaChicaAll.filter(g=>g.user_email===p&&g.mes===vm);
+                      const isAddingGasto=gastoFormPersona===p;
+                      const[yr,mn]=vm.split("-").map(Number);
+                      const minD=vm+"-01";const maxD=vm+"-"+String(new Date(yr,mn,0).getDate()).padStart(2,"0");
+                      return(<div style={{marginTop:12,borderTop:"1px solid #f0f0f0",paddingTop:10}}>
+                        {/* Botón agregar gasto */}
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"#a1a1aa",textTransform:"uppercase",letterSpacing:"1px"}}>Gastos del mes</div>
+                          <button className="btn btn-sm btn-blue" onClick={()=>{if(isAddingGasto){setGastoFormPersona(null);}else{setGastoFormPersona(p);setGastoForm(f=>({...f,fecha:minD}));}}}>{isAddingGasto?"Cancelar":"+ Gasto"}</button>
+                        </div>
+                        {/* Formulario de gasto inline */}
+                        {isAddingGasto&&(<div style={{background:"#f9fafb",borderRadius:12,padding:14,marginBottom:10,border:"1px solid #e4e4e7"}}>
+                          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:6}}>
+                            <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                              <label style={{fontSize:9,color:"#a1a1aa",fontWeight:700}}>FECHA</label>
+                              <input type="date" value={gastoForm.fecha} min={minD} max={maxD} onChange={e=>setGastoForm(f=>({...f,fecha:e.target.value}))} style={{padding:"6px 8px",fontSize:12}}/>
+                            </div>
+                            <div style={{display:"flex",flexDirection:"column",gap:2,flex:2}}>
+                              <label style={{fontSize:9,color:"#a1a1aa",fontWeight:700}}>CONCEPTO</label>
+                              <input value={gastoForm.concepto} onChange={e=>setGastoForm(f=>({...f,concepto:e.target.value}))} placeholder="Descripción del gasto" style={{padding:"6px 8px",fontSize:12}}/>
+                            </div>
+                            <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                              <label style={{fontSize:9,color:"#a1a1aa",fontWeight:700}}>MONTO S/</label>
+                              <input type="number" value={gastoForm.monto} onChange={e=>setGastoForm(f=>({...f,monto:e.target.value}))} placeholder="0.00" min="0.01" step="0.01" style={{width:90,padding:"6px 8px",fontSize:12,textAlign:"right"}}/>
+                            </div>
+                          </div>
+                          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:6}}>
+                            <div style={{display:"flex",flexDirection:"column",gap:2,flex:1,position:"relative"}}>
+                              <label style={{fontSize:9,color:"#a1a1aa",fontWeight:700}}>BENEFICIARIO / A QUIÉN SE PAGÓ</label>
+                              <input value={beneficiarioSearch} onChange={e=>{setBeneficiarioSearch(e.target.value);setGastoForm(f=>({...f,beneficiario:e.target.value}));}} placeholder="Escribe nombre..." style={{padding:"6px 8px",fontSize:12}} autoComplete="off"/>
+                              {beneficiarioSearch.length>=2&&allTeamNames.filter(n=>n.toLowerCase().includes(beneficiarioSearch.toLowerCase())).length>0&&(
+                                <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#fff",border:"1px solid #e4e4e7",borderRadius:8,zIndex:10,maxHeight:120,overflowY:"auto",boxShadow:"0 4px 12px rgba(0,0,0,.1)"}}>
+                                  {allTeamNames.filter(n=>n.toLowerCase().includes(beneficiarioSearch.toLowerCase())).map(n=>(
+                                    <div key={n} onClick={()=>{setBeneficiarioSearch(n);setGastoForm(f=>({...f,beneficiario:n}));}} style={{padding:"8px 10px",fontSize:12,cursor:"pointer",borderBottom:"1px solid #f4f4f5"}} onMouseEnter={e=>e.target.style.background="#f0f0f0"} onMouseLeave={e=>e.target.style.background="#fff"}>{n}</div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                              <label style={{fontSize:9,color:"#a1a1aa",fontWeight:700}}>MARCA</label>
+                              <select value={gastoForm.marca} onChange={e=>setGastoForm(f=>({...f,marca:e.target.value}))} style={{padding:"6px 8px",fontSize:12}}>
+                                <option value="Agencia">Agencia (→ OH)</option>
+                                {clients.filter(c=>c.active!==false).map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
+                              </select>
+                            </div>
+                            <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                              <label style={{fontSize:9,color:"#a1a1aa",fontWeight:700}}>CATEGORÍA</label>
+                              <select value={gastoForm.categoria} onChange={e=>setGastoForm(f=>({...f,categoria:e.target.value}))} style={{padding:"6px 8px",fontSize:12}}>
+                                <option value="Materiales">Materiales</option><option value="Alimentación">Alimentación</option>
+                                <option value="Movilidad">Movilidad</option><option value="Servicios">Servicios</option>
+                                <option value="Compra">Compra</option><option value="Otros">Otros</option>
+                              </select>
+                            </div>
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:6}}>
+                            <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:12}}>
+                              <input type="checkbox" checked={gastoForm.reembolsable} onChange={e=>setGastoForm(f=>({...f,reembolsable:e.target.checked}))} style={{width:15,height:15}}/>
+                              <span style={{fontWeight:600}}>Reembolsable (préstamo)</span>
+                              {gastoForm.reembolsable&&<span style={{fontSize:10,color:"#f59e0b",fontWeight:600,marginLeft:4}}>→ Va a Préstamos (+18% IGV)</span>}
+                            </label>
+                            <button className="btn btn-sm btn-green" onClick={()=>handleRegistrarGasto(p)}>Registrar</button>
+                          </div>
+                        </div>)}
+                        {/* Gastos del mes */}
+                        {pGastos.length>0&&(
+                          <table style={{width:"100%",fontSize:11,marginBottom:10}}><thead><tr style={{background:"#fef2f2"}}><th style={{padding:"5px 6px",textAlign:"left"}}>Fecha</th><th style={{padding:"5px 6px",textAlign:"left"}}>Concepto</th><th style={{padding:"5px 6px",textAlign:"left"}}>Marca</th><th style={{padding:"5px 6px",textAlign:"right"}}>Monto</th><th style={{padding:"5px 6px"}}>Tipo</th></tr></thead>
+                          <tbody>{pGastos.map(g=>(
+                            <tr key={g.id}><td style={{padding:"5px 6px"}}>{g.fecha?.slice(5)}</td><td style={{padding:"5px 6px"}}>{g.concepto}</td><td style={{padding:"5px 6px"}}><span className="badge" style={{fontSize:9}}>{g.marca||"Agencia"}</span></td><td style={{padding:"5px 6px",textAlign:"right",fontWeight:600,color:"#dc2626"}}>-{fmt(g.monto)}</td><td style={{padding:"5px 6px"}}>{g.tipo==="cliente"?<span style={{fontSize:9,color:"#f59e0b",fontWeight:600}}>Préstamo</span>:<span style={{fontSize:9,color:"#71717a"}}>Gasto</span>}</td></tr>
+                          ))}</tbody></table>
+                        )}
+                        {pGastos.length===0&&<div style={{fontSize:11,color:"#a1a1aa",marginBottom:8}}>Sin gastos este mes</div>}
+                        {/* Historial de asignaciones */}
+                        <div style={{fontSize:11,fontWeight:700,color:"#a1a1aa",marginBottom:6,marginTop:8,textTransform:"uppercase",letterSpacing:"1px"}}>Asignaciones</div>
                         {pAsig.length===0?<div style={{fontSize:12,color:"#a1a1aa",padding:"8px 0"}}>Sin asignaciones</div>:(
                           <table style={{width:"100%",fontSize:12}}><thead><tr style={{background:"#f9fafb"}}><th style={{padding:"6px 8px",textAlign:"left"}}>Fecha</th><th style={{padding:"6px 8px",textAlign:"left"}}>Mes</th><th style={{padding:"6px 8px",textAlign:"left"}}>Nota</th><th style={{padding:"6px 8px",textAlign:"right"}}>Monto</th><th style={{padding:"6px 8px",textAlign:"left"}}>Por</th><th style={{padding:"6px 8px",width:80}}>Acciones</th></tr></thead>
                           <tbody>{pAsig.map(a=>(
@@ -1042,15 +1121,14 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                             </tr>
                           ))}</tbody></table>
                         )}
-                      </div>
-                    )}
+                      </div>);
+                    })()}
                   </div>);
                 })}
               </div>
-              {/* Asignar caja chica + Registrar gasto */}
+              {/* Asignar caja chica */}
               <div style={{display:"flex",gap:8,marginBottom:12}}>
-                <button className="btn btn-sm btn-green" onClick={()=>{setShowAsignarCaja(!showAsignarCaja);if(!showAsignarCaja)setShowRegistrarGasto(false);}}>{showAsignarCaja?"Cancelar":"+ Asignar Fondos"}</button>
-                <button className="btn btn-sm btn-blue" onClick={()=>{setShowRegistrarGasto(!showRegistrarGasto);if(!showRegistrarGasto){setShowAsignarCaja(false);setGastoForm(f=>({...f,fecha:vm+"-01"}));}}}>{showRegistrarGasto?"Cancelar":"+ Registrar Gasto"}</button>
+                <button className="btn btn-sm btn-green" onClick={()=>setShowAsignarCaja(!showAsignarCaja)}>{showAsignarCaja?"Cancelar":"+ Asignar Fondos"}</button>
               </div>
               {showAsignarCaja&&(
                 <div className="form-card" style={{marginBottom:12}}>
@@ -1066,65 +1144,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                   </div>
                 </div>
               )}
-              {showRegistrarGasto&&(()=>{
-                const[y,mo]=vm.split("-").map(Number);
-                const minD=vm+"-01";const maxD=vm+"-"+String(new Date(y,mo,0).getDate()).padStart(2,"0");
-                return(<div className="form-card" style={{marginBottom:12}}>
-                  <h4>Registrar gasto</h4>
-                  <div className="form-row">
-                    <div style={{display:"flex",flexDirection:"column",gap:2,flex:1}}>
-                      <label style={{fontSize:10,color:"#a1a1aa",fontWeight:600}}>Fecha</label>
-                      <input type="date" value={gastoForm.fecha} min={minD} max={maxD} onChange={e=>setGastoForm(f=>({...f,fecha:e.target.value}))}/>
-                    </div>
-                    <div style={{display:"flex",flexDirection:"column",gap:2,flex:2}}>
-                      <label style={{fontSize:10,color:"#a1a1aa",fontWeight:600}}>Concepto</label>
-                      <input value={gastoForm.concepto} onChange={e=>setGastoForm(f=>({...f,concepto:e.target.value}))} placeholder="Ej: Compra de materiales, taxi, almuerzo..."/>
-                    </div>
-                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                      <label style={{fontSize:10,color:"#a1a1aa",fontWeight:600}}>Monto S/</label>
-                      <input type="number" value={gastoForm.monto} onChange={e=>setGastoForm(f=>({...f,monto:e.target.value}))} placeholder="0.00" min="0.01" step="0.01" style={{width:100}}/>
-                    </div>
-                  </div>
-                  <div className="form-row" style={{marginTop:6}}>
-                    <div style={{display:"flex",flexDirection:"column",gap:2,flex:1}}>
-                      <label style={{fontSize:10,color:"#a1a1aa",fontWeight:600}}>Persona</label>
-                      <select value={gastoForm.persona} onChange={e=>setGastoForm(f=>({...f,persona:e.target.value}))}>
-                        <option value="">Seleccionar...</option>
-                        {CAJA_PERSONAS_EMAILS.map(p=><option key={p} value={p}>{(cajaPersonas.find(cp=>cp.email===p)?.nombre)||nameFromEmail(p)}</option>)}
-                      </select>
-                    </div>
-                    <div style={{display:"flex",flexDirection:"column",gap:2,flex:1}}>
-                      <label style={{fontSize:10,color:"#a1a1aa",fontWeight:600}}>Marca</label>
-                      <select value={gastoForm.marca} onChange={e=>setGastoForm(f=>({...f,marca:e.target.value}))}>
-                        <option value="Agencia">Agencia (→ OH)</option>
-                        {clients.filter(c=>c.active!==false).map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
-                      </select>
-                    </div>
-                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
-                      <label style={{fontSize:10,color:"#a1a1aa",fontWeight:600}}>Categoría</label>
-                      <select value={gastoForm.categoria} onChange={e=>setGastoForm(f=>({...f,categoria:e.target.value}))}>
-                        <option value="Materiales">Materiales</option>
-                        <option value="Alimentación">Alimentación</option>
-                        <option value="Movilidad">Movilidad</option>
-                        <option value="Servicios">Servicios</option>
-                        <option value="Compra">Compra</option>
-                        <option value="Otros">Otros</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div style={{display:"flex",alignItems:"center",gap:12,marginTop:10,padding:"10px 0",borderTop:"1px solid #f4f4f5"}}>
-                    <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:13}}>
-                      <input type="checkbox" checked={gastoForm.reembolsable} onChange={e=>setGastoForm(f=>({...f,reembolsable:e.target.checked}))} style={{width:16,height:16,cursor:"pointer"}}/>
-                      <span style={{fontWeight:600}}>Reembolsable (préstamo al cliente)</span>
-                    </label>
-                    {gastoForm.reembolsable&&<span style={{fontSize:11,color:"#f59e0b",fontWeight:600}}>Se registrará también en Préstamos como pendiente de cobro (+18% IGV)</span>}
-                  </div>
-                  <div style={{display:"flex",gap:8,marginTop:8}}>
-                    <button className="btn btn-sm btn-green" onClick={handleRegistrarGasto}>Registrar gasto</button>
-                    <button className="btn btn-sm btn-gray" onClick={()=>setShowRegistrarGasto(false)}>Cancelar</button>
-                  </div>
-                </div>);
-              })()}
+              {/* Formulario global de gasto removido — ahora se agrega desde cada persona */}
               <div className="sl">GASTOS REGISTRADOS — {vm}</div>
               {loadingCaja?<div style={{textAlign:"center",padding:12,color:"#a1a1aa"}}>Cargando...</div>:
               cajaChica.length===0?<div style={{textAlign:"center",padding:12,color:"#a1a1aa",fontSize:12}}>Sin gastos registrados este mes</div>:(
