@@ -2840,7 +2840,8 @@ function StaffForm({roles,onSave,onClose}){
 function PersonCard({m,ctxLabel,ctxAmount,clients,editPerson,setEditPerson,setTeam}){
   const isExp=editPerson===m.id;
   const totalAssigned=m.assignments.reduce((s,a)=>s+a.amount,0);
-  const diff=m.bruto-totalAssigned;
+  const costBase=m.inversion||m.bruto;
+  const diff=costBase-totalAssigned;
   const otherAssigns=m.assignments.length>1;
   return(<div style={{padding:"8px 12px",background:isExp?"#fff":"#fafafa",borderRadius:8,marginBottom:4,border:isExp?"1px solid #e4e4e7":"1px solid transparent"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setEditPerson(isExp?null:m.id)}>
@@ -2864,9 +2865,15 @@ function PersonCard({m,ctxLabel,ctxAmount,clients,editPerson,setEditPerson,setTe
           <span style={{fontSize:12,fontWeight:600,minWidth:50}}>Bruto</span>
           <input type="number" value={m.bruto} onChange={e=>{
             const newBruto=parseInt(e.target.value)||0;
-            if(m.regimen==="planilla"){const afp=Math.round(newBruto*0.1137);const newNeto=newBruto-afp;const es=Math.round(newBruto*0.09);
-              setTeam(prev=>prev.map(t=>t.id===m.id?{...t,bruto:newBruto,neto:newNeto,essalud:es,afp,inversion:newBruto+es}:t));
-            }else{setTeam(prev=>prev.map(t=>t.id===m.id?{...t,bruto:newBruto,neto:newBruto,inversion:newBruto}:t));}
+            if(m.regimen==="planilla"){const afp=Math.round(newBruto*0.1137);const newNeto=newBruto-afp;const es=Math.round(newBruto*0.09);const newInv=newBruto+es;
+              setTeam(prev=>prev.map(t=>{if(t.id!==m.id)return t;
+                const na=[...t.assignments];const othersTotal=na.slice(1).reduce((s,x)=>s+x.amount,0);
+                na[0]={...na[0],amount:Math.max(newInv-othersTotal,0)};
+                return{...t,bruto:newBruto,neto:newNeto,essalud:es,afp,inversion:newInv,assignments:na};}));
+            }else{setTeam(prev=>prev.map(t=>{if(t.id!==m.id)return t;
+                const na=[...t.assignments];const othersTotal=na.slice(1).reduce((s,x)=>s+x.amount,0);
+                na[0]={...na[0],amount:Math.max(newBruto-othersTotal,0)};
+                return{...t,bruto:newBruto,neto:newBruto,inversion:newBruto,assignments:na};}));}
           }} style={{width:120,textAlign:"right",fontWeight:600,fontSize:13,padding:"4px 8px"}}/>
           <span className={`badge ${m.regimen==="planilla"?"bb":"bpp"}`} style={{fontSize:9}}>{m.regimen==="planilla"?"Planilla":"RH"}</span>
         </div>
@@ -2879,15 +2886,35 @@ function PersonCard({m,ctxLabel,ctxAmount,clients,editPerson,setEditPerson,setTe
           </div>
         </>}
       </div>
-      <div style={{fontSize:11,fontWeight:600,color:"#71717a",marginBottom:6}}>Distribución del costo</div>
-      {m.assignments.map(a=><AssignRow key={a.id} a={a} clients={clients} canDel={m.assignments.length>1}
-        onChange={up=>setTeam(prev=>prev.map(t=>t.id===m.id?{...t,assignments:t.assignments.map(x=>x.id===a.id?{...x,...up}:x)}:t))}
-        onDel={()=>{if(m.assignments.length<=1){setTeam(prev=>prev.filter(t=>t.id!==m.id));}
-          else setTeam(prev=>prev.map(t=>t.id===m.id?{...t,assignments:t.assignments.filter(x=>x.id!==a.id)}:t));}}/>)}
+      <div style={{fontSize:11,fontWeight:600,color:"#71717a",marginBottom:6}}>Distribución del costo — {fmt(costBase)}</div>
+      {m.assignments.map((a,ai)=><AssignRow key={a.id} a={a} clients={clients} canDel={m.assignments.length>1}
+        onChange={up=>{setTeam(prev=>prev.map(t=>{
+          if(t.id!==m.id)return t;
+          const newAssigns=t.assignments.map(x=>x.id===a.id?{...x,...up}:x);
+          /* Auto-ajustar la primera asignación para que el total = inversión */
+          if(ai>0&&newAssigns.length>1){
+            const othersTotal=newAssigns.slice(1).reduce((s,x)=>s+x.amount,0);
+            const inv=t.inversion||t.bruto;
+            newAssigns[0]={...newAssigns[0],amount:Math.max(inv-othersTotal,0)};
+          }
+          return{...t,assignments:newAssigns};
+        }));}}
+        onDel={()=>{setTeam(prev=>prev.map(t=>{
+          if(t.id!==m.id)return t;
+          if(t.assignments.length<=1)return null;
+          const newAssigns=t.assignments.filter(x=>x.id!==a.id);
+          /* Re-ajustar primera asignación */
+          if(newAssigns.length>0){
+            const othersTotal=newAssigns.slice(1).reduce((s,x)=>s+x.amount,0);
+            const inv=t.inversion||t.bruto;
+            newAssigns[0]={...newAssigns[0],amount:Math.max(inv-othersTotal,0)};
+          }
+          return{...t,assignments:newAssigns};
+        }).filter(Boolean));}}/>)}
       <button className="btn btn-sm btn-gray" style={{marginTop:4,fontSize:11}} onClick={()=>setTeam(prev=>prev.map(t=>t.id===m.id?{...t,assignments:[...t.assignments,{id:Date.now(),clientId:null,role:"",amount:0}]}:t))}>+ Bono / otra marca</button>
       {diff!==0&&<div style={{fontSize:11,padding:"4px 8px",borderRadius:6,marginTop:6,
-        background:diff>0?"#fafafa":"#fff1f2",color:diff>0?"#3f3f46":"#e11d48",fontWeight:600}}>
-        {diff>0?"⚠ Sin asignar: "+fmt(diff):"⚠ Excede el bruto: "+fmt(Math.abs(diff))}
+        background:diff>0?"#eff6ff":"#fff1f2",color:diff>0?"#2563eb":"#e11d48",fontWeight:600}}>
+        {diff>0?"⚡ Sin asignar: "+fmt(diff):"⚠ Excede la inversión: "+fmt(Math.abs(diff))}
       </div>}
       {m.regimen==="planilla"&&(<div style={{marginTop:8,paddingTop:6,borderTop:"1px solid #f4f4f5"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -2931,9 +2958,9 @@ function TeamForm({clients,staff,roles,onAdd,onClose,preClient}){
   const essalud=isRH?0:Math.round(bruto*0.09);
   const inversion=isRH?bruto:bruto+essalud;
 
-  /* Auto-adjust primary assignment when bonos change — distribute BRUTO */
+  /* Auto-adjust primary assignment when bonos change — distribute INVERSIÓN */
   const bonoTotal=assigns.filter(a=>!a.isPrimary).reduce((s,a)=>s+(parseInt(a.amount)||0),0);
-  const primaryAmount=Math.max(bruto-bonoTotal,0);
+  const primaryAmount=Math.max(inversion-bonoTotal,0);
 
   /* Keep primary synced */
   React.useEffect(()=>{
@@ -3038,9 +3065,9 @@ function TeamForm({clients,staff,roles,onAdd,onClose,preClient}){
       <button type="button" className="btn btn-sm btn-gray" onClick={addBono} style={{marginBottom:8}}>+ Agregar bono / otra marca</button>
 
       {bruto>0&&<div style={{fontSize:11,padding:"6px 10px",borderRadius:6,marginBottom:6,
-        background:totalAssigned===bruto?"#eff6ff":totalAssigned>bruto?"#fff1f2":"#fafafa",
-        color:totalAssigned===bruto?"#2563eb":totalAssigned>bruto?"#e11d48":"#3f3f46",fontWeight:600}}>
-        Distribución: {fmt(totalAssigned)} / {fmt(bruto)} {totalAssigned===bruto?" — OK ✓":totalAssigned>bruto?" — Excede el bruto":" — Falta "+fmt(bruto-totalAssigned)}
+        background:totalAssigned===inversion?"#eff6ff":totalAssigned>inversion?"#fff1f2":"#fafafa",
+        color:totalAssigned===inversion?"#2563eb":totalAssigned>inversion?"#e11d48":"#3f3f46",fontWeight:600}}>
+        Distribución: {fmt(totalAssigned)} / {fmt(inversion)} {totalAssigned===inversion?" — OK ✓":totalAssigned>inversion?" — Excede la inversión":" — Falta "+fmt(inversion-totalAssigned)}
       </div>}
       <div style={{display:"flex",gap:6}}><button type="button" className="btn btn-blue" onClick={submit}>Agregar</button><button type="button" className="btn btn-gray" onClick={onClose}>Cancelar</button></div>
     </div>
