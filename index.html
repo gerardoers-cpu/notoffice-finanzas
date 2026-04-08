@@ -263,7 +263,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[asigMonto,setAsigMonto]=useState("");
   const[asigNota,setAsigNota]=useState("");
   const[showRegistrarGasto,setShowRegistrarGasto]=useState(false);
-  const[gastoForm,setGastoForm]=useState({persona:"",fecha:"",concepto:"",categoria:"Movilidad",marca:"Agencia",tipo:"agencia",via_pago:"caja_chica",monto:""});
+  const[gastoForm,setGastoForm]=useState({persona:"",fecha:"",concepto:"",categoria:"Materiales",marca:"Agencia",monto:"",reembolsable:false});
   const[expandedCajaPersona,setExpandedCajaPersona]=useState(null);
   const[expandedMovPersona,setExpandedMovPersona]=useState(null);
   const[editingAsigId,setEditingAsigId]=useState(null);
@@ -285,14 +285,25 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     const sb=getSB();if(!sb){alert("Sin conexión a Supabase");return;}
     const persona=cajaPersonas.find(cp=>cp.email===g.persona);
     const mes=g.fecha.slice(0,7);
+    /* Si es reembolsable → tipo="cliente", via_pago="prestamo", estado_cobro="pendiente"
+       Si NO es reembolsable → tipo="agencia", via_pago="caja_chica" */
+    const esReembolsable=g.reembolsable;
     const{error}=await sb.from("caja_chica").insert({
       user_email:g.persona,user_name:persona?.nombre||nameFromEmail(g.persona),
       fecha:g.fecha,concepto:g.concepto,categoria:g.categoria,marca:g.marca,
-      tipo:g.tipo,via_pago:g.via_pago,monto:parseFloat(g.monto),
+      tipo:esReembolsable?"cliente":"agencia",
+      via_pago:esReembolsable?"prestamo":"caja_chica",
+      estado_cobro:esReembolsable?"pendiente":null,
+      monto:parseFloat(g.monto),
       registrado_por:userEmail,mes,origen:"web"
     });
     if(error)alert("Error: "+error.message);
-    else{setGastoForm({persona:"",fecha:"",concepto:"",categoria:"Movilidad",marca:"Agencia",tipo:"agencia",via_pago:"caja_chica",monto:""});setShowRegistrarGasto(false);loadCajaChica(vm);setSaveMsg("Gasto registrado");setTimeout(()=>setSaveMsg(""),3000);}
+    else{
+      setGastoForm({persona:"",fecha:"",concepto:"",categoria:"Materiales",marca:"Agencia",monto:"",reembolsable:false});
+      setShowRegistrarGasto(false);loadCajaChica(vm);
+      setSaveMsg(esReembolsable?"Gasto registrado + préstamo creado":"Gasto registrado");
+      setTimeout(()=>setSaveMsg(""),3000);
+    }
   };
   const[saveMsg,setSaveMsg]=useState("");
 
@@ -1059,37 +1070,58 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                 const[y,mo]=vm.split("-").map(Number);
                 const minD=vm+"-01";const maxD=vm+"-"+String(new Date(y,mo,0).getDate()).padStart(2,"0");
                 return(<div className="form-card" style={{marginBottom:12}}>
-                  <h4>Registrar gasto de caja chica</h4>
+                  <h4>Registrar gasto</h4>
                   <div className="form-row">
-                    <select value={gastoForm.persona} onChange={e=>setGastoForm(f=>({...f,persona:e.target.value}))} style={{minWidth:150}}>
-                      <option value="">Persona...</option>
-                      {CAJA_PERSONAS_EMAILS.map(p=><option key={p} value={p}>{(cajaPersonas.find(cp=>cp.email===p)?.nombre)||nameFromEmail(p)}</option>)}
-                    </select>
-                    <input type="date" value={gastoForm.fecha} min={minD} max={maxD} onChange={e=>setGastoForm(f=>({...f,fecha:e.target.value}))}/>
-                    <input value={gastoForm.concepto} onChange={e=>setGastoForm(f=>({...f,concepto:e.target.value}))} placeholder="Concepto / descripción" style={{minWidth:160}}/>
-                    <input type="number" value={gastoForm.monto} onChange={e=>setGastoForm(f=>({...f,monto:e.target.value}))} placeholder="Monto S/" min="0.01" step="0.01" style={{width:100}}/>
+                    <div style={{display:"flex",flexDirection:"column",gap:2,flex:1}}>
+                      <label style={{fontSize:10,color:"#a1a1aa",fontWeight:600}}>Fecha</label>
+                      <input type="date" value={gastoForm.fecha} min={minD} max={maxD} onChange={e=>setGastoForm(f=>({...f,fecha:e.target.value}))}/>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:2,flex:2}}>
+                      <label style={{fontSize:10,color:"#a1a1aa",fontWeight:600}}>Concepto</label>
+                      <input value={gastoForm.concepto} onChange={e=>setGastoForm(f=>({...f,concepto:e.target.value}))} placeholder="Ej: Compra de materiales, taxi, almuerzo..."/>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                      <label style={{fontSize:10,color:"#a1a1aa",fontWeight:600}}>Monto S/</label>
+                      <input type="number" value={gastoForm.monto} onChange={e=>setGastoForm(f=>({...f,monto:e.target.value}))} placeholder="0.00" min="0.01" step="0.01" style={{width:100}}/>
+                    </div>
                   </div>
-                  <div className="form-row" style={{marginTop:4}}>
-                    <select value={gastoForm.categoria} onChange={e=>setGastoForm(f=>({...f,categoria:e.target.value}))}>
-                      <option value="Movilidad">Movilidad</option>
-                      <option value="Alimentación">Alimentación</option>
-                      <option value="Materiales">Materiales</option>
-                      <option value="Servicios">Servicios</option>
-                      <option value="Otros">Otros</option>
-                    </select>
-                    <select value={gastoForm.marca} onChange={e=>setGastoForm(f=>({...f,marca:e.target.value}))}>
-                      <option value="Agencia">Agencia (→ OH)</option>
-                      {clients.filter(c=>c.active!==false).map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
-                    </select>
-                    <select value={gastoForm.tipo} onChange={e=>setGastoForm(f=>({...f,tipo:e.target.value}))}>
-                      <option value="agencia">Agencia</option>
-                      <option value="cliente">Cliente (refacturable)</option>
-                    </select>
-                    <select value={gastoForm.via_pago} onChange={e=>setGastoForm(f=>({...f,via_pago:e.target.value}))}>
-                      <option value="caja_chica">Caja chica</option>
-                      <option value="transferencia">Transferencia</option>
-                    </select>
-                    <button className="btn btn-sm btn-green" onClick={handleRegistrarGasto}>Registrar</button>
+                  <div className="form-row" style={{marginTop:6}}>
+                    <div style={{display:"flex",flexDirection:"column",gap:2,flex:1}}>
+                      <label style={{fontSize:10,color:"#a1a1aa",fontWeight:600}}>Persona</label>
+                      <select value={gastoForm.persona} onChange={e=>setGastoForm(f=>({...f,persona:e.target.value}))}>
+                        <option value="">Seleccionar...</option>
+                        {CAJA_PERSONAS_EMAILS.map(p=><option key={p} value={p}>{(cajaPersonas.find(cp=>cp.email===p)?.nombre)||nameFromEmail(p)}</option>)}
+                      </select>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:2,flex:1}}>
+                      <label style={{fontSize:10,color:"#a1a1aa",fontWeight:600}}>Marca</label>
+                      <select value={gastoForm.marca} onChange={e=>setGastoForm(f=>({...f,marca:e.target.value}))}>
+                        <option value="Agencia">Agencia (→ OH)</option>
+                        {clients.filter(c=>c.active!==false).map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
+                      </select>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                      <label style={{fontSize:10,color:"#a1a1aa",fontWeight:600}}>Categoría</label>
+                      <select value={gastoForm.categoria} onChange={e=>setGastoForm(f=>({...f,categoria:e.target.value}))}>
+                        <option value="Materiales">Materiales</option>
+                        <option value="Alimentación">Alimentación</option>
+                        <option value="Movilidad">Movilidad</option>
+                        <option value="Servicios">Servicios</option>
+                        <option value="Compra">Compra</option>
+                        <option value="Otros">Otros</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:12,marginTop:10,padding:"10px 0",borderTop:"1px solid #f4f4f5"}}>
+                    <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:13}}>
+                      <input type="checkbox" checked={gastoForm.reembolsable} onChange={e=>setGastoForm(f=>({...f,reembolsable:e.target.checked}))} style={{width:16,height:16,cursor:"pointer"}}/>
+                      <span style={{fontWeight:600}}>Reembolsable (préstamo al cliente)</span>
+                    </label>
+                    {gastoForm.reembolsable&&<span style={{fontSize:11,color:"#f59e0b",fontWeight:600}}>Se registrará también en Préstamos como pendiente de cobro (+18% IGV)</span>}
+                  </div>
+                  <div style={{display:"flex",gap:8,marginTop:8}}>
+                    <button className="btn btn-sm btn-green" onClick={handleRegistrarGasto}>Registrar gasto</button>
+                    <button className="btn btn-sm btn-gray" onClick={()=>setShowRegistrarGasto(false)}>Cancelar</button>
                   </div>
                 </div>);
               })()}
