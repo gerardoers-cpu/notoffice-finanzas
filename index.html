@@ -265,14 +265,6 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[gastoFormPersona,setGastoFormPersona]=useState(null); /* email de la persona a la que se le agrega gasto */
   const[gastoForm,setGastoForm]=useState({fecha:"",concepto:"",beneficiario:"",categoria:"Materiales",marca:"Agencia",monto:"",reembolsable:false});
   const[beneficiarioSearch,setBeneficiarioSearch]=useState("");
-  /* Lista de todos los nombres del equipo para autocompletado */
-  const allTeamNames=React.useMemo(()=>{
-    const names=new Set();
-    team.forEach(t=>{if(t.name)names.add(t.name);});
-    cajaPersonas.forEach(p=>{if(p.nombre)names.add(p.nombre);});
-    userRoles.forEach(r=>{if(r.nombre)names.add(r.nombre);});
-    return[...names].sort();
-  },[team,cajaPersonas,userRoles]);
   const[expandedCajaPersona,setExpandedCajaPersona]=useState(null);
   const[expandedMovPersona,setExpandedMovPersona]=useState(null);
   const[editingAsigId,setEditingAsigId]=useState(null);
@@ -420,6 +412,14 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     setLoadingCaja(false);
   };
   const CAJA_PERSONAS_EMAILS=cajaPersonas.map(p=>p.email);
+  /* Lista de todos los nombres del equipo para autocompletado de beneficiario */
+  const allTeamNames=React.useMemo(()=>{
+    const names=new Set();
+    team.forEach(t=>{if(t.name)names.add(t.name);});
+    cajaPersonas.forEach(p=>{if(p.nombre)names.add(p.nombre);});
+    userRoles.forEach(r=>{if(r.nombre)names.add(r.nombre);});
+    return[...names].sort();
+  },[team,cajaPersonas,userRoles]);
   const handleAddPersona=async()=>{
     if(!newPersonaEmail.trim()){alert("Ingresa un email");return;}
     const sb=getSB();if(!sb)return;
@@ -1020,7 +1020,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                     {isExpanded&&(()=>{
                       const pGastos=cajaChicaAll.filter(g=>g.user_email===p&&g.mes===vm);
                       const isAddingGasto=gastoFormPersona===p;
-                      const[yr,mn]=vm.split("-").map(Number);
+                      const vmParts=vm.split("-").map(Number);const yr=vmParts[0];const mn=vmParts[1];
                       const minD=vm+"-01";const maxD=vm+"-"+String(new Date(yr,mn,0).getDate()).padStart(2,"0");
                       return(<div style={{marginTop:12,borderTop:"1px solid #f0f0f0",paddingTop:10}}>
                         {/* Botón agregar gasto */}
