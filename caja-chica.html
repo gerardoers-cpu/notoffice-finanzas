@@ -1,3 +1,7 @@
+Caja chica · HTML
+
+Mostrar en carpeta
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -27,16 +31,16 @@ if('serviceWorker' in navigator){
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#fafafa;color:#18181b;-webkit-text-size-adjust:100%;overflow-x:hidden}
 .screen{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;padding-bottom:80px}
-
+ 
 /* ── Top Bar: clean, no color ── */
 .top-bar{padding:20px 24px 16px;display:flex;align-items:flex-start;justify-content:space-between;background:#fafafa;position:sticky;top:0;z-index:10}
 .top-bar h1{font-size:28px;font-weight:800;color:#18181b;letter-spacing:-.5px;line-height:1.1}
 .top-bar .user-info{font-size:11px;color:#a1a1aa;margin-top:4px;font-weight:400}
 .top-bar .logout-btn{background:#18181b;border:none;color:#fff;padding:8px 16px;border-radius:20px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;letter-spacing:.3px}
-
+ 
 /* ── Content area ── */
 .content{flex:1;padding:0 20px 20px;max-width:480px;margin:0 auto;width:100%}
-
+ 
 /* ── Balance Hero Card ── */
 .balance-hero{background:#18181b;border-radius:24px;padding:32px 28px;margin-bottom:24px;text-align:center;position:relative;overflow:hidden}
 .balance-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.03)}
@@ -47,16 +51,16 @@ body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:#fafafa;c
 .balance-hero .sub{display:flex;justify-content:center;gap:24px;margin-top:16px;font-size:12px;color:rgba(255,255,255,.5)}
 .balance-hero .sub span{display:flex;flex-direction:column;gap:2px}
 .balance-hero .sub .num{color:rgba(255,255,255,.8);font-weight:600}
-
+ 
 /* ── Bottom Pill Nav ── */
 .pill-nav{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#18181b;border-radius:50px;padding:5px;display:flex;gap:3px;z-index:20;box-shadow:0 8px 32px rgba(0,0,0,.2)}
 .pill-nav button{padding:11px 18px;border:none;border-radius:50px;background:transparent;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;color:rgba(255,255,255,.45);transition:all .2s;white-space:nowrap}
 .pill-nav button.active{background:#fff;color:#18181b}
-
+ 
 /* ── Cards ── */
 .card{background:#fff;border-radius:20px;padding:24px;margin-bottom:16px;border:1px solid #f0f0f0}
 .card h3{font-size:18px;font-weight:700;margin-bottom:16px;color:#18181b;letter-spacing:-.3px}
-
+ 
 /* ── Form Elements ── */
 label{display:block;font-size:11px;font-weight:600;color:#a1a1aa;margin-bottom:6px;text-transform:uppercase;letter-spacing:.8px}
 input,select,textarea{width:100%;padding:14px 16px;border:1.5px solid #e4e4e7;border-radius:14px;font-size:16px;font-family:inherit;color:#18181b;background:#fff;-webkit-appearance:none;appearance:none;transition:all .15s}
@@ -64,20 +68,20 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:#18181b;box-sh
 textarea{resize:vertical;min-height:60px}
 .field{margin-bottom:16px}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-
+ 
 /* ── Buttons ── */
 .btn{width:100%;padding:16px;border:none;border-radius:16px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;letter-spacing:-.2px}
 .btn-primary{background:#18181b;color:#fff}.btn-primary:hover{background:#27272a}.btn-primary:disabled{opacity:.35}
 .btn-secondary{background:#f4f4f5;color:#52525b}.btn-secondary:hover{background:#e4e4e7}
 .btn-google{background:#fff;color:#18181b;border:1.5px solid #e4e4e7;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:600}
 .btn-sm{padding:10px 14px;font-size:13px;width:auto;display:inline-block}
-
+ 
 /* ── Photo Upload ── */
 .photo-zone{border:2px dashed #e4e4e7;border-radius:16px;padding:28px;text-align:center;cursor:pointer;color:#a1a1aa;font-size:13px;transition:all .15s;position:relative;overflow:hidden}
 .photo-zone:hover,.photo-zone.drag{border-color:#18181b;color:#18181b}
 .photo-zone img{max-width:100%;max-height:200px;border-radius:12px;object-fit:contain}
 .photo-zone input{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer}
-
+ 
 /* ── Expense List ── */
 .expense-item{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid #f4f4f5}
 .expense-item:last-child{border-bottom:none}
@@ -86,15 +90,15 @@ textarea{resize:vertical;min-height:60px}
 .expense-meta{font-size:11px;color:#a1a1aa;margin-top:3px}
 .expense-amount{font-weight:800;font-size:16px;white-space:nowrap;margin-left:12px;color:#dc2626}
 .expense-thumb{width:44px;height:44px;border-radius:10px;object-fit:cover;margin-left:10px;cursor:pointer}
-
+ 
 /* ── Badges ── */
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;background:#f4f4f5;color:#71717a}
-
+ 
 /* ── Messages ── */
 .msg{padding:14px 18px;border-radius:14px;font-size:13px;margin-bottom:16px;text-align:center;font-weight:600}
 .msg-ok{background:#18181b;color:#fff}
 .msg-err{background:#dc2626;color:#fff}
-
+ 
 /* ── Team Person Card ── */
 .person-card{background:#fff;border-radius:20px;padding:24px;margin-bottom:12px;border:1px solid #f0f0f0}
 .person-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
@@ -103,34 +107,34 @@ textarea{resize:vertical;min-height:60px}
 .person-balance{text-align:right}
 .person-balance .amount{font-size:24px;font-weight:800;letter-spacing:-.5px}
 .person-balance .of{font-size:11px;color:#a1a1aa}
-
+ 
 /* ── Progress Bar ── */
 .progress-bar{background:#f4f4f5;border-radius:8px;height:4px;margin:12px 0 8px;overflow:hidden}
 .progress-fill{height:100%;border-radius:8px;transition:width .3s}
-
+ 
 /* ── Assignment Item ── */
 .asig-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f4f4f5;font-size:13px}
 .asig-item:last-child{border-bottom:none}
-
+ 
 /* ── Lightbox ── */
 .lightbox{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.92);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
 .lightbox img{max-width:100%;max-height:90vh;border-radius:12px;object-fit:contain}
 .lightbox button{position:absolute;top:20px;right:20px;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:20px;width:44px;height:44px;border-radius:50%;cursor:pointer;backdrop-filter:blur(8px)}
-
+ 
 /* ── Login ── */
 .login-screen{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;background:#fafafa;padding:20px}
 .login-box{background:#fff;border-radius:24px;padding:36px 28px;width:100%;max-width:380px;border:1px solid #f0f0f0}
 .login-title{font-size:32px;font-weight:800;letter-spacing:-.8px;text-align:center;margin-bottom:4px}
 .login-sub{font-size:13px;color:#a1a1aa;text-align:center;margin-bottom:28px}
-
+ 
 /* ── Delete Button ── */
 .del-btn{background:none;border:none;color:#d4d4d8;font-size:16px;cursor:pointer;padding:4px;margin-left:8px}.del-btn:hover{color:#dc2626}
-
+ 
 /* ── Utility ── */
 .divider{display:flex;align-items:center;gap:12px;margin:12px 0}
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:#e4e4e7}
 .divider span{font-size:11px;color:#a1a1aa;font-weight:500}
-
+ 
 /* ── Empty State ── */
 .empty{text-align:center;padding:40px 20px}
 .empty-icon{font-size:36px;margin-bottom:12px;opacity:.3}
@@ -142,13 +146,13 @@ textarea{resize:vertical;min-height:60px}
 <div id="root"></div>
 <script type="text/babel">
 const{useState,useEffect,useRef,useMemo}=React;
-
+ 
 const fmt=n=>"S/ "+Math.round(n).toLocaleString("es-PE");
 const Logo=({width=140,color="#18181b"})=>(<svg width={width} viewBox="0 0 556 53" fill={color} xmlns="http://www.w3.org/2000/svg"><polygon points="58.9 51.73 37.08 51.78 26.13 20.97 16.95 51.73 0 51.75 14.85 1.26 37.27 1.23 47.88 31.18 56.81 1.24 73.72 1.25 58.9 51.73"/><path d="M134.8,19.82c-1.85,25.09-29.46,38.53-51.69,31.24-7.11-2.33-11.96-8.56-12-15.96-.06-10.88,5.54-20.75,14.4-27.15C96.33.13,110.76-2.18,123.31,2.18c7.68,2.67,12.07,9.75,11.49,17.64ZM116.5,24.46c.63-3.82-1.52-7.11-5.37-8.14-9.45-2.52-20.67,2.1-21.77,12.95-.35,3.47,1.82,6.36,5.12,7.38,8.71,2.69,20.21-1.26,22.02-12.18Z"/><path d="M263.61,19.29c-1.4,24.88-28.33,38.77-50.9,32.1-8.5-2.51-13.65-9.92-12.81-18.67,2.35-24.53,28.87-37.72,51.23-30.89,7.84,2.39,12.94,9.33,12.49,17.46ZM236.92,35.6c4.94-2.21,7.86-6.68,8.39-11.85.34-3.3-1.57-6.2-4.78-7.22-9.62-3.05-21.34,1.79-22.35,12.7-.29,3.11,1.2,5.78,4.14,7.02,4.51,1.9,9.82,1.5,14.61-.64Z"/><path d="M506.86,32.61l-26.7.03c-1.17,1.35-1.94,3.16-2.5,5.23l30.05.06-4.05,13.82h-48.8c3.23-8.82,8.09-16.63,10.71-25.48,2.39-8.07,2.28-16.43,4.11-25.03l48.37-.02-3.9,13.84-30.09.03-.68,5.33,26.97.06-3.48,12.12Z"/><path d="M422.36,37.96c7.08.73,13.81-1.74,17.03-8.15l17.46.03c-7.1,18.3-29.22,26.89-47.29,21.67-8.39-2.42-13.49-9.69-12.77-18.32,2.03-24.41,27.74-38.01,49.56-31.62,9.65,2.83,14.76,11.99,12.39,21.63h-17.4c.27-3.65-1.58-6.57-5.01-7.52-4.15-1.15-8.76-.88-12.7,1.02-4.92,2.37-7.75,7.16-8.55,12.4-.73,4.81,2.38,8.34,7.28,8.85Z"/><path d="M315.36,20.94l-4.18,14.64-27.91.09-4.79,16.07h-17.48s14.85-50.52,14.85-50.52l46.7.06-4.25,14.55h-29.02c-.7,1.62-1.13,3.01-1.6,5.07l27.69.06Z"/><polygon points="368.43 20.95 364.23 35.6 336.3 35.65 331.52 51.75 314.05 51.75 328.9 1.22 375.56 1.27 371.43 15.8 342.22 15.82 340.71 20.89 368.43 20.95"/><polygon points="162.58 51.77 145.09 51.73 155.33 16.98 137.28 16.76 141.86 1.24 195.48 1.24 191.04 16.82 172.84 16.9 162.58 51.77"/><polygon points="384.62 51.69 367.11 51.77 381.95 1.26 399.45 1.24 384.62 51.69"/></svg>);
 const ML=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 const MARCAS=[];
 const nameFromEmail=(e)=>e?e.split("@")[0].replace(/\./g," ").replace(/\b\w/g,c=>c.toUpperCase()):"";
-
+ 
 /* ═══ SUPABASE CONFIG (hardcoded) ═══ */
 const SB_URL="https://zysffenpldnvjqdyzckl.supabase.co";
 const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5c2ZmZW5wbGRudmpxZHl6Y2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0MzE2NzcsImV4cCI6MjA5MTAwNzY3N30.CjsghKCPBqOMU2wGewA9pIskGsmDTMdDPawOfMDaXXQ";
@@ -159,7 +163,7 @@ const getSB=()=>{
   if(_sb)return _sb;
   _sb=supabase.createClient(SB_URL,SB_KEY);return _sb;
 };
-
+ 
 /* ═══ MAIN APP ═══ */
 function CajaChicaApp({user,onLogout}){
   const[tab,setTab]=useState("gasto");
@@ -181,9 +185,9 @@ function CajaChicaApp({user,onLogout}){
   const[lightboxUrl,setLightboxUrl]=useState(null);
   const fileRef=useRef(null);
   const fileRefGallery=useRef(null);
-
+ 
   const PERSONAS_EMAILS=personas.map(p=>p.email);
-
+ 
   const loadData=async()=>{
     const sb=getSB();if(!sb)return;
     setLoading(true);
@@ -199,9 +203,9 @@ function CajaChicaApp({user,onLogout}){
     }catch(e){console.warn("Load error:",e);}
     setLoading(false);
   };
-
+ 
   useEffect(()=>{loadData();},[]);
-
+ 
   const balances=useMemo(()=>{
     const b={};
     PERSONAS_EMAILS.forEach(p=>{
@@ -211,10 +215,10 @@ function CajaChicaApp({user,onLogout}){
     });
     return b;
   },[gastos,asignaciones,PERSONAS_EMAILS]);
-
+ 
   const myBalance=balances[user.email]||{asignado:0,gastado:0,saldo:0};
   const myGastos=gastos.filter(g=>g.user_email===user.email);
-
+ 
   const uploadFoto=async()=>{
     if(!foto)return null;
     const sb=getSB();if(!sb)return null;
@@ -225,7 +229,7 @@ function CajaChicaApp({user,onLogout}){
     const{data:{publicUrl}}=sb.storage.from("comprobantes").getPublicUrl(path);
     return publicUrl;
   };
-
+ 
   const handlePhoto=(e)=>{
     const file=e.target.files?.[0];
     if(!file)return;
@@ -235,7 +239,7 @@ function CajaChicaApp({user,onLogout}){
     reader.onload=(ev)=>setFotoPreview(ev.target.result);
     reader.readAsDataURL(file);
   };
-
+ 
   const handleSave=async(e)=>{
     e.preventDefault();
     const montoNum=parseFloat(monto);
@@ -252,7 +256,8 @@ function CajaChicaApp({user,onLogout}){
         monto:montoNum,concepto:concepto.trim(),categoria:categoria.trim()||"Sin categoria",
         marca:marca||"Agencia",tipo:tipo||"agencia",via_pago:"caja_chica",
         estado_cobro:tipo==="cliente"?"pendiente":"pendiente",
-        foto_url:fotoUrl
+        foto_url:fotoUrl,
+        origen:"web"
       });
       if(error)setMsg({type:"err",text:"Error: "+error.message});
       else{
@@ -264,22 +269,22 @@ function CajaChicaApp({user,onLogout}){
     }catch(e){setMsg({type:"err",text:"Error: "+e.message});}
     setSaving(false);
   };
-
-
+ 
+ 
   const handleDelete=async(id)=>{
     if(!confirm("Eliminar este gasto?"))return;
     const sb=getSB();if(!sb)return;
     await sb.from("caja_chica").delete().eq("id",id);
     loadData();
   };
-
+ 
   /* ═══ Gestión personas y asignaciones ═══ */
   const[newPersonaNombre,setNewPersonaNombre]=useState("");
   const[newPersonaEmail,setNewPersonaEmail]=useState("");
   const[asigEmail,setAsigEmail]=useState("");
   const[asigMonto,setAsigMonto]=useState("");
   const[asigNota,setAsigNota]=useState("");
-
+ 
   const addPersona=async()=>{
     if(!newPersonaNombre.trim()||!newPersonaEmail.trim())return;
     const sb=getSB();if(!sb)return;
@@ -289,7 +294,7 @@ function CajaChicaApp({user,onLogout}){
     setMsg({type:"ok",text:"Persona agregada"});setTimeout(()=>setMsg(null),3000);
     loadData();
   };
-
+ 
   const addAsignacion=async()=>{
     const m=parseFloat(asigMonto);
     if(!asigEmail||!m||m<=0)return;
@@ -301,9 +306,9 @@ function CajaChicaApp({user,onLogout}){
     setMsg({type:"ok",text:"Saldo asignado"});setTimeout(()=>setMsg(null),3000);
     loadData();
   };
-
+ 
   const pctUsed=myBalance.asignado>0?Math.min((myBalance.gastado/myBalance.asignado)*100,100):0;
-
+ 
   return(
     <div className="screen">
       {/* ── Top Bar ── */}
@@ -314,7 +319,7 @@ function CajaChicaApp({user,onLogout}){
         </div>
         <button className="logout-btn" onClick={onLogout}>Salir</button>
       </div>
-
+ 
       <div className="content">
         {/* ── Balance Hero ── */}
         <div className="balance-hero">
@@ -325,20 +330,17 @@ function CajaChicaApp({user,onLogout}){
             <span><span className="num">{fmt(myBalance.gastado)}</span>gastado</span>
           </div>
         </div>
-
+ 
         {msg&&<div className={`msg msg-${msg.type}`}>{msg.text}</div>}
-
+ 
         {/* ═══ TAB: Nuevo Gasto ═══ */}
         {tab==="gasto"&&(
-          myBalance.saldo<=0&&tipo!=="cliente"?(
-            <div className="empty">
-              <div className="empty-icon">$</div>
-              <div className="empty-title" style={{color:"#dc2626"}}>Sin saldo</div>
-              <div className="empty-text">Pide que te asignen caja chica para registrar gastos.</div>
-              <button type="button" onClick={()=>setTipo("cliente")} style={{marginTop:12,padding:"10px 20px",background:"#2563eb",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>Registrar gasto de cliente</button>
-            </div>
-          ):(
             <form onSubmit={handleSave}>
+              {myBalance.saldo<=0&&tipo==="agencia"&&(
+                <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:14,padding:"12px 16px",marginBottom:16,fontSize:13,color:"#dc2626",fontWeight:600,textAlign:"center"}}>
+                  Sin saldo de caja chica. Pide una asignación o registra como gasto de cliente.
+                </div>
+              )}
               <div className="card">
                 <h3>Nuevo gasto</h3>
                 <div className="row">
@@ -348,7 +350,7 @@ function CajaChicaApp({user,onLogout}){
                   </div>
                   <div className="field">
                     <label>Monto (S/)</label>
-                    <input type="number" step="0.01" min="0.01" max={myBalance.saldo} value={monto} onChange={e=>setMonto(e.target.value)} placeholder="0.00" required inputMode="decimal"/>
+                    <input type="number" step="0.01" min="0.01" value={monto} onChange={e=>setMonto(e.target.value)} placeholder="0.00" required inputMode="decimal"/>
                   </div>
                 </div>
                 <div className="field">
@@ -406,9 +408,8 @@ function CajaChicaApp({user,onLogout}){
                 {saving?"Guardando...":"Registrar gasto"}
               </button>
             </form>
-          )
         )}
-
+ 
         {/* ═══ TAB: Historial ═══ */}
         {tab==="historial"&&(
           <div>
@@ -457,7 +458,7 @@ function CajaChicaApp({user,onLogout}){
             )}
           </div>
         )}
-
+ 
         {/* ═══ TAB: Equipo ═══ */}
         {tab==="equipo"&&(
           <div>
@@ -500,7 +501,7 @@ function CajaChicaApp({user,onLogout}){
                 </div>
               );
             })}
-
+ 
             {/* ── Asignar saldo ── */}
             <div className="card" style={{marginTop:16}}>
               <h3 style={{fontSize:14,fontWeight:700,marginBottom:12}}>Asignar saldo</h3>
@@ -516,7 +517,7 @@ function CajaChicaApp({user,onLogout}){
                 <button onClick={addAsignacion} disabled={!asigEmail||!asigMonto} style={{padding:"12px",background:asigEmail&&asigMonto?"#18181b":"#d4d4d8",color:"#fff",border:"none",borderRadius:12,fontSize:13,fontWeight:700,cursor:asigEmail&&asigMonto?"pointer":"default",fontFamily:"inherit"}}>Asignar</button>
               </div>
             </div>
-
+ 
             {/* ── Agregar persona ── */}
             <div className="card" style={{marginTop:12}}>
               <h3 style={{fontSize:14,fontWeight:700,marginBottom:12}}>Agregar persona</h3>
@@ -529,14 +530,14 @@ function CajaChicaApp({user,onLogout}){
           </div>
         )}
       </div>
-
+ 
       {/* ── Bottom Pill Nav ── */}
       <div className="pill-nav">
         <button className={tab==="gasto"?"active":""} onClick={()=>setTab("gasto")}>Gasto</button>
         <button className={tab==="historial"?"active":""} onClick={()=>setTab("historial")}>Historial</button>
         <button className={tab==="equipo"?"active":""} onClick={()=>setTab("equipo")}>Equipo</button>
       </div>
-
+ 
       {lightboxUrl&&(
         <div className="lightbox" onClick={()=>setLightboxUrl(null)}>
           <img src={lightboxUrl} alt="Comprobante"/>
@@ -546,7 +547,7 @@ function CajaChicaApp({user,onLogout}){
     </div>
   );
 }
-
+ 
 /* ═══ AUTH WRAPPER ═══ */
 function AuthWrapper(){
   const[user,setUser]=useState(null);
@@ -556,7 +557,7 @@ function AuthWrapper(){
   const[error,setError]=useState("");
   const[showSetup,setShowSetup]=useState(false);
   const hasConfig=!!getSBConfig();
-
+ 
   useEffect(()=>{
     const sb=getSB();if(!sb){setLoading(false);return;}
     sb.auth.getSession().then(({data:{session}})=>{
@@ -569,7 +570,7 @@ function AuthWrapper(){
     });
     return()=>subscription.unsubscribe();
   },[]);
-
+ 
   const handleLogin=async(e)=>{
     e.preventDefault();setError("");
     const sb=getSB();if(!sb){setError("Error de conexion");return;}
@@ -582,11 +583,11 @@ function AuthWrapper(){
     if(err)setError(err.message);
   };
   const handleLogout=async()=>{const sb=getSB();if(sb)await sb.auth.signOut();setUser(null);};
-
+ 
   if(loading)return(<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100vh",fontFamily:"Inter,sans-serif"}}>
     <div style={{textAlign:"center"}}><Logo width={150} color="#18181b"/><div style={{color:"#a1a1aa",marginTop:12,fontSize:13}}>Cargando...</div></div>
   </div>);
-
+ 
   if(!hasConfig||showSetup)return(
     <div className="login-screen"><div className="login-box">
       <div style={{marginBottom:28,textAlign:"center"}}>
@@ -596,7 +597,7 @@ function AuthWrapper(){
       <SupabaseSetupMini onDone={()=>location.reload()}/>
     </div></div>
   );
-
+ 
   if(!user)return(
     <div className="login-screen"><div className="login-box">
       <div style={{marginBottom:28,textAlign:"center"}}>
@@ -616,10 +617,10 @@ function AuthWrapper(){
       </form>
     </div></div>
   );
-
+ 
   return <CajaChicaApp user={user} onLogout={handleLogout}/>;
 }
-
+ 
 function SupabaseSetupMini({onDone}){
   const cfg=getSBConfig()||{};
   const[url,setUrl]=useState(cfg.url||"");
@@ -643,7 +644,7 @@ function SupabaseSetupMini({onDone}){
     {result&&<div className={`msg ${result.includes("exitosa")?"msg-ok":"msg-err"}`} style={{marginTop:12}}>{result}</div>}
   </div>);
 }
-
+ 
 ReactDOM.render(<AuthWrapper/>,document.getElementById("root"));
 </script>
 </body>
