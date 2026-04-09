@@ -225,9 +225,25 @@ const loadStateCloud=async()=>{
 };
 const saveStateCloud=async(state,email)=>{
   const sb=getSB();if(!sb)return false;
-  try{const{error}=await sb.from("app_state").upsert({id:"main",data:state,updated_at:new Date().toISOString(),updated_by:email||"unknown"});
+  try{
+    /* ── Backup: save previous version before overwriting ── */
+    try{
+      const{data:prev}=await sb.from("app_state").select("data,updated_by,updated_at").eq("id","main").single();
+      if(prev&&prev.data){
+        await sb.from("app_state_backups").insert({
+          data:prev.data,
+          saved_by:prev.updated_by||"unknown",
+          saved_at:prev.updated_at||new Date().toISOString(),
+          note:"auto-backup before save by "+(email||"unknown")
+        });
+        console.log("[BACKUP] Versión anterior guardada (",prev.updated_by,prev.updated_at,")");
+      }
+    }catch(bkErr){console.warn("[BACKUP] Error (no crítico):",bkErr);}
+    /* ── Save current state ── */
+    const{error}=await sb.from("app_state").upsert({id:"main",data:state,updated_at:new Date().toISOString(),updated_by:email||"unknown"});
     if(error)console.error("Cloud save error:",error.message,error.details,error.hint);
-    return!error;}catch(e){console.error("Cloud save exception:",e);return false;}
+    return!error;
+  }catch(e){console.error("Cloud save exception:",e);return false;}
 };
 
 const initFees=()=>{
@@ -2597,10 +2613,101 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               }}>Limpiar Todo</button>
             </div>
           </div>
+
+          {cloudMode&&(<BackupManager getSB={getSB} setClients={setClients} setTeamByMonth={setTeamByMonth}
+            setInvoices={setInvoices} setProjects={setProjects} setFixedExp={setFixedExp} setDigitalExp={setDigitalExp}
+            setVariableExp={setVariableExp} setOfficeExp={setOfficeExp} setInvestExp={setInvestExp}
+            setClientFees={setClientFees} setMonthSnapshots={setMonthSnapshots} setStaff={setStaff} setRoles={setRoles}
+            setSaveMsg={setSaveMsg} initFees={initFees} ALL_MONTHS={ALL_MONTHS}/>)}
         </>)}
 
         </div></div>
       </div>
+    </div>
+  );
+}
+
+/* ═══ BACKUP MANAGER COMPONENT ═══ */
+function BackupManager({getSB,setClients,setTeamByMonth,setInvoices,setProjects,setFixedExp,setDigitalExp,setVariableExp,setOfficeExp,setInvestExp,setClientFees,setMonthSnapshots,setStaff,setRoles,setSaveMsg,initFees,ALL_MONTHS}){
+  const[backups,setBackups]=useState([]);
+  const[loading,setLoading]=useState(false);
+  const[open,setOpen]=useState(false);
+  const[restoring,setRestoring]=useState(null);
+
+  const loadBackups=async()=>{
+    setLoading(true);
+    try{
+      const sb=getSB();if(!sb){setLoading(false);return;}
+      const{data,error}=await sb.from("app_state_backups").select("id,saved_by,saved_at,note").order("saved_at",{ascending:false}).limit(20);
+      if(!error&&data)setBackups(data);
+      else console.warn("Error loading backups:",error);
+    }catch(e){console.warn("Backup load error:",e);}
+    setLoading(false);
+  };
+
+  const restoreBackup=async(bkId)=>{
+    if(!confirm("¿Restaurar este backup? Se reemplazarán los datos actuales."))return;
+    setRestoring(bkId);
+    try{
+      const sb=getSB();if(!sb)return;
+      const{data:bk,error}=await sb.from("app_state_backups").select("data").eq("id",bkId).single();
+      if(error||!bk){alert("Error al cargar backup");setRestoring(null);return;}
+      const d=bk.data;
+      if(d.clients)setClients(d.clients);
+      if(d.teamByMonth){setTeamByMonth(d.teamByMonth);}
+      else if(d.team&&d.team.length>0){const mg={};ALL_MONTHS.forEach(mo=>{mg[mo.value]=d.team.map(t=>({...t}));});setTeamByMonth(mg);}
+      setInvoices(d.invoices||[]);setProjects(d.projects||[]);
+      setFixedExp(d.fixedExp||[]);setDigitalExp(d.digitalExp||[]);setVariableExp(d.variableExp||[]);setOfficeExp(d.officeExp||[]);setInvestExp(d.investExp||[]);
+      setClientFees(d.clientFees||initFees());setMonthSnapshots(d.monthSnapshots||{});
+      if(d.staff)setStaff(d.staff);
+      if(d.roles)setRoles(d.roles);
+      setSaveMsg("Backup restaurado desde la nube");setTimeout(()=>setSaveMsg(""),3000);
+    }catch(e){alert("Error: "+e.message);}
+    setRestoring(null);
+  };
+
+  const fmtDate=(iso)=>{
+    if(!iso)return"?";
+    try{const d=new Date(iso);return d.toLocaleString("es-PE",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});}
+    catch(e){return iso;}
+  };
+
+  return(
+    <div style={{marginTop:20,background:"#18181b",borderRadius:12,padding:16,border:"1px solid #27272a"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:open?12:0}}>
+        <h4 style={{margin:0,fontSize:14,color:"#a78bfa"}}>Backups en la nube</h4>
+        <button className="btn" style={{fontSize:12,padding:"6px 14px",background:open?"#7c3aed":"#3f3f46"}}
+          onClick={()=>{setOpen(!open);if(!open&&backups.length===0)loadBackups();}}>
+          {open?"Cerrar":"Ver Backups"}
+        </button>
+      </div>
+      {open&&(
+        <div>
+          {loading&&<p style={{color:"#a1a1aa",fontSize:12}}>Cargando backups...</p>}
+          {!loading&&backups.length===0&&<p style={{color:"#a1a1aa",fontSize:12}}>No hay backups disponibles. Se crean automáticamente al guardar.</p>}
+          {!loading&&backups.length>0&&(
+            <table className="data-table" style={{fontSize:12}}>
+              <thead><tr><th>Fecha</th><th>Usuario</th><th>Nota</th><th></th></tr></thead>
+              <tbody>
+                {backups.map(b=>(
+                  <tr key={b.id}>
+                    <td style={{whiteSpace:"nowrap"}}>{fmtDate(b.saved_at)}</td>
+                    <td>{b.saved_by||"?"}</td>
+                    <td style={{fontSize:11,color:"#a1a1aa"}}>{b.note||""}</td>
+                    <td><button className="btn btn-red" style={{fontSize:11,padding:"4px 10px"}}
+                      disabled={restoring===b.id}
+                      onClick={()=>restoreBackup(b.id)}>
+                      {restoring===b.id?"Restaurando...":"Restaurar"}
+                    </button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          <button className="btn" style={{fontSize:11,padding:"4px 10px",marginTop:8,background:"#3f3f46"}}
+            onClick={loadBackups} disabled={loading}>Refrescar</button>
+        </div>
+      )}
     </div>
   );
 }
