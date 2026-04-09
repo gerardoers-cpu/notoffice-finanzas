@@ -361,7 +361,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[editStaffId,setEditStaffId]=useState(null);
   /* Per-month fees: { month: { clientId: { base:number, services:[{id,name,amount}] } } } */
   const[clientFees,setClientFees]=useState(saved?.clientFees||initFees);
-  const getEntry=(cId,m)=>(clientFees[m]&&clientFees[m][cId])||{base:0,services:[]};
+  const getEntry=(cId,m)=>{const raw=clientFees[m]&&clientFees[m][cId];if(!raw)return{base:0,services:[]};if(typeof raw==="number")return{base:raw,services:[]};if(typeof raw==="object"&&raw!==null)return{base:raw.base||0,services:raw.services||[]};return{base:0,services:[]};};
   const getFee=(cId,m)=>{const e=getEntry(cId,m);return e.base+e.services.reduce((s,sv)=>s+sv.amount,0);};
   const setBase=(cId,m,v)=>setClientFees(prev=>{const e=getEntry(cId,m);return{...prev,[m]:{...prev[m],[cId]:{...e,base:v}}};});
   const addSvc=(cId,m,name,amount)=>setClientFees(prev=>{const e=getEntry(cId,m);return{...prev,[m]:{...prev[m],[cId]:{...e,services:[...e.services,{id:Date.now(),name,amount}]}}};});
@@ -3370,7 +3370,28 @@ function SupabaseSetup({onDone}){
   </div>);
 }
 
-ReactDOM.render(<AuthWrapper/>,document.getElementById("root"));
+/* ═══ ERROR BOUNDARY ═══ */
+class ErrorBoundary extends React.Component{
+  constructor(props){super(props);this.state={hasError:false,error:null,info:null};}
+  static getDerivedStateFromError(error){return{hasError:true,error};}
+  componentDidCatch(error,info){this.setState({info});console.error("[ErrorBoundary]",error,info);}
+  render(){
+    if(this.state.hasError){
+      return React.createElement("div",{style:{padding:40,fontFamily:"Inter,sans-serif",maxWidth:700,margin:"40px auto"}},
+        React.createElement("h1",{style:{color:"#dc2626",fontSize:20,marginBottom:12}},"Error en la aplicación"),
+        React.createElement("pre",{style:{background:"#18181b",color:"#fca5a5",padding:20,borderRadius:12,fontSize:12,overflow:"auto",whiteSpace:"pre-wrap",marginBottom:16}},
+          String(this.state.error)+"\n\n"+(this.state.info?.componentStack||"")
+        ),
+        React.createElement("button",{onClick:()=>{this.setState({hasError:false,error:null,info:null});},
+          style:{padding:"12px 24px",background:"#18181b",color:"#fff",border:"none",borderRadius:12,fontSize:14,fontWeight:600,cursor:"pointer",marginRight:8}},"Reintentar"),
+        React.createElement("button",{onClick:()=>location.reload(),
+          style:{padding:"12px 24px",background:"#f4f4f5",color:"#18181b",border:"none",borderRadius:12,fontSize:14,fontWeight:600,cursor:"pointer"}},"Recargar página")
+      );
+    }
+    return this.props.children;
+  }
+}
+ReactDOM.render(React.createElement(ErrorBoundary,null,React.createElement(AuthWrapper)),document.getElementById("root"));
 </script>
 </body>
 </html>
