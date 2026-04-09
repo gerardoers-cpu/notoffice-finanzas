@@ -197,18 +197,27 @@ function CajaChicaApp({user,onLogout}){
     const sb=getSB();if(!sb)return;
     setLoading(true);
     try{
-      const[gRes,aRes,pRes,stateRes]=await Promise.all([
+      const[gRes,aRes,pRes]=await Promise.all([
         sb.from("caja_chica").select("*").order("fecha",{ascending:false}),
         sb.from("caja_chica_asignaciones").select("*").order("fecha",{ascending:false}),
-        sb.from("caja_chica_personas").select("*").eq("activo",true).order("nombre"),
-        sb.from("app_state").select("data").eq("id","main").single()
+        sb.from("caja_chica_personas").select("*").eq("activo",true).order("nombre")
       ]);
       if(!gRes.error&&gRes.data)setGastos(gRes.data);
       if(!aRes.error&&aRes.data)setAsignaciones(aRes.data);
       if(!pRes.error&&pRes.data)setPersonas(pRes.data);
-      if(!stateRes.error&&stateRes.data?.data?.clients){
-        setClientes(stateRes.data.data.clients.sort((a,b)=>a.name.localeCompare(b.name)));
-      }
+      /* Load clients from finanzas app_state separately */
+      try{
+        const stateRes=await sb.from("app_state").select("data").eq("id","main").single();
+        console.log("[CC] app_state response:",stateRes.error?"ERROR: "+stateRes.error.message:"OK",
+          "clients:",stateRes.data?.data?.clients?.length||0);
+        if(!stateRes.error&&stateRes.data?.data?.clients){
+          const cl=stateRes.data.data.clients;
+          console.log("[CC] Loaded clients:",cl.map(c=>c.name));
+          setClientes(cl.sort((a,b)=>(a.name||"").localeCompare(b.name||"")));
+        }else if(stateRes.error){
+          console.warn("[CC] app_state error:",stateRes.error);
+        }
+      }catch(e2){console.warn("[CC] Error loading clients:",e2);}
     }catch(e){console.warn("Load error:",e);}
     setLoading(false);
   };
@@ -473,9 +482,9 @@ function CajaChicaApp({user,onLogout}){
                 </div>
                 {(tipo==="marca"||tipo==="proyecto")&&(
                   <div className="field">
-                    <label>Cliente / Marca</label>
+                    <label>Cliente / Marca {clientes.length===0&&<span style={{color:"#dc2626",fontWeight:400,textTransform:"none",letterSpacing:0}}>(cargando...)</span>}</label>
                     <select value={clienteId} onChange={e=>setClienteId(e.target.value)} style={{padding:"14px 16px",border:!clienteId?"1.5px solid #fecaca":"1.5px solid #e4e4e7",borderRadius:14,fontSize:16,fontFamily:"inherit",color:"#18181b",background:"#fff",width:"100%"}}>
-                      <option value="">Selecciona cliente...</option>
+                      <option value="">{clientes.length===0?"Sin clientes — verifica conexión":"Selecciona cliente..."}</option>
                       {clientes.map(c=>(<option key={c.id} value={c.id}>{c.name}</option>))}
                     </select>
                   </div>
