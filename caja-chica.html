@@ -168,8 +168,8 @@ function CajaChicaApp({user,onLogout}){
   const[monto,setMonto]=useState("");
   const[concepto,setConcepto]=useState("");
   const[categoria,setCategoria]=useState("");
-  const[marca,setMarca]=useState("Agencia");
-  const[tipo,setTipo]=useState("agencia");
+  const[tipo,setTipo]=useState("agencia"); /* agencia | marca | proyecto | prestamo */
+  const[clienteId,setClienteId]=useState("");
   const[foto,setFoto]=useState(null);
   const[fotoPreview,setFotoPreview]=useState(null);
   const[saving,setSaving]=useState(false);
@@ -177,6 +177,7 @@ function CajaChicaApp({user,onLogout}){
   const[gastos,setGastos]=useState([]);
   const[asignaciones,setAsignaciones]=useState([]);
   const[personas,setPersonas]=useState([]);
+  const[clientes,setClientes]=useState([]); /* loaded from finanzas app_state */
   const[loading,setLoading]=useState(true);
   const[lightboxUrl,setLightboxUrl]=useState(null);
   const[showSuccess,setShowSuccess]=useState(false);
@@ -185,18 +186,29 @@ function CajaChicaApp({user,onLogout}){
 
   const PERSONAS_EMAILS=personas.map(p=>p.email);
 
+  const TIPOS=[
+    {id:"agencia",label:"Agencia",desc:"Gasto general de la agencia (overhead)",color:"#18181b"},
+    {id:"marca",label:"Marca",desc:"Se descuenta del fee de esa marca",color:"#2563eb"},
+    {id:"proyecto",label:"Proyecto",desc:"Costo directo del proyecto (afecta utilidad)",color:"#7c3aed"},
+    {id:"prestamo",label:"Préstamo",desc:"Reembolsable — se debe devolver",color:"#ea580c"}
+  ];
+
   const loadData=async()=>{
     const sb=getSB();if(!sb)return;
     setLoading(true);
     try{
-      const[gRes,aRes,pRes]=await Promise.all([
+      const[gRes,aRes,pRes,stateRes]=await Promise.all([
         sb.from("caja_chica").select("*").order("fecha",{ascending:false}),
         sb.from("caja_chica_asignaciones").select("*").order("fecha",{ascending:false}),
-        sb.from("caja_chica_personas").select("*").eq("activo",true).order("nombre")
+        sb.from("caja_chica_personas").select("*").eq("activo",true).order("nombre"),
+        sb.from("app_state").select("data").eq("id","finanzas").single()
       ]);
       if(!gRes.error&&gRes.data)setGastos(gRes.data);
       if(!aRes.error&&aRes.data)setAsignaciones(aRes.data);
       if(!pRes.error&&pRes.data)setPersonas(pRes.data);
+      if(!stateRes.error&&stateRes.data?.data?.clients){
+        setClientes(stateRes.data.data.clients.sort((a,b)=>a.name.localeCompare(b.name)));
+      }
     }catch(e){console.warn("Load error:",e);}
     setLoading(false);
   };
@@ -239,7 +251,7 @@ function CajaChicaApp({user,onLogout}){
   };
 
   const resetForm=()=>{
-    setMonto("");setConcepto("");setCategoria("");setMarca("Agencia");setTipo("agencia");setFoto(null);setFotoPreview(null);setFecha(new Date().toISOString().slice(0,10));
+    setMonto("");setConcepto("");setCategoria("");setTipo("agencia");setClienteId("");setFoto(null);setFotoPreview(null);setFecha(new Date().toISOString().slice(0,10));
     if(fileRef.current)fileRef.current.value="";if(fileRefGallery.current)fileRefGallery.current.value="";
   };
 
@@ -248,16 +260,20 @@ function CajaChicaApp({user,onLogout}){
     const montoNum=parseFloat(monto);
     if(!montoNum||montoNum<=0){setMsg({type:"err",text:"Ingresa un monto válido"});return;}
     if(!concepto.trim()){setMsg({type:"err",text:"Describe el gasto"});return;}
+    if((tipo==="marca"||tipo==="proyecto")&&!clienteId){setMsg({type:"err",text:"Selecciona un cliente/marca"});return;}
     setSaving(true);setMsg(null);
     try{
       const sb=getSB();if(!sb){setMsg({type:"err",text:"Sin conexión"});setSaving(false);return;}
       const fotoUrl=await uploadFoto();
       const mes=fecha.slice(0,7);
+      const selCliente=clientes.find(c=>String(c.id)===String(clienteId));
+      const marcaVal=(tipo==="marca"||tipo==="proyecto")?selCliente?.name||"":"Agencia";
       const{error}=await sb.from("caja_chica").insert({
         user_email:user.email,user_name:nameFromEmail(user.email),fecha,mes,
         monto:montoNum,concepto:concepto.trim(),categoria:categoria.trim()||"Sin categoría",
-        marca:marca||"Agencia",tipo:tipo||"agencia",via_pago:"caja_chica",
-        estado_cobro:"pendiente",
+        marca:marcaVal,tipo,via_pago:"caja_chica",
+        cliente_id:clienteId||null,cliente_nombre:selCliente?.name||null,
+        estado_cobro:tipo==="prestamo"?"por_cobrar":"pendiente",
         foto_url:fotoUrl,
         origen:"web"
       });
@@ -396,7 +412,11 @@ function CajaChicaApp({user,onLogout}){
                     <div key={g.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 4px",borderBottom:"1px solid #f4f4f5"}}>
                       <div>
                         <div style={{fontWeight:600,fontSize:14}}>{g.concepto}</div>
-                        <div style={{fontSize:11,color:"#a1a1aa",marginTop:2}}>{new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}{g.categoria?` · ${g.categoria}`:""}</div>
+                        <div style={{fontSize:11,color:"#a1a1aa",marginTop:2}}>
+                          {new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}
+                          {g.tipo&&g.tipo!=="agencia"?` · ${g.tipo==="marca"?"Marca":g.tipo==="proyecto"?"Proyecto":g.tipo==="prestamo"?"Préstamo":g.tipo}`:""}
+                          {g.cliente_nombre?` · ${g.cliente_nombre}`:""}
+                        </div>
                       </div>
                       <div style={{fontWeight:800,fontSize:15,color:"#dc2626",whiteSpace:"nowrap",marginLeft:8}}>{fmt(g.monto)}</div>
                     </div>
@@ -441,24 +461,25 @@ function CajaChicaApp({user,onLogout}){
                   </datalist>
                 </div>
                 <div className="field">
-                  <label>Marca o Agencia</label>
-                  <select value={marca} onChange={e=>setMarca(e.target.value)}>
-                    <option value="Agencia">Agencia (gasto general)</option>
-                    {MARCAS.map(m=>(<option key={m} value={m}>{m}</option>))}
-                  </select>
-                </div>
-                <div className="field">
                   <label>Tipo de gasto</label>
-                  <div style={{display:"flex",gap:8}}>
-                    <button type="button" onClick={()=>setTipo("agencia")} style={{flex:1,padding:"12px 8px",border:tipo==="agencia"?"2px solid #18181b":"1.5px solid #e4e4e7",borderRadius:14,background:tipo==="agencia"?"#18181b":"#fff",color:tipo==="agencia"?"#fff":"#18181b",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
-                      Agencia
-                    </button>
-                    <button type="button" onClick={()=>setTipo("cliente")} style={{flex:1,padding:"12px 8px",border:tipo==="cliente"?"2px solid #2563eb":"1.5px solid #e4e4e7",borderRadius:14,background:tipo==="cliente"?"#2563eb":"#fff",color:tipo==="cliente"?"#fff":"#18181b",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
-                      Cliente
-                    </button>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                    {TIPOS.map(t=>(
+                      <button key={t.id} type="button" onClick={()=>{setTipo(t.id);if(t.id==="agencia"||t.id==="prestamo")setClienteId("");}} style={{padding:"12px 8px",border:tipo===t.id?`2px solid ${t.color}`:"1.5px solid #e4e4e7",borderRadius:14,background:tipo===t.id?t.color:"#fff",color:tipo===t.id?"#fff":"#18181b",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+                        {t.label}
+                      </button>
+                    ))}
                   </div>
-                  <div style={{fontSize:11,color:"#a1a1aa",marginTop:6}}>{tipo==="agencia"?"La agencia absorbe este gasto":"Se facturará al cliente (+18% IGV)"}</div>
+                  <div style={{fontSize:11,color:"#a1a1aa",marginTop:6}}>{TIPOS.find(t=>t.id===tipo)?.desc||""}</div>
                 </div>
+                {(tipo==="marca"||tipo==="proyecto")&&(
+                  <div className="field">
+                    <label>Cliente / Marca</label>
+                    <select value={clienteId} onChange={e=>setClienteId(e.target.value)} style={{padding:"14px 16px",border:!clienteId?"1.5px solid #fecaca":"1.5px solid #e4e4e7",borderRadius:14,fontSize:16,fontFamily:"inherit",color:"#18181b",background:"#fff",width:"100%"}}>
+                      <option value="">Selecciona cliente...</option>
+                      {clientes.map(c=>(<option key={c.id} value={c.id}>{c.name}</option>))}
+                    </select>
+                  </div>
+                )}
                 <div className="field">
                   <label>Comprobante</label>
                   {fotoPreview?(
@@ -510,8 +531,8 @@ function CajaChicaApp({user,onLogout}){
                       <div className="expense-meta">
                         {new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short",year:"numeric"})}
                         {g.categoria&&<> &middot; <span className="badge">{g.categoria}</span></>}
-                        {g.marca&&g.marca!=="Agencia"&&<> &middot; <span className="badge" style={{background:"#2563eb",color:"#fff"}}>{g.marca}</span></>}
-                        {g.tipo==="cliente"&&<> &middot; <span className="badge" style={{background:"#f59e0b",color:"#fff"}}>Cliente</span></>}
+                        {g.tipo&&g.tipo!=="agencia"&&<> &middot; <span className="badge" style={{background:g.tipo==="marca"?"#2563eb":g.tipo==="proyecto"?"#7c3aed":g.tipo==="prestamo"?"#ea580c":"#18181b",color:"#fff"}}>{g.tipo==="marca"?"Marca":g.tipo==="proyecto"?"Proyecto":g.tipo==="prestamo"?"Préstamo":g.tipo}</span></>}
+                        {g.cliente_nombre&&<> &middot; <span className="badge" style={{background:"#f4f4f5",color:"#18181b"}}>{g.cliente_nombre}</span></>}
                       </div>
                     </div>
                     <div className="expense-amount">{fmt(g.monto)}</div>
