@@ -201,7 +201,7 @@ function CajaChicaApp({user,onLogout}){
         sb.from("caja_chica").select("*").order("fecha",{ascending:false}),
         sb.from("caja_chica_asignaciones").select("*").order("fecha",{ascending:false}),
         sb.from("caja_chica_personas").select("*").eq("activo",true).order("nombre"),
-        sb.from("app_state").select("data").eq("id","finanzas").single()
+        sb.from("app_state").select("data").eq("id","main").single()
       ]);
       if(!gRes.error&&gRes.data)setGastos(gRes.data);
       if(!aRes.error&&aRes.data)setAsignaciones(aRes.data);
