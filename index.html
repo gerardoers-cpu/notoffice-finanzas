@@ -351,10 +351,11 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   };
   const[invoices,setInvoices]=useState(saved?.invoices||genInvoices);
   const[projects,setProjects]=useState(saved?.projects||INIT_PROJECTS);
-  const[fixedExp,setFixedExp]=useState(saved?.fixedExp||INIT_FIXED);
-  const[digitalExp,setDigitalExp]=useState(saved?.digitalExp||INIT_DIGITAL);
+  const _migExp=arr=>(arr||[]).map(e=>e.month?e:{...e,month:"2026-01"});
+  const[fixedExp,setFixedExp]=useState(_migExp(saved?.fixedExp)||INIT_FIXED);
+  const[digitalExp,setDigitalExp]=useState(_migExp(saved?.digitalExp)||INIT_DIGITAL);
   const[variableExp,setVariableExp]=useState(saved?.variableExp||INIT_VAR);
-  const[officeExp,setOfficeExp]=useState(saved?.officeExp||INIT_OFFICE);
+  const[officeExp,setOfficeExp]=useState(_migExp(saved?.officeExp)||INIT_OFFICE);
   const[investExp,setInvestExp]=useState(saved?.investExp||INIT_INV);
   const[staff,setStaff]=useState(saved?.staff||INIT_STAFF);
   const[roles,setRoles]=useState(saved?.roles||INIT_ROLES);
@@ -573,8 +574,11 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           setTeamByMonth(migrated);
         }
         setInvoices(cloudData.invoices||[]);
-        setProjects(cloudData.projects||[]);setFixedExp(cloudData.fixedExp||[]);setDigitalExp(cloudData.digitalExp||[]);
-        setVariableExp(cloudData.variableExp||[]);setOfficeExp(cloudData.officeExp||[]);setInvestExp(cloudData.investExp||[]);
+        setProjects(cloudData.projects||[]);
+        /* Migración: gastos sin campo month → asignar a 2026-01 */
+        const migExp=arr=>(arr||[]).map(e=>e.month?e:{...e,month:"2026-01"});
+        setFixedExp(migExp(cloudData.fixedExp));setDigitalExp(migExp(cloudData.digitalExp));
+        setVariableExp(cloudData.variableExp||[]);setOfficeExp(migExp(cloudData.officeExp));setInvestExp(cloudData.investExp||[]);
         setClientFees(cloudData.clientFees||initFees());setMonthSnapshots(cloudData.monthSnapshots||{});
         if(cloudData.staff)setStaff(cloudData.staff);
         if(cloudData.roles)setRoles(cloudData.roles);
@@ -651,10 +655,10 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     const transPay=team.reduce((s,t)=>s+tTrans(t),0);
     const tLiquidaciones=team.reduce((s,t)=>s+(t.liquidacion||0),0);
     const totalPay=dedPay+transPay+tLiquidaciones;
-    const tFixed=fixedExp.reduce((s,e)=>s+e.amount,0);
-    const tDigital=digitalExp.reduce((s,e)=>s+e.amount,0);
+    const tFixed=fixedExp.filter(e=>e.month===vm).reduce((s,e)=>s+e.amount,0);
+    const tDigital=digitalExp.filter(e=>e.month===vm).reduce((s,e)=>s+e.amount,0);
     const tVar=variableExp.filter(e=>e.month===vm).reduce((s,e)=>s+e.amount,0);
-    const tOffice=officeExp.reduce((s,e)=>s+e.amount,0);
+    const tOffice=officeExp.filter(e=>e.month===vm).reduce((s,e)=>s+e.amount,0);
     const tInvest=investExp.filter(e=>e.month===vm).reduce((s,e)=>s+e.amount,0);
     const tCajaCloud=totalCajaCloud||0;
     const tMovAgencia=totalMovAgencia||0; /* Movilidad "Agencia" → OH */
@@ -731,10 +735,10 @@ function App({userEmail="local",onLogout,cloudMode=false}){
       const snap=monthSnapshots[m];
       const mTeam=teamByMonth[m]||[];
       const pay=snap?snap.team.reduce((s,t)=>s+(t.inversion||t.bruto||0),0):mTeam.reduce((s,t)=>s+(t.inversion||t.bruto),0);
-      const fx=snap?snap.fixedExp.reduce((s,e)=>s+e.amount,0):fixedExp.reduce((s,e)=>s+e.amount,0);
-      const dg=snap?snap.digitalExp.reduce((s,e)=>s+e.amount,0):digitalExp.reduce((s,e)=>s+e.amount,0);
+      const fx=snap?snap.fixedExp.reduce((s,e)=>s+e.amount,0):fixedExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+      const dg=snap?snap.digitalExp.reduce((s,e)=>s+e.amount,0):digitalExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
       const vr=variableExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
-      const of_=snap?snap.officeExp.reduce((s,e)=>s+e.amount,0):officeExp.reduce((s,e)=>s+e.amount,0);
+      const of_=snap?snap.officeExp.reduce((s,e)=>s+e.amount,0):officeExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
       const iv=investExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
       const mv=movAprobadaAll.filter(v=>v.mes===m).reduce((s,v)=>s+parseFloat(v.tarifa||0),0); /* total movilidad for structExp */
       const sExp=pay+fx+dg+vr+of_+iv+mv;
@@ -1158,8 +1162,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               <button key={k} className={`tab ${gastoTab===k?"active":""}`} onClick={()=>{setGastoTab(k);if(k==="variable"&&cloudMode)loadCajaChica(vm);}}>{l}</button>
             ))}
           </div>
-          {gastoTab==="fijos"&&<ExpBlock title="Servicios (mensuales)" items={fixedExp} total={calc.tFixed} color="tr" onAdd={e=>setFixedExp(p=>[...p,{...e,id:Date.now()}])} onDel={id=>setFixedExp(fixedExp.filter(e=>e.id!==id))}/>}
-          {gastoTab==="digital"&&<ExpBlock title="Servicios Digitales" items={digitalExp} total={calc.tDigital} color="tb" onAdd={e=>setDigitalExp(p=>[...p,{...e,id:Date.now()}])} onDel={id=>setDigitalExp(digitalExp.filter(e=>e.id!==id))}/>}
+          {gastoTab==="fijos"&&<ExpBlock title="Servicios (mensuales)" items={fixedExp.filter(e=>e.month===vm)} total={calc.tFixed} color="tr" onAdd={e=>setFixedExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setFixedExp(fixedExp.filter(e=>e.id!==id))}/>}
+          {gastoTab==="digital"&&<ExpBlock title="Servicios Digitales" items={digitalExp.filter(e=>e.month===vm)} total={calc.tDigital} color="tb" onAdd={e=>setDigitalExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setDigitalExp(digitalExp.filter(e=>e.id!==id))}/>}
           {gastoTab==="costovar"&&(<div>
             <div className="info-box" style={{marginBottom:12}}>Costos variables mensuales que no son fijos ni digitales. Se registran por mes.</div>
             <ExpBlock title={`Costos Variables — ${ML[parseInt(vm.split("-")[1])-1]} ${selYear}`} items={variableExp.filter(e=>e.month===vm)} total={calc.tVar} color="ta" onAdd={e=>setVariableExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setVariableExp(variableExp.filter(e=>e.id!==id))}/>
@@ -1598,7 +1602,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               {!cloudMode&&<div className="info-box" style={{marginTop:12}}>Conecta Supabase para ver préstamos.</div>}
             </div>);
           })()}
-          {gastoTab==="oficina"&&<ExpBlock title="Gastos de Oficina" items={officeExp} total={calc.tOffice} color="" onAdd={e=>setOfficeExp(p=>[...p,{...e,id:Date.now()}])} onDel={id=>setOfficeExp(officeExp.filter(e=>e.id!==id))}/>}
+          {gastoTab==="oficina"&&<ExpBlock title="Gastos de Oficina" items={officeExp.filter(e=>e.month===vm)} total={calc.tOffice} color="" onAdd={e=>setOfficeExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setOfficeExp(officeExp.filter(e=>e.id!==id))}/>}
           {gastoTab==="inversion"&&<ExpBlock title={`Inversión (${vm})`} items={investExp.filter(e=>e.month===vm)} total={calc.tInvest} color="tb" onAdd={e=>setInvestExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setInvestExp(investExp.filter(e=>e.id!==id))}/>}
           {/* Project costs moved to Proyectos page — they don't affect general flow */}
         </>)}
@@ -2066,10 +2070,10 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                 const snap=monthSnapshots[m];
                 const hmTeam=teamByMonth[m]||[];
                 const mTransPay=snap?snap.team.reduce((s,t)=>t.assignments.filter(a=>a.clientId===null).reduce((sa,a)=>sa+a.amount,0)+s,0):hmTeam.reduce((s,t)=>s+tTrans(t),0);
-                const mFx=snap?snap.fixedExp.reduce((s,e)=>s+e.amount,0):fixedExp.reduce((s,e)=>s+e.amount,0);
-                const mDg=snap?snap.digitalExp.reduce((s,e)=>s+e.amount,0):digitalExp.reduce((s,e)=>s+e.amount,0);
+                const mFx=snap?snap.fixedExp.reduce((s,e)=>s+e.amount,0):fixedExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+                const mDg=snap?snap.digitalExp.reduce((s,e)=>s+e.amount,0):digitalExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
                 const mVr=variableExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
-                const mOf=snap?snap.officeExp.reduce((s,e)=>s+e.amount,0):officeExp.reduce((s,e)=>s+e.amount,0);
+                const mOf=snap?snap.officeExp.reduce((s,e)=>s+e.amount,0):officeExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
                 const mOH=mTransPay+mFx+mDg+mVr+mOf;
                 const row={month:label.split(" ")[0],m};
                 activeClients.forEach(c=>{
@@ -2259,10 +2263,10 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             const pC=projects.filter(p=>p.month===m).reduce((s,p)=>s+pCost(p),0);
             const snap=monthSnapshots[m];const cfmTeam=teamByMonth[m]||[];
             const pay=snap?snap.team.reduce((s,t)=>s+(t.inversion||t.bruto||0),0):cfmTeam.reduce((s,t)=>s+(t.inversion||t.bruto),0);
-            const fx=snap?snap.fixedExp.reduce((s,e)=>s+e.amount,0):fixedExp.reduce((s,e)=>s+e.amount,0);
-            const dg=snap?snap.digitalExp.reduce((s,e)=>s+e.amount,0):digitalExp.reduce((s,e)=>s+e.amount,0);
+            const fx=snap?snap.fixedExp.reduce((s,e)=>s+e.amount,0):fixedExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+            const dg=snap?snap.digitalExp.reduce((s,e)=>s+e.amount,0):digitalExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
             const vr=variableExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
-            const of_=snap?snap.officeExp.reduce((s,e)=>s+e.amount,0):officeExp.reduce((s,e)=>s+e.amount,0);
+            const of_=snap?snap.officeExp.reduce((s,e)=>s+e.amount,0):officeExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
             const iv=investExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
             const mv=movAprobadaAll.filter(v=>v.mes===m).reduce((s,v)=>s+parseFloat(v.tarifa||0),0); /* total movilidad for structExp */
             const costOp=pay+fx+dg+vr+of_+mv; /* OPEX: sin inversiones */
@@ -2599,7 +2603,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                     if(d.clients&&(d.teamByMonth||d.team)){setClients(d.clients);
                       if(d.teamByMonth){setTeamByMonth(d.teamByMonth);}else if(d.team&&d.team.length>0){const mg={};ALL_MONTHS.forEach(mo=>{mg[mo.value]=d.team.map(t=>({...t}));});setTeamByMonth(mg);}
                       setInvoices(d.invoices||[]);setProjects(d.projects||[]);
-                      setFixedExp(d.fixedExp||[]);setDigitalExp(d.digitalExp||[]);setVariableExp(d.variableExp||[]);setOfficeExp(d.officeExp||[]);setInvestExp(d.investExp||[]);
+                      const _mig=arr=>(arr||[]).map(e=>e.month?e:{...e,month:"2026-01"});setFixedExp(_mig(d.fixedExp));setDigitalExp(_mig(d.digitalExp));setVariableExp(d.variableExp||[]);setOfficeExp(_mig(d.officeExp));setInvestExp(d.investExp||[]);
                       setClientFees(d.clientFees||initFees());setMonthSnapshots(d.monthSnapshots||{});
                       if(d.staff)setStaff(d.staff);
                       if(d.roles)setRoles(d.roles);
@@ -2657,7 +2661,7 @@ function BackupManager({getSB,setClients,setTeamByMonth,setInvoices,setProjects,
       if(d.teamByMonth){setTeamByMonth(d.teamByMonth);}
       else if(d.team&&d.team.length>0){const mg={};ALL_MONTHS.forEach(mo=>{mg[mo.value]=d.team.map(t=>({...t}));});setTeamByMonth(mg);}
       setInvoices(d.invoices||[]);setProjects(d.projects||[]);
-      setFixedExp(d.fixedExp||[]);setDigitalExp(d.digitalExp||[]);setVariableExp(d.variableExp||[]);setOfficeExp(d.officeExp||[]);setInvestExp(d.investExp||[]);
+      const _mig=arr=>(arr||[]).map(e=>e.month?e:{...e,month:"2026-01"});setFixedExp(_mig(d.fixedExp));setDigitalExp(_mig(d.digitalExp));setVariableExp(d.variableExp||[]);setOfficeExp(_mig(d.officeExp));setInvestExp(d.investExp||[]);
       setClientFees(d.clientFees||initFees());setMonthSnapshots(d.monthSnapshots||{});
       if(d.staff)setStaff(d.staff);
       if(d.roles)setRoles(d.roles);
