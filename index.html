@@ -1162,11 +1162,11 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               <button key={k} className={`tab ${gastoTab===k?"active":""}`} onClick={()=>{setGastoTab(k);if(k==="variable"&&cloudMode)loadCajaChica(vm);}}>{l}</button>
             ))}
           </div>
-          {gastoTab==="fijos"&&<ExpBlock title="Servicios (mensuales)" items={fixedExp.filter(e=>e.month===vm)} total={calc.tFixed} color="tr" onAdd={e=>setFixedExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setFixedExp(fixedExp.filter(e=>e.id!==id))}/>}
-          {gastoTab==="digital"&&<ExpBlock title="Servicios Digitales" items={digitalExp.filter(e=>e.month===vm)} total={calc.tDigital} color="tb" onAdd={e=>setDigitalExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setDigitalExp(digitalExp.filter(e=>e.id!==id))}/>}
+          {gastoTab==="fijos"&&<ExpBlock title="Servicios (mensuales)" items={fixedExp.filter(e=>e.month===vm)} total={calc.tFixed} color="tr" onAdd={e=>setFixedExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setFixedExp(fixedExp.filter(e=>e.id!==id))} onEdit={(id,up)=>setFixedExp(fixedExp.map(e=>e.id===id?{...e,...up}:e))}/>}
+          {gastoTab==="digital"&&<ExpBlock title="Servicios Digitales" items={digitalExp.filter(e=>e.month===vm)} total={calc.tDigital} color="tb" onAdd={e=>setDigitalExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setDigitalExp(digitalExp.filter(e=>e.id!==id))} onEdit={(id,up)=>setDigitalExp(digitalExp.map(e=>e.id===id?{...e,...up}:e))}/>}
           {gastoTab==="costovar"&&(<div>
             <div className="info-box" style={{marginBottom:12}}>Costos variables mensuales que no son fijos ni digitales. Se registran por mes.</div>
-            <ExpBlock title={`Costos Variables — ${ML[parseInt(vm.split("-")[1])-1]} ${selYear}`} items={variableExp.filter(e=>e.month===vm)} total={calc.tVar} color="ta" onAdd={e=>setVariableExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setVariableExp(variableExp.filter(e=>e.id!==id))}/>
+            <ExpBlock title={`Costos Variables — ${ML[parseInt(vm.split("-")[1])-1]} ${selYear}`} items={variableExp.filter(e=>e.month===vm)} total={calc.tVar} color="ta" onAdd={e=>setVariableExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setVariableExp(variableExp.filter(e=>e.id!==id))} onEdit={(id,up)=>setVariableExp(variableExp.map(e=>e.id===id?{...e,...up}:e))}/>
           </div>)}
           {gastoTab==="variable"&&(<div>
             {/* Balance cards per person */}
@@ -1602,8 +1602,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               {!cloudMode&&<div className="info-box" style={{marginTop:12}}>Conecta Supabase para ver préstamos.</div>}
             </div>);
           })()}
-          {gastoTab==="oficina"&&<ExpBlock title="Gastos de Oficina" items={officeExp.filter(e=>e.month===vm)} total={calc.tOffice} color="" onAdd={e=>setOfficeExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setOfficeExp(officeExp.filter(e=>e.id!==id))}/>}
-          {gastoTab==="inversion"&&<ExpBlock title={`Inversión (${vm})`} items={investExp.filter(e=>e.month===vm)} total={calc.tInvest} color="tb" onAdd={e=>setInvestExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setInvestExp(investExp.filter(e=>e.id!==id))}/>}
+          {gastoTab==="oficina"&&<ExpBlock title="Gastos de Oficina" items={officeExp.filter(e=>e.month===vm)} total={calc.tOffice} color="" onAdd={e=>setOfficeExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setOfficeExp(officeExp.filter(e=>e.id!==id))} onEdit={(id,up)=>setOfficeExp(officeExp.map(e=>e.id===id?{...e,...up}:e))}/>}
+          {gastoTab==="inversion"&&<ExpBlock title={`Inversión (${vm})`} items={investExp.filter(e=>e.month===vm)} total={calc.tInvest} color="tb" onAdd={e=>setInvestExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setInvestExp(investExp.filter(e=>e.id!==id))} onEdit={(id,up)=>setInvestExp(investExp.map(e=>e.id===id?{...e,...up}:e))}/>}
           {/* Project costs moved to Proyectos page — they don't affect general flow */}
         </>)}
 
@@ -2876,9 +2876,12 @@ function ProjExpForm({onAdd}){
   </form>);
 }
 
-function ExpBlock({title,items,total,color,onAdd,onDel}){
+function ExpBlock({title,items,total,color,onAdd,onDel,onEdit}){
   const[adding,setAdding]=useState(false);const[name,setName]=useState("");const[amount,setAmount]=useState("");
+  const[editId,setEditId]=useState(null);const[editName,setEditName]=useState("");const[editAmount,setEditAmount]=useState("");
   const submit=e=>{e.preventDefault();if(!name.trim()){alert("Ingresa un nombre.");return;}const a=parseInt(amount);if(!a||a<=0){alert("El monto debe ser mayor a 0.");return;}onAdd({name:name.trim(),amount:a});setName("");setAmount("");setAdding(false);};
+  const startEdit=(e)=>{setEditId(e.id);setEditName(e.name);setEditAmount(String(e.amount));};
+  const saveEdit=()=>{if(!editName.trim())return;const a=parseInt(editAmount);if(!a||a<=0)return;if(onEdit)onEdit(editId,{name:editName.trim(),amount:a});setEditId(null);};
   return(<div className="card">
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
       <span style={{fontWeight:600,fontSize:13}}>{title}</span>
@@ -2889,9 +2892,18 @@ function ExpBlock({title,items,total,color,onAdd,onDel}){
       <input type="number" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="Monto" required style={{width:100}}/>
       <button type="submit" className="btn btn-sm btn-green">OK</button><button type="button" className="btn btn-sm btn-gray" onClick={()=>setAdding(false)}>✕</button>
     </form>}
-    {items.map(e=>(<div key={e.id} style={{display:"flex",justifyContent:"space-between",padding:"5px 8px",background:"#fafafa",borderRadius:6,marginBottom:3,fontSize:12}}>
-      <span>{e.name}</span><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontWeight:600}}>{fmt(e.amount)}</span><button className="del-btn" onClick={()=>onDel(e.id)}>✕</button></div>
-    </div>))}
+    {items.map(e=>editId===e.id?(
+      <div key={e.id} style={{display:"flex",gap:4,padding:"4px 6px",background:"#eff6ff",borderRadius:6,marginBottom:3,alignItems:"center"}}>
+        <input value={editName} onChange={ev=>setEditName(ev.target.value)} style={{flex:1,fontSize:12,padding:"4px 6px",border:"1px solid #d4d4d8",borderRadius:6}}/>
+        <input type="number" value={editAmount} onChange={ev=>setEditAmount(ev.target.value)} style={{width:90,fontSize:12,padding:"4px 6px",border:"1px solid #d4d4d8",borderRadius:6,textAlign:"right"}}/>
+        <button className="btn btn-sm btn-green" style={{fontSize:10,padding:"3px 8px"}} onClick={saveEdit}>✓</button>
+        <button className="btn btn-sm btn-gray" style={{fontSize:10,padding:"3px 8px"}} onClick={()=>setEditId(null)}>✕</button>
+      </div>
+    ):(
+      <div key={e.id} style={{display:"flex",justifyContent:"space-between",padding:"5px 8px",background:"#fafafa",borderRadius:6,marginBottom:3,fontSize:12,cursor:"pointer"}} onClick={()=>startEdit(e)}>
+        <span>{e.name}</span><div style={{display:"flex",alignItems:"center",gap:6}}><span style={{fontWeight:600}}>{fmt(e.amount)}</span><button className="del-btn" onClick={ev=>{ev.stopPropagation();onDel(e.id);}}>✕</button></div>
+      </div>
+    ))}
     {items.length===0&&<div style={{color:"#a1a1aa",fontSize:12,textAlign:"center",padding:12}}>Sin gastos. Usa + para agregar.</div>}
   </div>);
 }
