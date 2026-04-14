@@ -233,10 +233,18 @@ const mergeArr=(localArr,cloudArr)=>{
   return Object.values(byId);
 };
 const mergeObj=(localObj,cloudObj)=>{
-  const result={...(cloudObj||{})};
-  Object.entries(localObj||{}).forEach(([k,v])=>{
-    if(typeof v==="object"&&v!==null&&!Array.isArray(v)&&typeof result[k]==="object"&&result[k]!==null&&!Array.isArray(result[k])){
-      result[k]={...result[k],...v}; /* merge objetos anidados (clientFees, teamByMonth) */
+  if(!cloudObj&&!localObj)return{};
+  if(!cloudObj)return localObj;
+  if(!localObj)return cloudObj;
+  const result={...cloudObj};
+  Object.entries(localObj).forEach(([k,v])=>{
+    const cv=result[k];
+    if(Array.isArray(v)&&Array.isArray(cv)){
+      /* arrays dentro de objetos (ej: teamByMonth["2026-02"]) → fusionar por ID */
+      result[k]=mergeArr(v,cv);
+    }else if(typeof v==="object"&&v!==null&&!Array.isArray(v)&&typeof cv==="object"&&cv!==null&&!Array.isArray(cv)){
+      /* objetos anidados (ej: clientFees["2026-02"]) → merge recursivo */
+      result[k]=mergeObj(v,cv);
     }else{result[k]=v;}
   });
   return result;
