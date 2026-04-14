@@ -1088,7 +1088,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               <div style={{display:"flex",gap:6}}><button type="submit" className="btn btn-blue">Guardar</button><button type="button" className="btn btn-gray" onClick={()=>setEditProject(null)}>Cancelar</button></div>
             </form>
           </div>}
-          {projects.sort((a,b)=>b.month.localeCompare(a.month)).map(p=>{const pc=pCost(p);const ut=p.revenue-pc;const mg=p.revenue>0?(ut/p.revenue)*100:0;const isExp=expandedClient===("proj-"+p.id);
+          {projects.filter(p=>p.month===vm).sort((a,b)=>(a.name||"").localeCompare(b.name||"")).map(p=>{const pc=pCost(p);const ut=p.revenue-pc;const mg=p.revenue>0?(ut/p.revenue)*100:0;const isExp=expandedClient===("proj-"+p.id);
             return(<div key={p.id} className="card" style={{marginBottom:8,borderLeft:`4px solid ${p.status==="Completado"?"#2563eb":p.status==="En curso"?"#52525b":"#71717a"}`}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setExpandedClient(isExp?null:"proj-"+p.id)}>
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -1122,13 +1122,13 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               </div>)}
             </div>);
           })}
-          {projects.length===0&&<div style={{color:"#a1a1aa",fontSize:12,textAlign:"center",padding:16}}>No hay proyectos.</div>}
+          {projects.filter(p=>p.month===vm).length===0&&<div style={{color:"#a1a1aa",fontSize:12,textAlign:"center",padding:16}}>No hay proyectos en {ML[parseInt(vm.split("-")[1])-1]} {selYear}.</div>}
           <div className="total-bar" style={{marginTop:12}}>
-            <div><div style={{fontSize:11,color:"#71717a",textTransform:"uppercase"}}>Total Proyectos</div>
+            <div><div style={{fontSize:11,color:"#71717a",textTransform:"uppercase"}}>Total Proyectos — {ML[parseInt(vm.split("-")[1])-1]} {selYear}</div>
               <div style={{display:"flex",gap:20,fontSize:14,fontWeight:700,marginTop:4}}>
-                <span className="tg">Ingreso: {fmt(projects.reduce((s,p)=>s+p.revenue,0))}</span>
-                <span className="tr">Costo: {fmt(projects.reduce((s,p)=>s+pCost(p),0))}</span>
-                <span style={{color:"#fff"}}>Utilidad: {fmt(projects.reduce((s,p)=>s+(p.revenue-pCost(p)),0))}</span>
+                <span className="tg">Ingreso: {fmt(projects.filter(p=>p.month===vm).reduce((s,p)=>s+p.revenue,0))}</span>
+                <span className="tr">Costo: {fmt(projects.filter(p=>p.month===vm).reduce((s,p)=>s+pCost(p),0))}</span>
+                <span style={{color:"#fff"}}>Utilidad: {fmt(projects.filter(p=>p.month===vm).reduce((s,p)=>s+(p.revenue-pCost(p)),0))}</span>
               </div>
             </div>
           </div>
