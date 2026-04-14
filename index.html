@@ -223,24 +223,68 @@ const loadStateCloud=async()=>{
     return null;
   }catch(e){console.error("[CLOUD] Load exception:",e);return null;}
 };
+/* ── MERGE-SAFE: combina arrays por ID sin perder items existentes ── */
+const mergeArr=(localArr,cloudArr)=>{
+  const local=Array.isArray(localArr)?localArr:[];
+  const cloud=Array.isArray(cloudArr)?cloudArr:[];
+  const byId={};
+  cloud.forEach(it=>{if(it&&it.id!=null)byId[it.id]=it;});
+  local.forEach(it=>{if(it&&it.id!=null)byId[it.id]=it;}); /* local sobrescribe cloud (ediciones del usuario actual) */
+  return Object.values(byId);
+};
+const mergeObj=(localObj,cloudObj)=>{
+  const result={...(cloudObj||{})};
+  Object.entries(localObj||{}).forEach(([k,v])=>{
+    if(typeof v==="object"&&v!==null&&!Array.isArray(v)&&typeof result[k]==="object"&&result[k]!==null&&!Array.isArray(result[k])){
+      result[k]={...result[k],...v}; /* merge objetos anidados (clientFees, teamByMonth) */
+    }else{result[k]=v;}
+  });
+  return result;
+};
+const mergeStates=(localState,cloudState)=>{
+  if(!cloudState)return localState;
+  return{
+    clients:mergeArr(localState.clients,cloudState.clients),
+    teamByMonth:mergeObj(localState.teamByMonth,cloudState.teamByMonth),
+    invoices:mergeArr(localState.invoices,cloudState.invoices),
+    projects:mergeArr(localState.projects,cloudState.projects),
+    fixedExp:mergeArr(localState.fixedExp,cloudState.fixedExp),
+    digitalExp:mergeArr(localState.digitalExp,cloudState.digitalExp),
+    variableExp:mergeArr(localState.variableExp,cloudState.variableExp),
+    officeExp:mergeArr(localState.officeExp,cloudState.officeExp),
+    investExp:mergeArr(localState.investExp,cloudState.investExp),
+    clientFees:mergeObj(localState.clientFees,cloudState.clientFees),
+    monthSnapshots:mergeObj(localState.monthSnapshots,cloudState.monthSnapshots),
+    staff:mergeArr(localState.staff,cloudState.staff),
+    roles:Array.isArray(localState.roles)&&localState.roles.length>=(cloudState.roles||[]).length?localState.roles:(cloudState.roles||localState.roles||[])
+  };
+};
+
 const saveStateCloud=async(state,email)=>{
   const sb=getSB();if(!sb)return false;
   try{
-    /* ── Backup: save previous version before overwriting ── */
+    /* ── 1. Fetch latest cloud state (concurrency protection) ── */
+    let merged=state;
     try{
       const{data:prev}=await sb.from("app_state").select("data,updated_by,updated_at").eq("id","main").single();
       if(prev&&prev.data){
-        await sb.from("app_state_backups").insert({
-          data:prev.data,
-          saved_by:prev.updated_by||"unknown",
-          saved_at:prev.updated_at||new Date().toISOString(),
-          note:"auto-backup before save by "+(email||"unknown")
-        });
-        console.log("[BACKUP] Versión anterior guardada (",prev.updated_by,prev.updated_at,")");
+        /* Backup la versión anterior antes de tocar nada */
+        try{
+          await sb.from("app_state_backups").insert({
+            data:prev.data,
+            saved_by:prev.updated_by||"unknown",
+            saved_at:prev.updated_at||new Date().toISOString(),
+            note:"auto-backup before save by "+(email||"unknown")
+          });
+          console.log("[BACKUP] Versión anterior guardada (",prev.updated_by,prev.updated_at,")");
+        }catch(bkErr){console.warn("[BACKUP] Error (no crítico):",bkErr);}
+        /* Fusionar local con cloud — nunca pierde items ajenos */
+        merged=mergeStates(state,prev.data);
+        console.log("[MERGE] Local + Cloud fusionados. Items preservados.");
       }
-    }catch(bkErr){console.warn("[BACKUP] Error (no crítico):",bkErr);}
-    /* ── Save current state ── */
-    const{error}=await sb.from("app_state").upsert({id:"main",data:state,updated_at:new Date().toISOString(),updated_by:email||"unknown"});
+    }catch(bkErr){console.warn("[MERGE] Error fetching cloud (saving local sin merge):",bkErr);}
+    /* ── 2. Save merged state ── */
+    const{error}=await sb.from("app_state").upsert({id:"main",data:merged,updated_at:new Date().toISOString(),updated_by:email||"unknown"});
     if(error)console.error("Cloud save error:",error.message,error.details,error.hint);
     return!error;
   }catch(e){console.error("Cloud save exception:",e);return false;}
@@ -596,13 +640,13 @@ function App({userEmail="local",onLogout,cloudMode=false}){
       saveStateLocal(state); /* always save locally as backup */
       if(cloudMode){
         saveStateCloud(state,userEmail).then(ok=>{
-          setSaveMsg(ok?"Guardado en la nube":"Guardado local (nube falló)");
+          setSaveMsg(ok?"Guardado en la nube ✓":"Guardado local (nube falló)");
           setTimeout(()=>setSaveMsg(""),4000);
         });
       }else{
         setSaveMsg("Guardado");setTimeout(()=>setSaveMsg(""),2000);
       }
-    },1500);
+    },3000);
     return()=>clearTimeout(timer);
   },[clients,teamByMonth,invoices,projects,fixedExp,digitalExp,variableExp,officeExp,investExp,clientFees,monthSnapshots,staff,roles,initialLoaded]);
 
@@ -774,6 +818,23 @@ function App({userEmail="local",onLogout,cloudMode=false}){
           <h1>{pageLabel}</h1>
           <div style={{display:"flex",alignItems:"center",gap:16}}>
             {saveMsg&&<span style={{fontSize:11,color:"#fff",fontWeight:600,background:saveMsg.includes("nube")?"#059669":"#18181b",padding:"6px 16px",borderRadius:20,animation:"fadeIn .2s",whiteSpace:"nowrap"}}>{saveMsg.includes("nube")?"☁️ ":""}{saveMsg}</span>}
+            {cloudMode&&<button className="btn btn-sm btn-gray" title="Recargar datos desde la nube (descarta cambios locales no guardados)" onClick={async()=>{
+              if(!confirm("¿Recargar datos desde la nube? Los cambios locales sin guardar se perderán."))return;
+              setSaveMsg("Recargando...");
+              const cd=await loadStateCloud();
+              if(cd){
+                if(cd.clients)setClients(cd.clients);
+                if(cd.teamByMonth)setTeamByMonth(cd.teamByMonth);
+                else if(cd.team&&cd.team.length>0){const mg={};ALL_MONTHS.forEach(m=>{mg[m.value]=cd.team.map(t=>({...t}));});setTeamByMonth(mg);}
+                setInvoices(cd.invoices||[]);setProjects(cd.projects||[]);
+                const migE=arr=>(arr||[]).map(e=>e.month?e:{...e,month:"2026-01"});
+                setFixedExp(migE(cd.fixedExp));setDigitalExp(migE(cd.digitalExp));
+                setVariableExp(cd.variableExp||[]);setOfficeExp(migE(cd.officeExp));setInvestExp(cd.investExp||[]);
+                setClientFees(cd.clientFees||initFees());setMonthSnapshots(cd.monthSnapshots||{});
+                if(cd.staff)setStaff(cd.staff);if(cd.roles)setRoles(cd.roles);
+                setSaveMsg("Recargado desde la nube ✓");setTimeout(()=>setSaveMsg(""),3000);
+              }else{setSaveMsg("Error al recargar");setTimeout(()=>setSaveMsg(""),3000);}
+            }}>↻ Recargar</button>}
             <button className="btn btn-sm btn-gray" title="Cerrar mes: guarda snapshot de planilla y gastos actuales para este mes" onClick={()=>{takeSnapshot();setSaveMsg("Mes cerrado ✓");setTimeout(()=>setSaveMsg(""),3000);}}>Cerrar {ML[parseInt(vm.split("-")[1])-1]}</button>
             <button className="btn btn-sm btn-blue" onClick={()=>setShowPrepMes(!showPrepMes)}><Ic d={ic.repeat} size={13} color="#fff"/> Preparar Mes</button>
             <div style={{display:"flex",alignItems:"center",gap:4,background:"#f4f4f5",borderRadius:10,padding:3}}>
