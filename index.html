@@ -2267,7 +2267,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                 });
                 return row;
               });
-              const[selCli,setSelCli]=[null,null]; /* placeholder, usará expandedClient */
+              const colors=["#18181b","#52525b","#71717a","#a1a1aa","#dc2626","#d4d4d8","#2563eb","#059669"];
               return(<div className="card" style={{marginTop:16}}>
                 <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Utilidad por Cliente — Mes a Mes</div>
                 <div style={{fontSize:11,color:"#a1a1aa",marginBottom:16}}>Compara utilidad mensual total. Desglose: utilidad de fee (estructura) vs utilidad de proyectos. Δ = cambio vs mes anterior.</div>
