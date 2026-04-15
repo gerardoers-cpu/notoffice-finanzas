@@ -332,7 +332,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[asigMonto,setAsigMonto]=useState("");
   const[asigNota,setAsigNota]=useState("");
   const[gastoFormPersona,setGastoFormPersona]=useState(null); /* email de la persona a la que se le agrega gasto */
-  const[gastoForm,setGastoForm]=useState({fecha:"",concepto:"",beneficiario:"",categoria:"Materiales",marca:"Agencia",monto:"",reembolsable:false});
+  const[gastoForm,setGastoForm]=useState({fecha:"",concepto:"",beneficiario:"",categoria:"Materiales",marca:"Agencia",monto:""});
   const[beneficiarioSearch,setBeneficiarioSearch]=useState("");
   const[expandedCajaPersona,setExpandedCajaPersona]=useState(null);
   const[expandedMovPersona,setExpandedMovPersona]=useState(null);
@@ -357,17 +357,15 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     const sb=getSB();if(!sb){alert("Sin conexión a Supabase");return;}
     const persona=cajaPersonas.find(cp=>cp.email===personaEmail);
     const mes=g.fecha.slice(0,7);
-    const esReembolsable=g.reembolsable;
     const conceptoFull=g.beneficiario?(g.concepto+" — "+g.beneficiario):g.concepto;
     const row={
       user_email:personaEmail,user_name:persona?.nombre||nameFromEmail(personaEmail),
       fecha:g.fecha,concepto:conceptoFull,categoria:g.categoria,marca:g.marca,
-      tipo:esReembolsable?"cliente":"agencia",
-      via_pago:esReembolsable?"prestamo":"caja_chica",
+      tipo:"agencia",
+      via_pago:"caja_chica",
       monto:parseFloat(g.monto),
       registrado_por:userEmail,mes,origen:"web"
     };
-    if(esReembolsable)row.estado_cobro="pendiente";
     let{error}=await sb.from("caja_chica").insert(row);
     /* Retry sin columnas opcionales si faltan en el schema */
     if(error&&error.message&&(error.message.includes("registrado_por")||error.message.includes("origen")||error.message.includes("schema cache"))){
@@ -377,9 +375,9 @@ function App({userEmail="local",onLogout,cloudMode=false}){
     }
     if(error)alert("Error: "+error.message);
     else{
-      setGastoForm({fecha:"",concepto:"",beneficiario:"",categoria:"Materiales",marca:"Agencia",monto:"",reembolsable:false});
+      setGastoForm({fecha:"",concepto:"",beneficiario:"",categoria:"Materiales",marca:"Agencia",monto:""});
       setBeneficiarioSearch("");setGastoFormPersona(null);loadCajaChica(vm);
-      setSaveMsg(esReembolsable?"Gasto + préstamo registrado":"Gasto registrado");
+      setSaveMsg("Gasto registrado");
       setTimeout(()=>setSaveMsg(""),3000);
     }
   };
@@ -1339,12 +1337,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                               </select>
                             </div>
                           </div>
-                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:6}}>
-                            <label style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer",fontSize:12}}>
-                              <input type="checkbox" checked={gastoForm.reembolsable} onChange={e=>setGastoForm(f=>({...f,reembolsable:e.target.checked}))} style={{width:15,height:15}}/>
-                              <span style={{fontWeight:600}}>Reembolsable (préstamo)</span>
-                              {gastoForm.reembolsable&&<span style={{fontSize:10,color:"#f59e0b",fontWeight:600,marginLeft:4}}>→ Va a Préstamos (+18% IGV)</span>}
-                            </label>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"flex-end",marginTop:6,gap:10}}>
+                            <span style={{fontSize:10,color:"#a1a1aa"}}>Para préstamos reembolsables, usa la pestaña <strong>Préstamos</strong></span>
                             <button className="btn btn-sm btn-green" onClick={()=>handleRegistrarGasto(p)}>Registrar</button>
                           </div>
                         </div>)}
