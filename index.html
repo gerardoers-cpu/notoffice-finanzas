@@ -736,12 +736,14 @@ function App({userEmail="local",onLogout,cloudMode=false}){
       /* Movilidad (gasolina) aprobada asignada a esta marca (excluye "Agencia" que va a OH) */
       const cMovilidad=movMarcas.filter(v=>v.marca===c.name).reduce((s,v)=>s+parseFloat(v.tarifa||0),0);
       const cOH=totalFees>0?(cFee/totalFees)*overhead:0;
-      const cNet=cFee-cTeam-cGastosOp-cMovilidad-cOH;
+      const cContrib=cFee-cTeam-cGastosOp-cMovilidad; /* Contribución: utilidad ANTES de OH (estable, no depende del # de clientes) */
+      const cContribMargin=cFee>0?(cContrib/cFee)*100:0;
+      const cNet=cContrib-cOH;
       const cMargin=cFee>0?(cNet/cFee)*100:0; /* Margen incluye OH proporcional */
       const cP=mProj.filter(p=>p.clientId===c.id);
       const cPR=cP.reduce((s,p)=>s+p.revenue,0);const cPC=cP.reduce((s,p)=>s+pCost(p),0);
       const cInv=invoices.filter(i=>i.clientId===c.id);
-      return{...c,fee:cFee,teamCost:cTeam,gastosOp:cGastosOp,movilidad:cMovilidad,oh:cOH,structNet:cNet,margin:cMargin,projRev:cPR,projCost:cPC,projProfit:cPR-cPC,
+      return{...c,fee:cFee,teamCost:cTeam,gastosOp:cGastosOp,movilidad:cMovilidad,oh:cOH,contribucion:cContrib,contribMargin:cContribMargin,structNet:cNet,margin:cMargin,projRev:cPR,projCost:cPC,projProfit:cPR-cPC,
         utilFee:cNet,utilProy:cPR-cPC,totalNet:cNet+(cPR-cPC),
         teamMembers:team.filter(t=>t.assignments.some(a=>a.clientId===c.id)),projects:cP,
         cobrado:cInv.filter(i=>i.status==="Cobrada").reduce((s,i)=>s+i.amount,0),
@@ -2125,18 +2127,19 @@ function App({userEmail="local",onLogout,cloudMode=false}){
         {page==="rentabilidad"&&(<>
           {selClient?<ClientDetail c={calc.clientProfit.find(c=>c.id===selClient)} totalFees={calc.totalFees} overhead={calc.overhead}
             invoices={invoices.filter(i=>i.clientId===selClient)} onBack={()=>setSelClient(null)}/>:(<>
-            <div className="info-box">Utilidad Fee = Fee − Equipo − Gastos Op. − Movilidad − OH proporcional. Margen = Utilidad Fee ÷ Fee. OH = % participación del fee en ingresos totales × overhead general. Utilidad Proyectos se suma aparte.</div>
+            <div className="info-box"><strong>Contribución</strong> = Fee − Equipo − Gastos Op. − Movilidad (sin OH, métrica estable que NO cambia con el # de clientes). <strong>Utilidad Fee</strong> = Contribución − OH proporcional. OH = % del fee en ingresos totales × overhead general.</div>
             <div className="card" style={{padding:0,overflow:"hidden"}}>
               <table>
-                <thead><tr><th>Cliente</th><th className="text-right">Fee</th><th className="text-right">Equipo</th><th className="text-right">G. Op.</th><th className="text-right">Mov.</th><th className="text-right">OH</th><th className="text-center">Margen</th><th className="text-right">Util. Fee</th><th className="text-right">Util. Proy.</th><th className="text-right font-bold">Total</th><th></th></tr></thead>
+                <thead><tr><th>Cliente</th><th className="text-right">Fee</th><th className="text-right">Equipo</th><th className="text-right">G. Op.</th><th className="text-right">Mov.</th><th className="text-right" style={{background:"#eff6ff"}}>Contribución</th><th className="text-center" style={{background:"#eff6ff"}}>% Contrib.</th><th className="text-right">OH</th><th className="text-right">Util. Fee</th><th className="text-right">Util. Proy.</th><th className="text-right font-bold">Total</th><th></th></tr></thead>
                 <tbody>{calc.clientProfit.sort((a,b)=>b.totalNet-a.totalNet).map(c=>{
                   return(
                   <tr key={c.id}><td style={{fontWeight:600}}>{c.name}</td><td className="text-right tg">{fmt(c.fee)}</td><td className="text-right tr">{fmt(c.teamCost)}</td>
                     <td className="text-right ta">{c.gastosOp>0?fmt(c.gastosOp):"—"}</td>
                     <td className="text-right ta">{c.movilidad>0?fmt(c.movilidad):"—"}</td>
+                    <td className={`text-right font-bold ${c.contribucion>=0?"tg":"tr"}`} style={{background:"#eff6ff"}}>{fmt(c.contribucion)}</td>
+                    <td className="text-center" style={{background:"#eff6ff"}}><span className={`badge ${c.contribMargin>=40?"bg":c.contribMargin>=20?"ba":"br"}`}>{c.contribMargin.toFixed(1)}%</span></td>
                     <td className="text-right" style={{fontSize:11,color:"#a1a1aa"}}>{fmt(c.oh)}</td>
-                    <td className="text-center"><span className={`badge ${c.margin>=30?"bg":c.margin>=15?"ba":"br"}`}>{c.margin.toFixed(1)}%</span></td>
-                    <td className={`text-right font-bold ${c.structNet>=0?"tg":"tr"}`}>{fmt(c.structNet)}</td>
+                    <td className={`text-right ${c.structNet>=0?"tg":"tr"}`}>{fmt(c.structNet)}</td>
                     <td className={`text-right ${c.utilProy?"tb":""}`} style={{fontSize:12}}>{c.utilProy?fmt(c.utilProy):"—"}</td>
                     <td className={`text-right font-bold ${c.totalNet>=0?"tg":"tr"}`}>{fmt(c.totalNet)}</td>
                     <td className="text-center"><button className="btn btn-sm btn-gray" onClick={()=>setSelClient(c.id)}><Ic d={ic.eye} size={13} color="#71717a"/></button></td></tr>
@@ -2146,20 +2149,21 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                   <td>SUBTOTAL OPERATIVO</td><td className="text-right tg">{fmt(calc.totalFees)}</td><td className="text-right tr">{fmt(calc.dedPay)}</td>
                   <td className="text-right ta">{fmt(calc.clientProfit.reduce((s,c)=>s+c.gastosOp,0))}</td>
                   <td className="text-right ta">{fmt(calc.clientProfit.reduce((s,c)=>s+(c.movilidad||0),0))}</td>
+                  <td className="text-right" style={{background:"#eff6ff"}}>{fmt(calc.clientProfit.reduce((s,c)=>s+(c.contribucion||0),0))}</td>
+                  <td className="text-center" style={{background:"#eff6ff"}}>{calc.totalFees>0?(calc.clientProfit.reduce((s,c)=>s+(c.contribucion||0),0)/calc.totalFees*100).toFixed(1):"0.0"}%</td>
                   <td className="text-right" style={{color:"#a1a1aa"}}>{fmt(calc.overhead)}</td>
-                  <td className="text-center">{calc.totalFees>0?(calc.clientProfit.reduce((s,c)=>s+(c.utilFee||0),0)/calc.totalFees*100).toFixed(1):"0.0"}%</td>
                   <td className={`text-right ${calc.clientProfit.reduce((s,c)=>s+(c.utilFee||0),0)>=0?"tg":"tr"}`}>{fmt(calc.clientProfit.reduce((s,c)=>s+(c.utilFee||0),0))}</td>
                   <td className="text-right tb">{fmt(calc.projProfit)}</td>
                   <td className="text-right font-bold">{fmt(calc.clientProfit.reduce((s,c)=>s+c.totalNet,0))}</td><td></td>
                 </tr>
                 {calc.tInvest>0&&<tr style={{color:"#71717a",fontSize:12}}>
-                  <td colSpan={7} style={{textAlign:"right",paddingRight:8}}>(-) Inversiones no distribuidas</td>
+                  <td colSpan={8} style={{textAlign:"right",paddingRight:8}}>(-) Inversiones no distribuidas</td>
                   <td className="text-right tr" style={{fontWeight:600}}>{fmt(-calc.tInvest)}</td>
                   <td></td>
                   <td className="text-right tr" style={{fontWeight:600}}>{fmt(-calc.tInvest)}</td><td></td>
                 </tr>}
                 {calc.tInvest>0&&<tr style={{fontWeight:700,borderTop:"1px solid #e4e4e7",background:"#fafafa"}}>
-                  <td colSpan={7} style={{textAlign:"right",paddingRight:8}}>UTILIDAD NETA</td>
+                  <td colSpan={8} style={{textAlign:"right",paddingRight:8}}>UTILIDAD NETA</td>
                   <td className={`text-right ${(calc.clientProfit.reduce((s,c)=>s+(c.utilFee||0),0)-calc.tInvest)>=0?"tg":"tr"}`}>{fmt(calc.clientProfit.reduce((s,c)=>s+(c.utilFee||0),0)-calc.tInvest)}</td>
                   <td className="text-right tb">{fmt(calc.projProfit)}</td>
                   <td className={`text-right font-bold ${(calc.clientProfit.reduce((s,c)=>s+c.totalNet,0)-calc.tInvest)>=0?"tg":"tr"}`}>{fmt(calc.clientProfit.reduce((s,c)=>s+c.totalNet,0)-calc.tInvest)}</td><td></td>
@@ -2256,11 +2260,16 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                   const f=getFee(c.id,m);
                   const tc=snap?snap.team.reduce((s,t)=>t.assignments.filter(a=>a.clientId===c.id).reduce((sa,a)=>sa+a.amount,0)+s,0):hmTeam.reduce((s,t)=>s+tDed(t,c.id),0);
                   const oh=mFees>0?(f/mFees)*mOH:0;
-                  const utilFee=f>0?(f-tc-oh):0;
+                  /* Gastos Op. y Movilidad solo para el mes activo (vm); para otros meses usar 0 por ahora */
+                  const gOp=m===vm?(cajaChica.filter(g=>(g.tipo||"agencia")==="agencia"&&g.marca===c.name).reduce((s,g)=>s+parseFloat(g.monto||0),0)):0;
+                  const mov=m===vm?(movMarcas.filter(v=>v.marca===c.name).reduce((s,v)=>s+parseFloat(v.tarifa||0),0)):0;
+                  const contrib=f>0?(f-tc-gOp-mov):0; /* contribución antes de OH */
+                  const utilFee=f>0?(contrib-oh):0;
                   const mProj=projects.filter(p=>p.month===m&&p.clientId===c.id);
                   const projRev=mProj.reduce((s,p)=>s+p.revenue,0);
                   const projCost=mProj.reduce((s,p)=>s+pCost(p),0);
                   const utilProy=projRev-projCost;
+                  row["contrib_"+c.id]=Math.round(contrib);
                   row["fee_"+c.id]=Math.round(utilFee);
                   row["proy_"+c.id]=Math.round(utilProy);
                   row["tot_"+c.id]=Math.round(utilFee+utilProy);
@@ -2309,9 +2318,50 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                     </tr></tfoot>
                   </table>
                 </div>
+                {/* Contribución mes a mes (sin OH — estable) */}
+                <div style={{marginTop:20,paddingTop:16,borderTop:"2px solid #e4e4e7"}}>
+                  <div style={{fontWeight:700,fontSize:13,marginBottom:4}}>Contribución por Cliente — Mes a Mes (sin OH)</div>
+                  <div style={{fontSize:11,color:"#a1a1aa",marginBottom:12}}>Fee − Equipo − Gastos Op. − Movilidad. <strong>No incluye OH</strong> → métrica estable que muestra la rentabilidad real del cliente independiente de cuántos otros clientes haya.</div>
+                  <div style={{overflow:"auto"}}>
+                    <table style={{fontSize:11}}>
+                      <thead><tr style={{background:"#eff6ff"}}><th>Cliente</th>{utilHistory.map(r=><th key={r.m} className="text-center">{r.month}</th>)}<th className="text-center">Total</th></tr></thead>
+                      <tbody>{activeClients.map((c,ci)=>{
+                        const contribs=utilHistory.map(r=>r["contrib_"+c.id]||0);
+                        const gTotal=contribs.reduce((s,v)=>s+v,0);
+                        return(<tr key={c.id}><td style={{fontWeight:600,color:colors[ci%colors.length]}}>{c.name}</td>
+                          {contribs.map((v,i)=>{
+                            const prev=i>0?contribs[i-1]:null;
+                            const delta=prev!==null?v-prev:null;
+                            const hasData=v!==0||(utilHistory[i]["fee_"+c.id]||0)!==0;
+                            if(!hasData)return(<td key={i} className="text-center" style={{color:"#d4d4d8"}}>—</td>);
+                            return(<td key={i} className="text-center" style={{verticalAlign:"top",padding:"6px 4px"}}>
+                              <div style={{fontWeight:700,color:v>=0?"#18181b":"#dc2626",fontSize:12}}>{fmt(v)}</div>
+                              {delta!==null&&delta!==0&&<div style={{fontSize:9,color:delta>0?"#059669":"#dc2626",fontWeight:600}}>{delta>0?"▲":"▼"} {fmt(Math.abs(delta))}</div>}
+                            </td>);
+                          })}
+                          <td className="text-center"><span style={{fontWeight:700,color:gTotal>=0?"#18181b":"#dc2626"}}>{fmt(gTotal)}</span></td>
+                        </tr>);
+                      })}</tbody>
+                      <tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e4e4e7",background:"#eff6ff"}}>
+                        <td>TOTAL CONTRIB.</td>
+                        {utilHistory.map((r,i)=>{
+                          const tot=activeClients.reduce((s,c)=>s+(r["contrib_"+c.id]||0),0);
+                          const prevTot=i>0?activeClients.reduce((s,c)=>s+(utilHistory[i-1]["contrib_"+c.id]||0),0):null;
+                          const delta=prevTot!==null?tot-prevTot:null;
+                          return(<td key={i} className="text-center">
+                            <div style={{color:tot>=0?"#18181b":"#dc2626"}}>{fmt(tot)}</div>
+                            {delta!==null&&delta!==0&&<div style={{fontSize:9,color:delta>0?"#059669":"#dc2626"}}>{delta>0?"▲":"▼"} {fmt(Math.abs(delta))}</div>}
+                          </td>);
+                        })}
+                        <td className="text-center">{fmt(activeClients.reduce((s,c)=>s+utilHistory.reduce((ss,r)=>ss+(r["contrib_"+c.id]||0),0),0))}</td>
+                      </tr></tfoot>
+                    </table>
+                  </div>
+                </div>
                 {/* Legend */}
-                <div style={{fontSize:10,color:"#71717a",display:"flex",gap:16,flexWrap:"wrap",borderTop:"1px solid #f4f4f5",paddingTop:8}}>
-                  <span><strong style={{color:"#18181b"}}>F:</strong> Utilidad fee (fee − equipo − overhead)</span>
+                <div style={{fontSize:10,color:"#71717a",display:"flex",gap:16,flexWrap:"wrap",borderTop:"1px solid #f4f4f5",paddingTop:8,marginTop:12}}>
+                  <span><strong style={{color:"#18181b"}}>Contribución:</strong> Fee − Equipo − Gastos Op. − Mov. (sin OH)</span>
+                  <span><strong style={{color:"#18181b"}}>F:</strong> Utilidad fee (contribución − OH)</span>
                   <span><strong style={{color:"#18181b"}}>P:</strong> Utilidad proyectos (ingreso − costo)</span>
                   <span><span style={{color:"#059669",fontWeight:700}}>▲</span> Mejoró vs mes anterior</span>
                   <span><span style={{color:"#dc2626",fontWeight:700}}>▼</span> Bajó vs mes anterior</span>
