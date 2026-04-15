@@ -339,6 +339,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const[editingAsigId,setEditingAsigId]=useState(null);
   const[editAsigMonto,setEditAsigMonto]=useState("");
   const[editAsigNota,setEditAsigNota]=useState("");
+  const[editingGastoId,setEditingGastoId]=useState(null);
+  const[editGasto,setEditGasto]=useState({concepto:"",monto:"",categoria:"",marca:"",fecha:""});
   const handleAsignarCaja=async()=>{
     if(!asigPersona||!asigMonto||parseFloat(asigMonto)<=0){alert("Selecciona persona y monto");return;}
     const sb=getSB();if(!sb){alert("Sin conexión a Supabase");return;}
@@ -366,7 +368,13 @@ function App({userEmail="local",onLogout,cloudMode=false}){
       registrado_por:userEmail,mes,origen:"web"
     };
     if(esReembolsable)row.estado_cobro="pendiente";
-    const{error}=await sb.from("caja_chica").insert(row);
+    let{error}=await sb.from("caja_chica").insert(row);
+    /* Retry sin columnas opcionales si faltan en el schema */
+    if(error&&error.message&&(error.message.includes("registrado_por")||error.message.includes("origen")||error.message.includes("schema cache"))){
+      const{registrado_por,origen,...fallback}=row;
+      const retry=await sb.from("caja_chica").insert(fallback);
+      error=retry.error;
+    }
     if(error)alert("Error: "+error.message);
     else{
       setGastoForm({fecha:"",concepto:"",beneficiario:"",categoria:"Materiales",marca:"Agencia",monto:"",reembolsable:false});
@@ -1408,9 +1416,32 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               {loadingCaja?<div style={{textAlign:"center",padding:12,color:"#a1a1aa"}}>Cargando...</div>:
               cajaChica.length===0?<div style={{textAlign:"center",padding:12,color:"#a1a1aa",fontSize:12}}>Sin gastos registrados este mes</div>:(
                 <div className="card" style={{padding:0,overflow:"hidden",marginBottom:12}}>
-                  <table><thead><tr><th>Fecha</th><th>Persona</th><th>Concepto</th><th>Categoría</th><th>Marca</th><th>Tipo</th><th>Vía</th><th className="text-right">Monto</th><th>Estado</th><th>Foto</th></tr></thead>
-                  <tbody>{cajaChica.map(g=>(
-                    <tr key={g.id} style={g.tipo==="cliente"?{background:"#fffbeb"}:{}}>
+                  <table><thead><tr><th>Fecha</th><th>Persona</th><th>Concepto</th><th>Categoría</th><th>Marca</th><th>Tipo</th><th>Vía</th><th className="text-right">Monto</th><th>Estado</th><th>Foto</th><th style={{width:80}}>Acciones</th></tr></thead>
+                  <tbody>{cajaChica.map(g=>{
+                    const isEd=editingGastoId===g.id;
+                    if(isEd){
+                      return(<tr key={g.id} style={{background:"#eff6ff"}}>
+                        <td><input type="date" value={editGasto.fecha} onChange={e=>setEditGasto({...editGasto,fecha:e.target.value})} style={{fontSize:11,padding:"3px 5px",width:120}}/></td>
+                        <td style={{fontSize:11,color:"#a1a1aa"}}>{g.user_name||nameFromEmail(g.user_email)}</td>
+                        <td><input value={editGasto.concepto} onChange={e=>setEditGasto({...editGasto,concepto:e.target.value})} style={{fontSize:12,padding:"3px 6px",width:"100%"}}/></td>
+                        <td><select value={editGasto.categoria} onChange={e=>setEditGasto({...editGasto,categoria:e.target.value})} style={{fontSize:11,padding:"3px 5px"}}><option value="Materiales">Materiales</option><option value="Alimentación">Alimentación</option><option value="Movilidad">Movilidad</option><option value="Servicios">Servicios</option><option value="Compra">Compra</option><option value="Otros">Otros</option></select></td>
+                        <td><select value={editGasto.marca} onChange={e=>setEditGasto({...editGasto,marca:e.target.value})} style={{fontSize:11,padding:"3px 5px"}}><option value="Agencia">Agencia</option>{clients.map(c=><option key={c.id} value={c.name}>{c.name}</option>)}</select></td>
+                        <td colSpan={2} style={{fontSize:11,color:"#a1a1aa"}}>—</td>
+                        <td><input type="number" step="0.01" value={editGasto.monto} onChange={e=>setEditGasto({...editGasto,monto:e.target.value})} style={{fontSize:12,padding:"3px 6px",width:90,textAlign:"right"}}/></td>
+                        <td colSpan={2}></td>
+                        <td>
+                          <button onClick={async()=>{
+                            const sb=getSB();if(!sb)return;
+                            const upd={concepto:editGasto.concepto,monto:parseFloat(editGasto.monto),categoria:editGasto.categoria,marca:editGasto.marca,fecha:editGasto.fecha,mes:editGasto.fecha.slice(0,7)};
+                            const{error}=await sb.from("caja_chica").update(upd).eq("id",g.id);
+                            if(error)alert("Error: "+error.message);
+                            else{setEditingGastoId(null);loadCajaChica(vm);setSaveMsg("Gasto actualizado");setTimeout(()=>setSaveMsg(""),2500);}
+                          }} style={{background:"#059669",color:"#fff",border:"none",borderRadius:6,padding:"3px 8px",fontSize:10,cursor:"pointer",marginRight:2}}>✓</button>
+                          <button onClick={()=>setEditingGastoId(null)} style={{background:"#d4d4d8",color:"#18181b",border:"none",borderRadius:6,padding:"3px 8px",fontSize:10,cursor:"pointer"}}>✕</button>
+                        </td>
+                      </tr>);
+                    }
+                    return(<tr key={g.id} style={g.tipo==="cliente"?{background:"#fffbeb"}:{}}>
                       <td style={{fontSize:12}}>{new Date(g.fecha+"T12:00:00").toLocaleDateString("es-PE",{day:"numeric",month:"short"})}</td>
                       <td style={{fontSize:12}}>{g.user_name||nameFromEmail(g.user_email)}</td>
                       <td>{g.concepto}</td>
@@ -1421,8 +1452,18 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                       <td className="text-right font-bold tr">{fmt(g.monto)}{g.tipo==="cliente"&&<div style={{fontSize:10,color:"#a1a1aa",fontWeight:400}}>Fact: {fmt(g.monto*1.18)}</div>}</td>
                       <td>{g.tipo==="cliente"?<select value={g.estado_cobro||"pendiente"} onChange={async(e)=>{const sb=getSB();if(!sb)return;await sb.from("caja_chica").update({estado_cobro:e.target.value}).eq("id",g.id);loadCajaChica(vm);}} style={{fontSize:10,padding:"3px 6px",borderRadius:6,minWidth:75}}><option value="pendiente">Pendiente</option><option value="facturado">Facturado</option><option value="cobrado">Cobrado</option></select>:"—"}</td>
                       <td className="text-center">{g.foto_url?<a href={g.foto_url} target="_blank" rel="noopener" style={{fontSize:16}}>📎</a>:"—"}</td>
-                    </tr>
-                  ))}</tbody></table>
+                      <td>
+                        <button onClick={()=>{setEditingGastoId(g.id);setEditGasto({concepto:g.concepto||"",monto:String(g.monto||""),categoria:g.categoria||"Materiales",marca:g.marca||"Agencia",fecha:g.fecha||""});}} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,padding:2,marginRight:4}} title="Editar">✎</button>
+                        <button onClick={async()=>{
+                          if(!confirm(`¿Eliminar el gasto "${g.concepto}" de ${fmt(g.monto)}? Esta acción no se puede deshacer.`))return;
+                          const sb=getSB();if(!sb)return;
+                          const{error}=await sb.from("caja_chica").delete().eq("id",g.id);
+                          if(error)alert("Error: "+error.message);
+                          else{loadCajaChica(vm);setSaveMsg("Gasto eliminado");setTimeout(()=>setSaveMsg(""),2500);}
+                        }} style={{background:"none",border:"none",cursor:"pointer",fontSize:14,padding:2,color:"#dc2626"}} title="Eliminar">🗑</button>
+                      </td>
+                    </tr>);
+                  })}</tbody></table>
                   <div style={{padding:"10px 12px",borderTop:"1px solid #e4e4e7",display:"flex",justifyContent:"space-between",fontWeight:700,fontSize:13}}>
                     <span>Gasto Agencia ({vm})</span><span className="tp">{fmt(totalCajaCloud)}</span>
                   </div>
