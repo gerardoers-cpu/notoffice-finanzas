@@ -2237,6 +2237,87 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                 </div>
               </div>);
             })()}
+            {/* ─── Utilidad por Cliente mes a mes ─── */}
+            {(()=>{
+              const activeClients=calc.clientProfit.filter(c=>c.fee>0||c.utilProy);
+              /* Construye utilidad por cliente por mes: fee, proy, total, delta vs mes anterior */
+              const utilHistory=MONTHS.map(({value:m,label})=>{
+                const mFees=clients.reduce((s,c)=>s+getFee(c.id,m),0);
+                const snap=monthSnapshots[m];
+                const hmTeam=teamByMonth[m]||[];
+                const mTransPay=snap?snap.team.reduce((s,t)=>t.assignments.filter(a=>a.clientId===null).reduce((sa,a)=>sa+a.amount,0)+s,0):hmTeam.reduce((s,t)=>s+tTrans(t),0);
+                const mFx=snap?snap.fixedExp.reduce((s,e)=>s+e.amount,0):fixedExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+                const mDg=snap?snap.digitalExp.reduce((s,e)=>s+e.amount,0):digitalExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+                const mVr=variableExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+                const mOf=snap?snap.officeExp.reduce((s,e)=>s+e.amount,0):officeExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+                const mOH=mTransPay+mFx+mDg+mVr+mOf;
+                const row={month:label.split(" ")[0],m};
+                activeClients.forEach(c=>{
+                  const f=getFee(c.id,m);
+                  const tc=snap?snap.team.reduce((s,t)=>t.assignments.filter(a=>a.clientId===c.id).reduce((sa,a)=>sa+a.amount,0)+s,0):hmTeam.reduce((s,t)=>s+tDed(t,c.id),0);
+                  const oh=mFees>0?(f/mFees)*mOH:0;
+                  const utilFee=f>0?(f-tc-oh):0;
+                  const mProj=projects.filter(p=>p.month===m&&p.clientId===c.id);
+                  const projRev=mProj.reduce((s,p)=>s+p.revenue,0);
+                  const projCost=mProj.reduce((s,p)=>s+pCost(p),0);
+                  const utilProy=projRev-projCost;
+                  row["fee_"+c.id]=Math.round(utilFee);
+                  row["proy_"+c.id]=Math.round(utilProy);
+                  row["tot_"+c.id]=Math.round(utilFee+utilProy);
+                });
+                return row;
+              });
+              const[selCli,setSelCli]=[null,null]; /* placeholder, usará expandedClient */
+              return(<div className="card" style={{marginTop:16}}>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Utilidad por Cliente — Mes a Mes</div>
+                <div style={{fontSize:11,color:"#a1a1aa",marginBottom:16}}>Compara utilidad mensual total. Desglose: utilidad de fee (estructura) vs utilidad de proyectos. Δ = cambio vs mes anterior.</div>
+                {/* Tabla de utilidades totales */}
+                <div style={{overflow:"auto",marginBottom:16}}>
+                  <table style={{fontSize:11}}>
+                    <thead><tr><th>Cliente</th>{utilHistory.map(r=><th key={r.m} className="text-center">{r.month}</th>)}<th className="text-center">Total</th></tr></thead>
+                    <tbody>{activeClients.map((c,ci)=>{
+                      const totals=utilHistory.map(r=>r["tot_"+c.id]||0);
+                      const gTotal=totals.reduce((s,v)=>s+v,0);
+                      return(<tr key={c.id}><td style={{fontWeight:600,color:colors[ci%colors.length]}}>{c.name}</td>
+                        {totals.map((v,i)=>{
+                          const prev=i>0?totals[i-1]:null;
+                          const delta=prev!==null?v-prev:null;
+                          const hasFee=(utilHistory[i]["fee_"+c.id]||0)!==0;
+                          const hasProy=(utilHistory[i]["proy_"+c.id]||0)!==0;
+                          if(!hasFee&&!hasProy)return(<td key={i} className="text-center" style={{color:"#d4d4d8"}}>—</td>);
+                          return(<td key={i} className="text-center" style={{verticalAlign:"top",padding:"6px 4px"}}>
+                            <div style={{fontWeight:700,color:v>=0?"#18181b":"#dc2626",fontSize:12}}>{fmt(v)}</div>
+                            {delta!==null&&delta!==0&&<div style={{fontSize:9,color:delta>0?"#059669":"#dc2626",fontWeight:600}}>{delta>0?"▲":"▼"} {fmt(Math.abs(delta))}</div>}
+                            {hasProy&&<div style={{fontSize:9,color:"#71717a",marginTop:2}}>F:{fmt(utilHistory[i]["fee_"+c.id]||0)}<br/>P:{fmt(utilHistory[i]["proy_"+c.id]||0)}</div>}
+                          </td>);
+                        })}
+                        <td className="text-center"><span style={{fontWeight:700,color:gTotal>=0?"#18181b":"#dc2626"}}>{fmt(gTotal)}</span></td>
+                      </tr>);
+                    })}</tbody>
+                    <tfoot><tr style={{fontWeight:700,borderTop:"2px solid #e4e4e7",background:"#fafafa"}}>
+                      <td>TOTAL</td>
+                      {utilHistory.map((r,i)=>{
+                        const tot=activeClients.reduce((s,c)=>s+(r["tot_"+c.id]||0),0);
+                        const prevTot=i>0?activeClients.reduce((s,c)=>s+(utilHistory[i-1]["tot_"+c.id]||0),0):null;
+                        const delta=prevTot!==null?tot-prevTot:null;
+                        return(<td key={i} className="text-center">
+                          <div style={{color:tot>=0?"#18181b":"#dc2626"}}>{fmt(tot)}</div>
+                          {delta!==null&&delta!==0&&<div style={{fontSize:9,color:delta>0?"#059669":"#dc2626"}}>{delta>0?"▲":"▼"} {fmt(Math.abs(delta))}</div>}
+                        </td>);
+                      })}
+                      <td className="text-center">{fmt(activeClients.reduce((s,c)=>s+utilHistory.reduce((ss,r)=>ss+(r["tot_"+c.id]||0),0),0))}</td>
+                    </tr></tfoot>
+                  </table>
+                </div>
+                {/* Legend */}
+                <div style={{fontSize:10,color:"#71717a",display:"flex",gap:16,flexWrap:"wrap",borderTop:"1px solid #f4f4f5",paddingTop:8}}>
+                  <span><strong style={{color:"#18181b"}}>F:</strong> Utilidad fee (fee − equipo − overhead)</span>
+                  <span><strong style={{color:"#18181b"}}>P:</strong> Utilidad proyectos (ingreso − costo)</span>
+                  <span><span style={{color:"#059669",fontWeight:700}}>▲</span> Mejoró vs mes anterior</span>
+                  <span><span style={{color:"#dc2626",fontWeight:700}}>▼</span> Bajó vs mes anterior</span>
+                </div>
+              </div>);
+            })()}
             {/* Export */}
             <div style={{marginTop:12,display:"flex",gap:8}}>
               <button className="btn btn-gray" onClick={()=>{
