@@ -2318,6 +2318,116 @@ function App({userEmail="local",onLogout,cloudMode=false}){
                 </div>
               </div>);
             })()}
+            {/* ─── Análisis Mensual Automático ─── */}
+            {(()=>{
+              /* Construir serie mensual detallada con causas */
+              const series=MONTHS.map(({value:m,label})=>{
+                const mFees=clients.reduce((s,c)=>s+getFee(c.id,m),0);
+                const snap=monthSnapshots[m];
+                const hmTeam=teamByMonth[m]||[];
+                const mTransPay=snap?snap.team.reduce((s,t)=>t.assignments.filter(a=>a.clientId===null).reduce((sa,a)=>sa+a.amount,0)+s,0):hmTeam.reduce((s,t)=>s+tTrans(t),0);
+                const mDedPay=snap?snap.team.reduce((s,t)=>t.assignments.filter(a=>a.clientId!==null).reduce((sa,a)=>sa+a.amount,0)+s,0):hmTeam.reduce((s,t)=>s+tAllDed(t),0);
+                const mFx=snap?snap.fixedExp.reduce((s,e)=>s+e.amount,0):fixedExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+                const mDg=snap?snap.digitalExp.reduce((s,e)=>s+e.amount,0):digitalExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+                const mVr=variableExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+                const mOf=snap?snap.officeExp.reduce((s,e)=>s+e.amount,0):officeExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+                const mInv=investExp.filter(e=>e.month===m).reduce((s,e)=>s+e.amount,0);
+                const mOH=mTransPay+mFx+mDg+mVr+mOf;
+                /* Proyectos del mes */
+                const mProj=projects.filter(p=>p.month===m);
+                const projRev=mProj.reduce((s,p)=>s+p.revenue,0);
+                const projCost=mProj.reduce((s,p)=>s+pCost(p),0);
+                /* Por cliente */
+                const perCli=clients.map(c=>{
+                  const f=getFee(c.id,m);
+                  const tc=snap?snap.team.reduce((s,t)=>t.assignments.filter(a=>a.clientId===c.id).reduce((sa,a)=>sa+a.amount,0)+s,0):hmTeam.reduce((s,t)=>s+tDed(t,c.id),0);
+                  const oh=mFees>0?(f/mFees)*mOH:0;
+                  const uFee=f>0?(f-tc-oh):0;
+                  const pClients=mProj.filter(p=>p.clientId===c.id);
+                  const pRev=pClients.reduce((s,p)=>s+p.revenue,0);
+                  const pCostC=pClients.reduce((s,p)=>s+pCost(p),0);
+                  const uProy=pRev-pCostC;
+                  return{id:c.id,name:c.name,fee:f,teamCost:tc,oh,uFee,uProy,total:uFee+uProy,nProy:pClients.length,pRev,pCost:pCostC};
+                }).filter(c=>c.fee>0||c.total!==0);
+                const totalFee=perCli.reduce((s,c)=>s+c.uFee,0);
+                const totalProy=perCli.reduce((s,c)=>s+c.uProy,0);
+                const totalUtil=totalFee+totalProy;
+                const hasData=mFees>0||projRev>0||mVr>0||mInv>0;
+                return{m,label,mFees,mDedPay,mTransPay,mFx,mDg,mVr,mOf,mInv,mOH,projRev,projCost,perCli,totalFee,totalProy,totalUtil,hasData,nProj:mProj.length,nTeam:hmTeam.length};
+              });
+              const active=series.filter(s=>s.hasData);
+              if(active.length===0)return null;
+              /* Generar análisis para cada mes (usando mes anterior si existe) */
+              const analyses=active.map((cur,idx)=>{
+                const prev=idx>0?active[idx-1]:null;
+                const bullets=[];
+                if(!prev){
+                  bullets.push({type:"info",text:`Mes base. ${cur.perCli.length} clientes activos, ${cur.nProj} proyecto${cur.nProj!==1?"s":""}. Utilidad total: ${fmt(cur.totalUtil)} (Fee: ${fmt(cur.totalFee)}${cur.totalProy?", Proy: "+fmt(cur.totalProy):""}).`});
+                }else{
+                  const dTotal=cur.totalUtil-prev.totalUtil;
+                  const dFee=cur.totalFee-prev.totalFee;
+                  const dProy=cur.totalProy-prev.totalProy;
+                  const dFees=cur.mFees-prev.mFees;
+                  const dDed=cur.mDedPay-prev.mDedPay;
+                  const dOH=cur.mOH-prev.mOH;
+                  /* Resumen general */
+                  if(dTotal>0)bullets.push({type:"good",text:`Utilidad total subió ${fmt(dTotal)} vs ${prev.label.split(" ")[0]} (${prev.totalUtil>=0?fmt(prev.totalUtil):"pérdida "+fmt(Math.abs(prev.totalUtil))} → ${fmt(cur.totalUtil)}).`});
+                  else if(dTotal<0)bullets.push({type:"bad",text:`Utilidad total bajó ${fmt(Math.abs(dTotal))} vs ${prev.label.split(" ")[0]} (${fmt(prev.totalUtil)} → ${fmt(cur.totalUtil)}).`});
+                  else bullets.push({type:"info",text:`Utilidad total se mantuvo (${fmt(cur.totalUtil)}).`});
+                  /* Fees vs Proyectos */
+                  if(Math.abs(dFee)>Math.abs(dProy)&&Math.abs(dFee)>100){
+                    bullets.push({type:dFee>0?"good":"bad",text:`Principal causa: utilidad de fee ${dFee>0?"subió":"bajó"} ${fmt(Math.abs(dFee))}.`});
+                  }else if(Math.abs(dProy)>100){
+                    bullets.push({type:dProy>0?"good":"bad",text:`Principal causa: utilidad de proyectos ${dProy>0?"subió":"bajó"} ${fmt(Math.abs(dProy))} (${cur.nProj} proyecto${cur.nProj!==1?"s":""} vs ${prev.nProj} el mes anterior).`});
+                  }
+                  /* Drivers: ingresos, equipo, OH */
+                  if(Math.abs(dFees)>100)bullets.push({type:dFees>0?"good":"bad",text:`Ingresos por fees ${dFees>0?"crecieron":"bajaron"} ${fmt(Math.abs(dFees))} (${fmt(prev.mFees)} → ${fmt(cur.mFees)}).`});
+                  if(Math.abs(dDed)>100)bullets.push({type:dDed<0?"good":"bad",text:`Costo equipo dedicado ${dDed>0?"subió":"bajó"} ${fmt(Math.abs(dDed))} (${fmt(prev.mDedPay)} → ${fmt(cur.mDedPay)}).`});
+                  if(Math.abs(dOH)>100)bullets.push({type:dOH<0?"good":"bad",text:`Overhead ${dOH>0?"subió":"bajó"} ${fmt(Math.abs(dOH))} (${fmt(prev.mOH)} → ${fmt(cur.mOH)}).`});
+                  /* Top cambios por cliente */
+                  const cliChanges=cur.perCli.map(c=>{
+                    const p=prev.perCli.find(pc=>pc.id===c.id);
+                    return{name:c.name,cur:c.total,prev:p?p.total:0,delta:c.total-(p?p.total:0),uFee:c.uFee,prevUFee:p?p.uFee:0,uProy:c.uProy,prevUProy:p?p.uProy:0};
+                  }).filter(c=>Math.abs(c.delta)>=200).sort((a,b)=>Math.abs(b.delta)-Math.abs(a.delta));
+                  cliChanges.slice(0,3).forEach(c=>{
+                    const reasons=[];
+                    if(Math.abs(c.uFee-c.prevUFee)>100)reasons.push((c.uFee-c.prevUFee>0?"+":"")+fmt(c.uFee-c.prevUFee)+" en fee");
+                    if(Math.abs(c.uProy-c.prevUProy)>100)reasons.push((c.uProy-c.prevUProy>0?"+":"")+fmt(c.uProy-c.prevUProy)+" en proyectos");
+                    const reasonStr=reasons.length?" ("+reasons.join(", ")+")":"";
+                    bullets.push({type:c.delta>0?"good":"bad",text:`${c.name}: ${c.delta>0?"+":""}${fmt(c.delta)}${reasonStr}.`});
+                  });
+                  /* Clientes nuevos o inactivos */
+                  const nuevos=cur.perCli.filter(c=>!prev.perCli.find(p=>p.id===c.id)).map(c=>c.name);
+                  const salieron=prev.perCli.filter(p=>!cur.perCli.find(c=>c.id===p.id)).map(p=>p.name);
+                  if(nuevos.length)bullets.push({type:"good",text:`Cliente${nuevos.length>1?"s":""} nuevo${nuevos.length>1?"s":""}: ${nuevos.join(", ")}.`});
+                  if(salieron.length)bullets.push({type:"bad",text:`Cliente${salieron.length>1?"s":""} sin actividad: ${salieron.join(", ")}.`});
+                }
+                /* Clientes en rojo */
+                const rojos=cur.perCli.filter(c=>c.total<0&&c.fee>0);
+                if(rojos.length)bullets.push({type:"bad",text:`${rojos.length} cliente${rojos.length>1?"s":""} con utilidad negativa: ${rojos.map(r=>r.name+" ("+fmt(r.total)+")").join(", ")}.`});
+                return{m:cur.m,label:cur.label,totalUtil:cur.totalUtil,bullets};
+              });
+              const colorMap={good:"#059669",bad:"#dc2626",info:"#52525b"};
+              const bgMap={good:"#f0fdf4",bad:"#fef2f2",info:"#fafafa"};
+              return(<div className="card" style={{marginTop:16}}>
+                <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Análisis Mensual — ¿Qué pasó?</div>
+                <div style={{fontSize:11,color:"#a1a1aa",marginBottom:16}}>Interpretación automática de los cambios mes a mes. Identifica causas principales: fees, equipo, overhead, proyectos, clientes en movimiento.</div>
+                {analyses.slice().reverse().map(a=>(
+                  <div key={a.m} style={{marginBottom:14,paddingBottom:14,borderBottom:"1px solid #f4f4f5"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                      <div style={{fontWeight:700,fontSize:13}}>{a.label}</div>
+                      <div style={{fontSize:13,fontWeight:700,color:a.totalUtil>=0?"#059669":"#dc2626"}}>{fmt(a.totalUtil)}</div>
+                    </div>
+                    {a.bullets.map((b,i)=>(
+                      <div key={i} style={{display:"flex",gap:8,padding:"6px 10px",borderRadius:6,marginBottom:4,background:bgMap[b.type],fontSize:12,color:colorMap[b.type],alignItems:"flex-start"}}>
+                        <span style={{fontSize:10,fontWeight:700,marginTop:2}}>{b.type==="good"?"▲":b.type==="bad"?"▼":"•"}</span>
+                        <span>{b.text}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>);
+            })()}
             {/* Export */}
             <div style={{marginTop:12,display:"flex",gap:8}}>
               <button className="btn btn-gray" onClick={()=>{
