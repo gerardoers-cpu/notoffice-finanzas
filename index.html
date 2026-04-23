@@ -1246,6 +1246,94 @@ function App({userEmail="local",onLogout,cloudMode=false}){
             <ExpBlock title={`Costos Variables — ${ML[parseInt(vm.split("-")[1])-1]} ${selYear}`} items={variableExp.filter(e=>e.month===vm)} total={calc.tVar} color="ta" onAdd={e=>setVariableExp(p=>[...p,{...e,id:Date.now(),month:vm}])} onDel={id=>setVariableExp(variableExp.filter(e=>e.id!==id))} onEdit={(id,up)=>setVariableExp(variableExp.map(e=>e.id===id?{...e,...up}:e))}/>
           </div>)}
           {gastoTab==="variable"&&(<div>
+            {/* ── Registro rápido de gasto ── */}
+            {cloudMode&&CAJA_PERSONAS_EMAILS.length>0&&(()=>{
+              const[showQuick,setShowQuick]=useState(false);
+              const[qPersona,setQPersona]=useState("");
+              const[qFecha,setQFecha]=useState(vm+"-01");
+              const[qConcepto,setQConcepto]=useState("");
+              const[qMonto,setQMonto]=useState("");
+              const[qCategoria,setQCategoria]=useState("Materiales");
+              const[qMarca,setQMarca]=useState("Agencia");
+              const[qSaving,setQSaving]=useState(false);
+              const handleQuickSave=async()=>{
+                if(!qPersona){alert("Selecciona una persona");return;}
+                if(!qFecha){alert("Ingresa una fecha");return;}
+                if(!qConcepto.trim()){alert("Ingresa un concepto");return;}
+                const monto=parseFloat(qMonto);
+                if(!monto||monto<=0){alert("El monto debe ser mayor a 0");return;}
+                const sb=getSB();if(!sb){alert("Sin conexión");return;}
+                setQSaving(true);
+                const persona=cajaPersonas.find(cp=>cp.email===qPersona);
+                const row={
+                  user_email:qPersona,user_name:persona?.nombre||nameFromEmail(qPersona),
+                  fecha:qFecha,concepto:qConcepto.trim(),categoria:qCategoria,marca:qMarca,
+                  tipo:"agencia",via_pago:"caja_chica",monto,
+                  registrado_por:userEmail,mes:qFecha.slice(0,7),origen:"web"
+                };
+                let{error}=await sb.from("caja_chica").insert(row);
+                if(error&&error.message&&(error.message.includes("registrado_por")||error.message.includes("origen")||error.message.includes("schema cache"))){
+                  const{registrado_por,origen,...fallback}=row;
+                  const retry=await sb.from("caja_chica").insert(fallback);
+                  error=retry.error;
+                }
+                if(error)alert("Error: "+error.message);
+                else{setQConcepto("");setQMonto("");setSaveMsg("Gasto registrado ✓");setTimeout(()=>setSaveMsg(""),3000);loadCajaChica(vm);}
+                setQSaving(false);
+              };
+              return(<div className="card" style={{marginBottom:16,borderLeft:"4px solid #059669"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer"}} onClick={()=>setShowQuick(!showQuick)}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{fontSize:18}}>💰</span>
+                    <div><div style={{fontWeight:700,fontSize:14}}>Registrar Gasto Rápido</div>
+                    <div style={{fontSize:11,color:"#71717a"}}>Agrega un gasto de caja chica sin expandir personas</div></div>
+                  </div>
+                  <span style={{fontSize:16,color:"#a1a1aa"}}>{showQuick?"▾":"▸"}</span>
+                </div>
+                {showQuick&&(<div style={{marginTop:14,paddingTop:14,borderTop:"1px solid #f4f4f5"}}>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}>
+                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                      <label style={{fontSize:9,color:"#a1a1aa",fontWeight:700}}>PERSONA</label>
+                      <select value={qPersona} onChange={e=>setQPersona(e.target.value)} style={{fontSize:12,padding:"7px 10px",minWidth:180}}>
+                        <option value="">Seleccionar...</option>
+                        {CAJA_PERSONAS_EMAILS.map(p=>{const per=cajaPersonas.find(cp=>cp.email===p);const bal=cajaBalances[p]||{};
+                          return <option key={p} value={p}>{per?.nombre||nameFromEmail(p)} — Saldo: {fmt(bal.saldo||0)}</option>;})}
+                      </select>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                      <label style={{fontSize:9,color:"#a1a1aa",fontWeight:700}}>FECHA</label>
+                      <input type="date" value={qFecha} onChange={e=>setQFecha(e.target.value)} style={{fontSize:12,padding:"7px 10px"}}/>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:2,flex:2}}>
+                      <label style={{fontSize:9,color:"#a1a1aa",fontWeight:700}}>CONCEPTO</label>
+                      <input value={qConcepto} onChange={e=>setQConcepto(e.target.value)} placeholder="Descripción del gasto" style={{fontSize:12,padding:"7px 10px"}}/>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                      <label style={{fontSize:9,color:"#a1a1aa",fontWeight:700}}>MONTO S/</label>
+                      <input type="number" step="0.01" min="0.01" value={qMonto} onChange={e=>setQMonto(e.target.value)} placeholder="0.00" style={{width:100,fontSize:12,padding:"7px 10px",textAlign:"right"}}/>
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"flex-end"}}>
+                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                      <label style={{fontSize:9,color:"#a1a1aa",fontWeight:700}}>CATEGORÍA</label>
+                      <select value={qCategoria} onChange={e=>setQCategoria(e.target.value)} style={{fontSize:12,padding:"7px 10px"}}>
+                        <option value="Materiales">Materiales</option><option value="Alimentación">Alimentación</option>
+                        <option value="Movilidad">Movilidad</option><option value="Servicios">Servicios</option>
+                        <option value="Compra">Compra</option><option value="Otros">Otros</option>
+                      </select>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                      <label style={{fontSize:9,color:"#a1a1aa",fontWeight:700}}>MARCA</label>
+                      <select value={qMarca} onChange={e=>setQMarca(e.target.value)} style={{fontSize:12,padding:"7px 10px"}}>
+                        <option value="Agencia">Agencia (→ OH)</option>
+                        {clients.filter(c=>c.active!==false).map(c=><option key={c.id} value={c.name}>{c.name}</option>)}
+                      </select>
+                    </div>
+                    <button className="btn btn-green" style={{padding:"8px 24px"}} onClick={handleQuickSave} disabled={qSaving}>{qSaving?"Guardando...":"Registrar Gasto"}</button>
+                  </div>
+                </div>)}
+              </div>);
+            })()}
             {/* Balance cards per person */}
             {cloudMode&&<div>
               {/* ── Personas management ── */}
