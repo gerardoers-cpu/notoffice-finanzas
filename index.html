@@ -591,8 +591,8 @@ function App({userEmail="local",onLogout,cloudMode=false}){
   const totalMovMarcas=movMarcas.reduce((s,v)=>s+parseFloat(v.tarifa||0),0);
   const totalMovilidad=movAprobada.reduce((s,v)=>s+parseFloat(v.tarifa||0),0);
   const totalMovPendiente=movPendiente.reduce((s,v)=>s+parseFloat(v.tarifa||0),0);
-  const totalCajaCloud=cajaChica.filter(g=>(g.tipo||"agencia")==="agencia").reduce((s,g)=>s+parseFloat(g.monto||0),0);
-  const totalCajaCliente=cajaChica.filter(g=>g.tipo==="cliente").reduce((s,g)=>s+parseFloat(g.monto||0),0);
+  const totalCajaCloud=cajaChica.filter(g=>(g.tipo||"agencia")==="agencia"&&(!g.mes||g.mes===vm)).reduce((s,g)=>s+parseFloat(g.monto||0),0);
+  const totalCajaCliente=cajaChica.filter(g=>g.tipo==="cliente"&&(!g.mes||g.mes===vm)).reduce((s,g)=>s+parseFloat(g.monto||0),0);
   const totalCajaClienteAll=cajaChicaAll.filter(g=>g.tipo==="cliente").reduce((s,g)=>s+parseFloat(g.monto||0),0);
   const cuentasPorCobrar=cajaChicaAll.filter(g=>g.tipo==="cliente"&&g.estado_cobro!=="cobrado");
   const cajaBalances=useMemo(()=>{
@@ -1418,7 +1418,7 @@ function App({userEmail="local",onLogout,cloudMode=false}){
               cajaChica.length===0?<div style={{textAlign:"center",padding:12,color:"#a1a1aa",fontSize:12}}>Sin gastos registrados este mes</div>:(
                 <div className="card" style={{padding:0,overflow:"hidden",marginBottom:12}}>
                   <table><thead><tr><th>Fecha</th><th>Persona</th><th>Concepto</th><th>Categoría</th><th>Marca</th><th>Tipo</th><th>Vía</th><th className="text-right">Monto</th><th>Estado</th><th>Foto</th><th style={{width:80}}>Acciones</th></tr></thead>
-                  <tbody>{cajaChica.map(g=>{
+                  <tbody>{cajaChica.filter(g=>!g.mes||g.mes===vm).map(g=>{
                     const isEd=editingGastoId===g.id;
                     if(isEd){
                       return(<tr key={g.id} style={{background:"#eff6ff"}}>
